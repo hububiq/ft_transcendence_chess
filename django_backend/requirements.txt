@@ -1,0 +1,7 @@
+Django>=4.2,<5.0
+psycopg2-binary>=2.9                # The PostgreSQL driver
+dj-database-url>=2.1                # Parses URL in the .env file
+django-cors-headers>=4.3            # Fixes browser CORS blocks for React
+django-allauth>=0.58                # For the OAuth2 'Minor' Module
+djangorestframework>=3.14           # For building  REST API
+djangorestframework-simplejwt>=5.3  # For creating the JWT tokens

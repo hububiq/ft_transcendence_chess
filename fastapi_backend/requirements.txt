@@ -1,0 +1,7 @@
+fastapi>=0.104.0
+uvicorn[standard]>=0.23.2 # The ASGI web server (supports WebSockets)
+sqlmodel>=0.0.14          # The ORM for FastAPI
+psycopg2-binary>=2.9      # PostgreSQL driver
+asyncpg>=0.28.0           # Asynchronous PostgreSQL driver (for max speed)
+redis>=5.0.1              # To talk to Redis Broker
+PyJWT>=2.8.0              # To decode the JWT tokens from Django
