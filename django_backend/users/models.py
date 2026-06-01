@@ -6,7 +6,7 @@ class User(AbstractUser):
     bot_difficulty = models.IntegerField(null=True, blank=True)
 
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE) # Creates the user_id foreign key!
+    user = models.OneToOneField(User, on_delete=models.CASCADE) #foreign key
     elo_rating = models.IntegerField(default=1200)
     avatar_url = models.URLField(null=True, blank=True)
     

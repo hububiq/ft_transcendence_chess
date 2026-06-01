@@ -22,5 +22,5 @@ Migrations has own history, they will add on the top of your local database chan
 If you need a new library (like `requests`):
 1. Add it to `requirements.txt` manually.
 2. Run `make up` to rebuild the container with the new library.
-*If you are pro: To freeze exact versions of what is currently installed, use `docker exec -it django_backend pip freeze > current_reqs.txt`* 
-This one-liner will basically add rewrite dependencies with your new ones and sum it up in requirements.txt file.
+*If you are pro: To freeze exact versions of what is currently installed, use `docker exec -it django_backend pip freeze > requirements.txt`* 
+This one-liner will basically rewrite dependencies with your new ones and sum it up in requirements.txt file.
