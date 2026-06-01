@@ -32,6 +32,6 @@ fclean:
 		echo "Aborted fclean. Your data is safe."; \
 	fi
 
-re: fclean all
+re: clean all
 
 .PHONY: all up down clean re fclean
