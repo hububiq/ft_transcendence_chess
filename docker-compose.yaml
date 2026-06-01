@@ -36,6 +36,7 @@ services:
       # Syncs your live code edits to the container so you don't have to rebuild! It's bind mount! (.)
       # bind mount is used for local development so live edits are sync immediately
       - ./django_backend:/app
+      - media_data:/app/media  # for avatars uploaded from disk
     ports:
       - "8000:8000"
     depends_on:
@@ -69,6 +70,7 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  media_data:
 
 #later: health check and adminer to view database by the team
 
