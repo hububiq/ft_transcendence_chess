@@ -12,7 +12,7 @@ def seed_database(num_fake_users=20):
     print("Deleting old mocked data...")
     User.objects.filter(is_superuser=False).delete()
 
-    print("👑 Creating specific test accounts...")
+    print("Creating specific test accounts...")
     
     hubert = User.objects.create_user(username="Hubert", email="h@test.com", password="123")
     Profile.objects.create(user=hubert, elo_rating=1500, bio="The Systems Architect.")

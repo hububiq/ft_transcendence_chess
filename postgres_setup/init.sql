@@ -1,2 +1,2 @@
-CREATE DATABASE fastapi_db
-CREATE DATABASE django_db
+CREATE DATABASE fastapi_db;
+CREATE DATABASE django_db;
