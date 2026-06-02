@@ -1,0 +1,6 @@
+.env
+django_backend/core
+django_backend/db.sqlite3
+django_backend/manage.py
+django_backend/media
+django_backend/users/migrations
