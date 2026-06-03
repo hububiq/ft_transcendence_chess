@@ -1,0 +1,79 @@
+services:
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_setup/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - transcendence_net
+
+  redis_broker:
+    image: redis:7-alpine
+    container_name: redis_broker
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - transcendence_net
+
+  django_backend:
+    build:
+      context: ./django_backend
+      dockerfile: Dockerfile
+    container_name: django_backend
+    restart: on-failure
+    env_file:
+      - .env
+    volumes:
+      # Syncs your live code edits to the container so you don't have to rebuild! It's bind mount! (.)
+      # bind mount is used for local development so live edits are sync immediately
+      - ./django_backend:/app
+      - media_data:/app/media  # for avatars uploaded from disk
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres_db
+      - redis_broker
+    networks:
+      - transcendence_net
+
+  fastapi_backend:
+    build:
+      context: ./fastapi_backend
+      dockerfile: Dockerfile
+    container_name: fastapi_backend
+    restart: on-failure
+    env_file:
+      - .env
+    volumes:
+      - ./fastapi_backend:/app
+    ports:
+      - "8001:8001"
+    depends_on:
+      - postgres_db
+      - redis_broker
+    networks:
+      - transcendence_net
+
+networks:
+  transcendence_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
+
+#later: health check and adminer to view database by the team
+
+#later: will add React when frontend will start deploying (node.js)
+#for evaluation (production) it nginx will have to be setup to sent static files to nginx server and view and throw node.js away
+#for now: just standard React container on port 3000

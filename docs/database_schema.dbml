@@ -1,0 +1,77 @@
+// MICROSERVICE 1: DJANGO (Users & Stats)
+
+Table Users {
+  id integer [primary key]
+  email varchar [unique, note: 'Used for login']
+  password varchar
+  oauth_provider varchar [note: 'e.g., 42, github']
+  oauth_id varchar
+  is_bot boolean [default: false]
+  bot_difficulty integer
+  date_joined timestamp
+}
+
+Table Profiles {
+  id integer [primary key]
+  user_id integer [note: 'Strict Foreign Key']
+  username varchar [unique]
+  avatar_url varchar
+  location varchar
+  bio text
+  theme_color varchar [default: 'dark']
+  
+  // Stats Columns
+  elo_rating integer [default: 1200]
+  peak_rating integer [default: 1200]
+  total_games integer [default: 0]
+  wins integer [default: 0]
+  losses integer [default: 0]
+  draws integer [default: 0]
+  current_streak integer [default: 0]
+}
+
+// Django Strict Relation
+Ref: Profiles.user_id - Users.id
+
+
+// MICROSERVICE 2: FASTAPI (Game & Tournaments)
+
+Table Games {
+  id integer [primary key]
+  white_player_id integer [note: 'Soft Link to Django Users.id']
+  black_player_id integer [note: 'Soft Link to Django Users.id (NULL if local)']
+  tournament_id integer
+  is_local_1v1 boolean
+  status varchar [note: 'ongoing, completed, drawn']
+  winner_id integer
+  moves_pgn text
+  played_at timestamp
+}
+
+Table Tournaments {
+  id integer [primary key]
+  creator_id integer [note: 'Soft Link to Django Users.id']
+  status varchar
+  winner_id integer
+  created_at timestamp
+}
+
+Table Tournament_Participants {
+  id integer [primary key]
+  tournament_id integer
+  player_id integer [note: 'Soft Link to Django Users.id (Can be a bot!)']
+  bracket_position integer [note: 'Slots 1 through 8']
+}
+
+Table Game_Invitations {
+  id integer [primary key]
+  sender_id integer [note: 'Soft Link to Django Users.id']
+  receiver_id integer
+  status varchar [note: 'pending, accepted, declined']
+  is_recommendation boolean [note: 'True if from Scikit-Learn']
+  created_at timestamp
+}
+
+// FastAPI Strict Relations
+Ref: Games.tournament_id > Tournaments.id
+Ref: Tournament_Participants.tournament_id > Tournaments.id
