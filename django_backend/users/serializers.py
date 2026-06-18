@@ -3,14 +3,13 @@ from .models import User, Profile
 
 # 1. THE PROFILE TRANSLATOR
 class ProfileSerializer(serializers.ModelSerializer):
-    class Meta:
+    class Meta: ########### whats this Meta and why is it called like this
         model = Profile
         fields = [
             'avatar_url', 'location', 'bio', 'theme_color', 
             'elo_rating', 'peak_rating', 'total_games', 
             'wins', 'losses', 'draws', 'current_streak'
         ]
-
 # 2. THE USER TRANSLATOR
 class UserSerializer(serializers.ModelSerializer):
     # (Nesting)

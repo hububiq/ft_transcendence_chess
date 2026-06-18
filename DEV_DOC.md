@@ -31,9 +31,10 @@ sudo chown -R $USER:$USER .
 
 ## Test the Localhost
 Run make re (to restart with the new commands). Open your browser:
- Django: http://localhost:8000 (You should see the Django page!)
- FastAPI: http://localhost:8001 (You should see {"message": "FastAPI is running!"})
- FastAPI Docs: http://localhost:8001/docs (Auto-generated API Swagger docs!)
+ * Django: http://localhost:8000 (You should see the Django page!)
+ * FastAPI: http://localhost:8001 (You should see {"message": "FastAPI is running!"})
+ * FastAPI Docs: http://localhost:8001/docs (Auto-generated API Swagger docs!)
+ * Django RestAPI: https://localhost:8000/api/users/
 
 ## 1. Initialize/Sync the Database (Migrations)
 Now that Django knows about PostgreSQL and our custom users, generate the SQL tables:
