@@ -12,6 +12,7 @@
    POSTGRES_USER=admin
    POSTGRES_PASSWORD=supersecret42
    DATABASE_URL=postgres://admin:supersecret42@postgres_db:5432/django_db
+   ```
 
 **Step B: Build and Boot Containers**
 Start the project in the background:
@@ -19,61 +20,6 @@ Start the project in the background:
 make up (or docker-compose up -d --build)
 ```
 
-Because our Git repository starts without any Django or FastAPI files, the containers will crash if they try to run `manage.py` or `main.py` immediately. Here is how to initialize the project for the very first time:
-
-**Step A. Initialize FastAPI:**
-1. Create a file named `main.py` inside `fastapi_backend/`.
-2. Paste the basic "Hello World" code:
-   ```python
-   from fastapi import FastAPI
-   app = FastAPI()
-   @app.get("/")
-   def read_root():
-       return {"message": "FastAPI Microservice is running!"}
-To build and start all containers in the background:
-`make up` (or `docker-compose up -d --build`)
-
-**Step C. Initialize Django:**
-1. Open `django_backend/Dockerfile` and temporarily change the last line to:
-   `CMD ["tail", "-f", "/dev/null"]` *(This keeps the empty container awake)*
-2. Run `make up`.
-3. Generate the Django project files inside the container:
-   `docker exec -it django_backend django-admin startproject core .`
-   *(Notice the dot `.` at the end! It puts the files in our current mapped folder).*
-4. Change the `Dockerfile` last line back to normal:
-   `CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]`
-
-
-**Step D: Manually Configure settings.py**
-
-1. Open django_backend/core/settings.py and make these 4 mandatory changes to connect our Microservices architecture:
-At the very top of the file, add these imports:
-```python
-import os
-import dj_database_url
-```
-
-Scroll to INSTALLED_APPS and add our custom users app to the bottom:
-```python
-INSTALLED_APPS = [
-    'django.contrib.admin',
-    # ...
-    'django.contrib.staticfiles',
-    'users', # <-- ADD THIS LINE
-]
-```
-Scroll to DATABASES, delete the default SQLite configuration, and replace it with this:
-```python
-DATABASES = {
-    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
-}
-```
-At the very bottom of the file, add this line to enable our custom email-based user model:
-```python
-AUTH_USER_MODEL = 'users.User'
-```
-
-*Save the file.*
 
 **IMPORTANT-----WSL / Linux Permission Fix-----**
 
@@ -98,18 +44,36 @@ Now that Django knows about PostgreSQL and our custom users, generate the SQL ta
 
 Migrations has own history. If you are not pulling for the first time, they will add on the top of your local database changes that have been done before
 
-## 3. Share and manage the Database State
+## 2. Share and manage the Database State
 *  **Mock: To generate fake test data (Users, Bots, ELOs):**
     `docker exec -it django_backend python seed_db.py`
 *   **To EXPORT your database to a file (so others can use it):**
-    `docker exec -it django_backend python manage.py dumpdata users > mock_db.json`
+    `docker exec -it django_backend bash -c "mkdir -p fixtures && python manage.py dumpdata users > fixtures/mock_db.json"`
     You can git push it to repo for everybody to use and be on the same page with most up-to-date database.
 *   **To IMPORT a database file your teammate pushed to Git:**
-    `docker exec -it django_backend python manage.py loaddata mock_db.json`
+    `docker exec -it django_backend python manage.py loaddata fixtures/mock_db.json`
 
-## 4. Add new Python Libraries
+## 3. Add new Python Libraries
 If you need a new library (like `requests`):
 1. Add it to `requirements.txt` manually.
 2. Run `make up` to rebuild the container with the new library.
-*If you are pro: To freeze exact versions of what is currently installed, use `docker exec -it django_backend pip freeze > requirements.txt`* 
+*If you are pro: To freeze exact versions of what is currently installed locally at your machine, use `docker exec -it django_backend pip freeze > requirements.txt`* 
 This one-liner will basically rewrite dependencies with your new ones and sum it up in requirements.txt file.
+
+## 4. Add new apps to Django/FastApi
+If you add a new app directory (like Django/users) you need to change settings.py accordingly and push it to the GitHub repository for everybody to use.
+```bash
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'users', 
+    'rest_framework',
+    #<your_new_app,>
+]
+```
+
+After pushing new requirements or settings.py, anyone pulling must remember to migrate models to update one's local database.
