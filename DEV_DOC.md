@@ -12,6 +12,8 @@
    POSTGRES_USER=admin
    POSTGRES_PASSWORD=supersecret42
    DATABASE_URL=postgres://admin:supersecret42@postgres_db:5432/django_db
+
+   SECRET_KEY = <paste_a_random_50_character_string_here>
    ```
 
 **Step B: Build and Boot Containers**
