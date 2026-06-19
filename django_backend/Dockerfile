@@ -13,14 +13,3 @@ COPY . .
 
 # Run the Django development server
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
-
-
-#  !!!!!!!!!! NOTE !!!!!!!!!!!
-
-# on first run uncomment line below
-# CMD ["tail", "-f", "/dev/null"]
-
-# and paste this to terminal to download django package
-# sudo docker exec -it django_backend django-admin startproject core .
-
-# then, rebuild infrastructure
