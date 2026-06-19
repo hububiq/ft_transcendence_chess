@@ -1,0 +1,94 @@
+import { useState } from "react";
+import { MessageSquare, Users, ChevronDown, ChevronUp, Send } from "lucide-react";
+import clsx from "clsx";
+
+const friends = [
+  { id: 1, name: "Kasparov", status: "online", elo: 2800 },
+  { id: 2, name: "JPolgar", status: "online", elo: 2850 },
+  { id: 3, name: "StockFish", status: "offline", elo: 2350 },
+  { id: 4, name: "BotezLive", status: "online", elo: 2000 },
+];
+
+const messages = [
+  { id: 1, sender: "HikaruN", text: "GG well played!" },
+  { id: 2, sender: "You", text: "Thanks, that knight fork was brutal." },
+];
+
+export function SocialSidebar() {
+  const [isChatOpen, setIsChatOpen] = useState(true);
+
+  return (
+    <aside className="w-72 bg-[#050505] border-l border-neutral-900 flex flex-col h-full">
+      <div className="p-4 border-b border-neutral-900 flex items-center gap-2 text-neutral-300 font-medium text-sm">
+        <Users className="w-4 h-4 text-purple-500" />
+        Social Hub
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <div>
+          <h3 className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-3">Friends List</h3>
+          <div className="space-y-1">
+            {friends.map((friend) => (
+              <div key={friend.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-900/50 cursor-pointer transition-colors group">
+                <div className="relative">
+                  <div className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-xs font-bold text-neutral-500">
+                    {friend.name.charAt(0)}
+                  </div>
+                  <div
+                    className={clsx(
+                      "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#050505]",
+                      friend.status === "online" ? "bg-green-500" : "bg-neutral-600"
+                    )}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-neutral-400 group-hover:text-neutral-200 truncate transition-colors">
+                    {friend.name}
+                  </p>
+                  <p className="text-xs text-neutral-600">ELO {friend.elo}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Chat Section */}
+      <div className="bg-black border-t border-neutral-900 flex flex-col">
+        <button
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className="flex items-center justify-between p-4 hover:bg-neutral-900 transition-colors w-full"
+        >
+          <div className="flex items-center gap-2 text-sm font-medium text-neutral-300">
+            <MessageSquare className="w-4 h-4 text-blue-500" />
+            Global Chat
+          </div>
+          {isChatOpen ? <ChevronDown className="w-4 h-4 text-neutral-600" /> : <ChevronUp className="w-4 h-4 text-neutral-600" />}
+        </button>
+
+        {isChatOpen && (
+          <div className="h-72 flex flex-col">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map((msg) => (
+                <div key={msg.id} className="text-sm">
+                  <span className="font-medium text-purple-400">{msg.sender} </span>
+                  <span className="text-neutral-400">{msg.text}</span>
+                </div>
+              ))}
+            </div>
+            <div className="p-3 border-t border-neutral-900 flex gap-2 bg-[#050505]">
+              <input
+                type="text"
+                placeholder="Type a message..."
+                className="flex-1 bg-neutral-900/50 border border-neutral-800 rounded-md px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
+              />
+              <button className="p-2 bg-blue-600 hover:bg-blue-500 rounded-md text-white transition-colors">
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}
