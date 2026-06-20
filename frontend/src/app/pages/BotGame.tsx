@@ -3,33 +3,12 @@ import { Link } from "react-router";
 import { ArrowLeft, Flag, Bot, RotateCcw, ChevronDown } from "lucide-react";
 import clsx from "clsx";
 import { ChessBoardUI } from "./ChessBoard";
-
-type Difficulty = "easy" | "medium" | "hard" | "master";
-
-const DIFFICULTY_CONFIG: Record<
-  Difficulty,
-  { label: string; elo: number; color: string; delay: number }
-> = {
-  easy: { label: "Easy", elo: 800, color: "text-green-500", delay: 1200 },
-  medium: { label: "Medium", elo: 1400, color: "text-yellow-500", delay: 800 },
-  hard: { label: "Hard", elo: 1900, color: "text-orange-500", delay: 500 },
-  master: { label: "Master", elo: 2400, color: "text-red-500", delay: 200 },
-};
-
-const PIECE_SYMBOLS: Record<string, string> = {
-  r: "♜",
-  n: "♞",
-  b: "♝",
-  q: "♛",
-  k: "♚",
-  p: "♟",
-  R: "♖",
-  N: "♘",
-  B: "♗",
-  Q: "♕",
-  K: "♔",
-  P: "♙",
-};
+import {
+  DIFFICULTY_CONFIG,
+  PIECE_SYMBOLS,
+  formatTime,
+} from "../utils/constants";
+import { type Difficulty } from "../utils/constants";
 
 export function BotGame() {
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
@@ -53,9 +32,6 @@ export function BotGame() {
   const [botMoveIndex, setBotMoveIndex] = useState(0);
   const [gameOver, setGameOver] = useState<"win" | "loss" | null>(null);
 
-  const formatTime = (s: number) =>
-    `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
-
   // Player timer
   useEffect(() => {
     if (!gameStarted || !isPlayerTurn || botThinking || gameOver) return;
@@ -70,83 +46,8 @@ export function BotGame() {
     return () => clearInterval(t);
   }, [gameStarted, isPlayerTurn, botThinking, gameOver]);
 
-  const doMockBotMove = useCallback(() => {
-    const moveData = MOCK_BOT_MOVES[botMoveIndex % MOCK_BOT_MOVES.length];
-    const [fr, fc] = moveData.from;
-    const [tr, tc] = moveData.to;
-
-    setPieces((prev) => {
-      const without = prev.filter((p) => !(p.row === tr && p.col === tc));
-      return without.map((p) =>
-        p.row === fr && p.col === fc ? { ...p, row: tr, col: tc } : p,
-      );
-    });
-
-    const cols = "abcdefgh";
-    const notation = `${cols[fc]}${8 - fr}${cols[tc]}${8 - tr}`;
-    setMoveHistory((prev) => {
-      const last = prev[prev.length - 1];
-      if (last && !last.black)
-        return [...prev.slice(0, -1), { ...last, black: notation }];
-      return [...prev, { n: prev.length + 1, white: "...", black: notation }];
-    });
-    setLastMove({ from: [fr, fc], to: [tr, tc] });
-    setBotMoveIndex((i) => i + 1);
-    setBotThinking(false);
-    setIsPlayerTurn(true);
-  }, [botMoveIndex]);
-
-  const handleSquareClick = (row: number, col: number) => {
-    if (!gameStarted || !isPlayerTurn || botThinking || gameOver) return;
-
-    const clickedPiece = pieces.find((p) => p.row === row && p.col === col);
-
-    if (selectedSquare) {
-      const [sr, sc] = selectedSquare;
-      if (sr === row && sc === col) {
-        setSelectedSquare(null);
-        return;
-      }
-
-      const moving = pieces.find((p) => p.row === sr && p.col === sc);
-      if (moving && moving.color === "w") {
-        // Move the piece
-        setPieces((prev) => {
-          const without = prev.filter((p) => !(p.row === row && p.col === col));
-          return without.map((p) =>
-            p.row === sr && p.col === sc ? { ...p, row, col } : p,
-          );
-        });
-
-        const cols = "abcdefgh";
-        const notation = `${cols[sc]}${8 - sr}${cols[col]}${8 - row}`;
-        setMoveHistory((prev) => {
-          const last = prev[prev.length - 1];
-          if (!last || last.black)
-            return [...prev, { n: prev.length + 1, white: notation }];
-          return prev;
-        });
-        setLastMove({ from: [sr, sc], to: [row, col] });
-        setSelectedSquare(null);
-        setIsPlayerTurn(false);
-        setBotThinking(true);
-
-        // Bot responds after delay
-        setTimeout(() => doMockBotMove(), DIFFICULTY_CONFIG[difficulty].delay);
-        return;
-      }
-    }
-
-    if (clickedPiece && clickedPiece.color === "w") {
-      setSelectedSquare([row, col]);
-    } else {
-      setSelectedSquare(null);
-    }
-  };
-
   const handleResign = () => setGameOver("loss");
   const handleRestart = () => {
-    // setPieces(INITIAL_PIECES);
     setSelectedSquare(null);
     setIsPlayerTurn(true);
     setBotThinking(false);
@@ -160,12 +61,6 @@ export function BotGame() {
   };
 
   const cfg = DIFFICULTY_CONFIG[difficulty];
-
-  // const squares = Array.from({ length: 64 }, (_, i) => ({
-  //   row: Math.floor(i / 8),
-  //   col: i % 8,
-  //   isBlack: (Math.floor(i / 8) + (i % 8)) % 2 === 1,
-  // }));
 
   return (
     <div className="min-h-screen bg-black flex flex-col text-neutral-200">

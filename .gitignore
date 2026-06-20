@@ -9,3 +9,5 @@ fastapi_backend/media/
 # Node modules (For React)
 node_modules/
 dist/
+
+backend/
