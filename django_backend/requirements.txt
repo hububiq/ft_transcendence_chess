@@ -1,8 +1,12 @@
 Django>=4.2,<5.0
 psycopg2-binary>=2.9                # The PostgreSQL driver
-Faker
+Faker>=20.0.0
 dj-database-url>=2.1                # Parses URL in the .env file
 django-cors-headers>=4.3            # Fixes browser CORS blocks for React
 django-allauth>=0.58                # For the OAuth2 'Minor' Module
 djangorestframework>=3.14           # For building  REST API
 djangorestframework-simplejwt>=5.3  # For creating the JWT tokens
+requests>=2.31.0
+django-allauth[socialaccount]>=0.58
+cryptography>=41.0.0
+Pillow>=10.0.0                      # for avatar image processing

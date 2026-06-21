@@ -17,8 +17,8 @@ services:
     image: redis:7-alpine
     container_name: redis_broker
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    # ports:
+    #  - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
