@@ -30,7 +30,6 @@ Because Docker runs as the root user, any files it generates (like Python cache 
 sudo chown -R $USER:$USER .
 ```
 
-
 ## Test the Localhost
 Run make re (to restart with the new commands). Open your browser:
  * Django: http://localhost:8000 (You should see {"message": "Django is running"})
@@ -82,7 +81,7 @@ INSTALLED_APPS = [
 
 After pushing new requirements or settings.py, anyone pulling must remember to migrate models to update one's local database.
 
-##  
+
 ## 
 ## DJANGO API CHEAT SHEET (For Frontend & FastAPI)
 
@@ -130,7 +129,7 @@ Milos (React): Because we allow both local uploads and GitHub OAuth logins, the 
 1. `avatar` (Local uploaded file URL, like `/media/avatars/me.jpg`)
 2. `oauth_avatar_url` (External link, like `https://github.com/...`)
 When building the UI, check if `avatar` exists first. If it is null, fallback to `oauth_avatar_url`. If both are null, show a default blank picture "grey silhouette"
-
+##
 ### How to test GitHub OAuth 
 We cannot test GitHub login with curl. OAuth strictly requires a web browser because it forces the user to click an "Authorize" button on GitHub's actual website. We must do this: (i did it on my github)
 Go to GitHub.com -> Settings -> Developer Settings -> OAuth Apps. Create an app. Set the callback URL to http://localhost:8000/accounts/github/login/callback/. GitHub gives a Client ID and Secret.
@@ -138,3 +137,19 @@ Go to Django Admin Panel (http://localhost:8000/admin/).
 Click on Social Applications. Add GitHub, and paste the Client ID and Secret in there.
 Now, if we go to http://localhost:8000/accounts/github/login/ in browser, it will redirect you to GitHub, ask for permission, and create and account.
 **I was able to be redirected, but after clicking "Authorize", I had "This-Party login failure" on django admin panel. - TO BE RESOLVED**
+
+
+##
+### Useful commands
+
+* To check if avatars are uploading to volumes, we can run this command which will create temporary apline container, list files of the volume directory from given path, close container and delete it leaving no trace after it
+```bash
+docker run --rm -v transcendence_media_data:/media alpine ls -R /media
+```
+
+* To check it by running the particular container:
+```bash
+docker exec -it <name_of_container> ls -la /app/media
+```
+In this case, to check avatars on the backend. placeholder should be replaced with "django_backend"
+
