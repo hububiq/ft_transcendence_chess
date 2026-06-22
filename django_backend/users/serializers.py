@@ -6,7 +6,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta: ########### whats this Meta and why is it called like this
         model = Profile
         fields = [
-            'avatar_url', 'location', 'bio', 'theme_color', 
+            'avatar',  'oauth_avatar_url', 'location', 'bio', 'theme_color', 
             'elo_rating', 'peak_rating', 'total_games', 
             'wins', 'losses', 'draws', 'current_streak'
         ]
@@ -25,3 +25,26 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'is_bot', 'bot_difficulty', 
             'oauth_provider', 'date_joined', 'profile'
         ]
+
+class RegisterSerializer(serializers.ModelSerializer):
+    # write_only=True ensures the password is never sent back to the browser in a response!
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['email', 'username', 'password']
+
+    def create(self, validated_data):
+        # 1. Create the User. 
+        # We MUST use create_user() here instead of normal save() because 
+        # create_user() automatically hashes the password
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            username=validated_data['username'],
+            password=validated_data['password']
+        )
+        
+        # 2. Automatically generate their blank Profile with default ELO and 0 wins!
+        Profile.objects.create(user=user)
+        
+        return user

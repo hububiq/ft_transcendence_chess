@@ -30,13 +30,13 @@ Because Docker runs as the root user, any files it generates (like Python cache 
 sudo chown -R $USER:$USER .
 ```
 
-
 ## Test the Localhost
 Run make re (to restart with the new commands). Open your browser:
- * Django: http://localhost:8000 (You should see the Django page!)
+ * Django: http://localhost:8000 (You should see {"message": "Django is running"})
  * FastAPI: http://localhost:8001 (You should see {"message": "FastAPI is running!"})
  * FastAPI Docs: http://localhost:8001/docs (Auto-generated API Swagger docs!)
- * Django RestAPI: https://localhost:8000/api/users/
+ * Django users database in json format through RestAPI: http://localhost:8000/api/users/
+ * Django Admin panel (CRUD): http://localhost:8000/admin/
 
 ## 1. Initialize/Sync the Database (Migrations)
 Now that Django knows about PostgreSQL and our custom users, generate the SQL tables:
@@ -80,3 +80,76 @@ INSTALLED_APPS = [
 ```
 
 After pushing new requirements or settings.py, anyone pulling must remember to migrate models to update one's local database.
+
+
+## 
+## DJANGO API CHEAT SHEET (For Frontend & FastAPI)
+
+Our Django backend acts as the core Auth & Profile microservice. Here are the endpoints currently available:
+
+### Authentication (JWT)
+*   **POST** `/api/login/` -> Send `email` and `password` of one of the database profiles. Returns JWT `access` and `refresh` tokens.
+```bash
+curl -X POST http://localhost:8000/api/login/ \
+-H "Content-Type: application/json" \
+-d '{"email":"h@test.com","password":"123"}'
+```
+* Copy the long string next to "access": .Will be used in the next commands.
+*   **POST** `/api/token/refresh/` -> Send `refresh` token to get a new access token.
+*   **POST** `/api/register/` -> Send `email`, `username`, and `password`. Automatically generates a blank Profile.
+
+### Public Data (Leaderboards)
+*   **GET** `/api/users/` -> Returns a JSON list of all users and their stats.
+
+### Protected Actions (Requires `Authorization: Bearer <token>` Header)
+*   **GET** `/api/me/` -> Returns the logged-in user's profile.
+```bash
+curl -X GET http://localhost:8000/api/me/ \
+-H "Authorization: Bearer PASTE_YOUR_ACCESS_TOKEN_HERE"
+```
+*   **PUT** `/api/me/update/` -> Send JSON (e.g. `{"bio": "hello", "location": "Poland"}`) to edit your profile.
+```bash
+curl -X PUT http://localhost:8000/api/me/update/ \
+-H "Authorization: Bearer PASTE_YOUR_ACCESS_TOKEN_HERE" \
+-H "Content-Type: application/json" \
+-d '{"bio":"I just updated this via cURL!","location":"Poland"}'
+```
+*   **POST** `/api/me/avatar/` -> Send `multipart/form-data` with an image file named `avatar` to upload a local picture.
+```bash
+curl -X POST http://localhost:8000/api/me/avatar/ \
+-H "Authorization: Bearer PASTE_YOUR_ACCESS_TOKEN_HERE" \
+-F "avatar=@test.jpg"
+```
+
+### Microservice Internal APIs (For FastAPI)
+*   **POST** `/api/update-elo/` -> (FastAPI use only) Send `winner_id` and `loser_id` to mathematically update ELO ratings after a match.
+
+### Frontend Architecture Note: The "Two-Avatar" System
+Milos (React): Because we allow both local uploads and GitHub OAuth logins, the Profile JSON contains TWO avatar fields:
+1. `avatar` (Local uploaded file URL, like `/media/avatars/me.jpg`)
+2. `oauth_avatar_url` (External link, like `https://github.com/...`)
+When building the UI, check if `avatar` exists first. If it is null, fallback to `oauth_avatar_url`. If both are null, show a default blank picture "grey silhouette"
+##
+### How to test GitHub OAuth 
+We cannot test GitHub login with curl. OAuth strictly requires a web browser because it forces the user to click an "Authorize" button on GitHub's actual website. We must do this: (i did it on my github)
+Go to GitHub.com -> Settings -> Developer Settings -> OAuth Apps. Create an app. Set the callback URL to http://localhost:8000/accounts/github/login/callback/. GitHub gives a Client ID and Secret.
+Go to Django Admin Panel (http://localhost:8000/admin/).
+Click on Social Applications. Add GitHub, and paste the Client ID and Secret in there.
+Now, if we go to http://localhost:8000/accounts/github/login/ in browser, it will redirect you to GitHub, ask for permission, and create and account.
+**I was able to be redirected, but after clicking "Authorize", I had "This-Party login failure" on django admin panel. - TO BE RESOLVED**
+
+
+##
+### Useful commands
+
+* To check if avatars are uploading to volumes, we can run this command which will create temporary apline container, list files of the volume directory from given path, close container and delete it leaving no trace after it
+```bash
+docker run --rm -v transcendence_media_data:/media alpine ls -R /media
+```
+
+* To check it by running the particular container:
+```bash
+docker exec -it <name_of_container> ls -la /app/media
+```
+In this case, to check avatars on the backend. placeholder should be replaced with "django_backend"
+

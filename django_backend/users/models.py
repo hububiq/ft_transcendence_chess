@@ -19,7 +19,8 @@ class User(AbstractUser):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE) #foreign key, CASCADE for deleting in case of deleting mother table
     
-    avatar_url = models.URLField(null=True, blank=True)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    oauth_avatar_url = models.URLField(null=True, blank=True)
     location = models.CharField(max_length=100, null=True, blank=True)
     bio = models.TextField(null=True, blank=True)
     theme_color = models.CharField(max_length=20, default='dark')

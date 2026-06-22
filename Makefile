@@ -26,8 +26,13 @@ fclean:
 	@echo "WARNING: This will DESTROY the database and all volumes! ⚠️"
 	@read -p "Are you ABSOLUTELY sure you want to wipe data? Type 'yes' to continue: " confirm; \
 	if [ "$$confirm" = "yes" ]; then \
-		echo "Nuking project..."; \
+		echo "Stopping all global containers to release resources..."; \
+		docker stop $$(docker ps -aq) 2>/dev/null || true; \
+		echo "Nuking project and forcing volume removal..."; \
 		$(DOCKER_COMPOSE) down -v --rmi all --remove-orphans; \
+		echo "Pruning remaining dangling volumes and system cache..."; \
+		docker volume prune -f; \
+		docker system prune -f; \
 	else \
 		echo "Aborted fclean. Your data is safe."; \
 	fi

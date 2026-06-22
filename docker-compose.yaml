@@ -1,6 +1,10 @@
+name: transcendence
+
 services:
   postgres_db:
-    image: postgres:15-alpine
+    build:                                
+      context: ./postgres_setup           
+      dockerfile: Dockerfile              
     container_name: postgres_db
     restart: unless-stopped
     env_file:
@@ -9,7 +13,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres_setup/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - transcendence_net
 
@@ -17,8 +20,8 @@ services:
     image: redis:7-alpine
     container_name: redis_broker
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    # ports:
+    #  - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
