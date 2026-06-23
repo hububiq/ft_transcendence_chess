@@ -15,6 +15,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - transcendence_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
 
   redis_broker:
     image: redis:7-alpine
@@ -43,8 +48,10 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - postgres_db
-      - redis_broker
+      postgres_db:
+        condition: service_healthy
+      redis_broker:
+        condition: service_started
     networks:
       - transcendence_net
 
@@ -61,8 +68,10 @@ services:
     ports:
       - "8001:8001"
     depends_on:
-      - postgres_db
-      - redis_broker
+      postgres_db:
+        condition: service_healthy
+      redis_broker:
+        condition: service_started
     networks:
       - transcendence_net
 
