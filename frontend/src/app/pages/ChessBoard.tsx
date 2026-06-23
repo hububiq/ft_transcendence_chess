@@ -3,10 +3,15 @@ import { Chess } from "chess.js";
 import { type Square } from "chess.js";
 import { type PieceDropHandlerArgs } from "react-chessboard";
 import { type SquareHandlerArgs } from "react-chessboard";
+import { type GameOutcome } from "../utils/constants";
 
 import { Chessboard } from "react-chessboard";
 
-export function ChessBoardUI() {
+interface ChessBoardUIProps {
+  onGameEnd: (outcome: GameOutcome) => void;
+}
+
+export function ChessBoardUI({ onGameEnd }: ChessBoardUIProps) {
   // create a chess game using a ref to always have access to the latest game state within closures and maintain the game state across renders
   const chessGameRef = useRef(new Chess());
   const chessGame = chessGameRef.current;
@@ -156,6 +161,14 @@ export function ChessBoardUI() {
         to: targetSquare,
         promotion: "q", // always promote to a queen for example simplicity
       });
+
+      // Game Over validation
+      if (chessGame.isCheckmate()) {
+        // If the turn just ended and it's the bot's turn to move next, the Player caused the checkmate!
+        onGameEnd(chessGame.turn() === "b" ? "win" : "loss");
+      } else if (chessGame.isDraw() || chessGame.isStalemate()) {
+        onGameEnd("draw");
+      }
 
       // update the position state upon successful move to trigger a re-render of the chessboard
       setChessPosition(chessGame.fen());

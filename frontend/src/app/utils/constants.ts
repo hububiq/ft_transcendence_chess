@@ -1,6 +1,6 @@
-import { useState } from "react";
-
 export type Difficulty = "easy" | "medium" | "hard" | "master";
+
+export type GameOutcome = "win" | "loss" | "draw";
 
 export const DIFFICULTY_CONFIG: Record<
   Difficulty,
