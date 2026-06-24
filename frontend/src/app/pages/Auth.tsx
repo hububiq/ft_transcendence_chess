@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import React, { useState } from "react";
+import { useNavigate } from "react-router";
 import { Upload, Mail, Lock, User, ArrowRight } from "lucide-react";
 import git_logo from "../assets/github.svg";
 import google_logo from "../assets/google.svg";
@@ -12,6 +12,7 @@ function GoogleIcon() {
 }
 
 export function Auth() {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [oauthLoading, setOauthLoading] = useState<"github" | "google" | null>(
     null,
@@ -23,13 +24,51 @@ export function Auth() {
     setTimeout(() => setOauthLoading(null), 1500);
   };
 
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const endpoint = isLogin ? "api/login/" : "api/register/";
+
+  async function handleAuthSubmit(e: React.SyntheticEvent) {
+    e.preventDefault();
+    setErrorMessage(null);
+    try {
+      // https://httpbin.org/post -- for test
+      const response = await fetch(`http://localhost:8000/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        const backendReason =
+          data.error || data.detail || data.message || "Invalid credentials.";
+        setErrorMessage(backendReason);
+        setPassword("");
+        return;
+      }
+      localStorage.setItem("access_token", data.access_token);
+      setErrorMessage(null);
+      navigate("/");
+      console.log("Django's response:", data);
+    } catch (error) {
+      setErrorMessage(`Network problem: ${error}.`);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
       <div className="w-full max-w-md bg-[#050505] border border-neutral-900 rounded-2xl shadow-2xl relative z-10 overflow-hidden">
         <div className="p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold tracking-wider text-white flex items-center justify-center gap-2 mb-2">
-              <span className="text-blue-500">CHESS</span>42
+              <span className="text-blue-500">Chess</span>42
             </h1>
             <p className="text-neutral-500 text-sm">
               {isLogin
@@ -67,7 +106,12 @@ export function Auth() {
             </button>
           </div>
 
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-4" onSubmit={handleAuthSubmit}>
+            {errorMessage && (
+              <div className="p-3 bg-red-950/50 border border-red-800 rounded-lg text-red-400 text-sm text-center">
+                {errorMessage}
+              </div>
+            )}
             {!isLogin && (
               <div className="flex justify-center mb-6">
                 <div className="relative group cursor-pointer">
@@ -87,6 +131,8 @@ export function Auth() {
                   <User className="w-5 h-5 text-neutral-600" />
                 </div>
                 <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   type="text"
                   placeholder="Username"
                   className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
@@ -99,6 +145,8 @@ export function Auth() {
                 <Mail className="w-5 h-5 text-neutral-600" />
               </div>
               <input
+                value={email} //<-- Prop A: "Look at my React state to know what to draw"
+                onChange={(e) => setEmail(e.target.value)} // <-- Prop B: "When typed in, update my state"
                 type="email"
                 placeholder="Email address"
                 className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
@@ -110,19 +158,21 @@ export function Auth() {
                 <Lock className="w-5 h-5 text-neutral-600" />
               </div>
               <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 type="password"
                 placeholder="Password"
                 className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
               />
             </div>
 
-            <Link
-              to="/"
+            <button
+              type="submit"
               className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all"
             >
               {isLogin ? "Enter Arena" : "Create Account"}
               <ArrowRight className="w-4 h-4" />
-            </Link>
+            </button>
           </form>
 
           <div className="mt-6 text-center">

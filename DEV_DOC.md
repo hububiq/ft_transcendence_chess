@@ -37,7 +37,7 @@ Run make re (to restart with the new commands). Open your browser:
  * FastAPI Docs: http://localhost:8001/docs (Auto-generated API Swagger docs!)
  * Django users database in json format through RestAPI: http://localhost:8000/api/users/
  * Django Admin panel (CRUD): http://localhost:8000/admin/
-
+ * Our frontend mockup website with Typescript on Vite server: http://localhost:3000
 ## 1. Initialize/Sync the Database (Migrations)
 Now that Django knows about PostgreSQL and our custom users, generate the SQL tables:
 

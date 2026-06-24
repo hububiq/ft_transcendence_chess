@@ -7,8 +7,13 @@ __pycache__/
 fastapi_backend/media/
 frontend/Dockerfile-production
 
-# Node modules (For React)
+# (For React)
 node_modules/
+frontend/node_modules/
 dist/
+frontend/dist/
+frontend/build/
+build/
+
 
 backend/
