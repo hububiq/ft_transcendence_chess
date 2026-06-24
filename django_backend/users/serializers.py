@@ -3,7 +3,7 @@ from .models import User, Profile
 
 # 1. THE PROFILE TRANSLATOR
 class ProfileSerializer(serializers.ModelSerializer):
-    class Meta: ########### whats this Meta and why is it called like this
+    class Meta:
         model = Profile
         fields = [
             'avatar',  'oauth_avatar_url', 'location', 'bio', 'theme_color', 
