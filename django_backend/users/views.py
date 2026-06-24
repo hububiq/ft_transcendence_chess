@@ -96,3 +96,37 @@ def upload_avatar(request):
     
     # Django automatically saves the file to /app/media/avatars/ and generates a new URL!
     return Response({"message": "Avatar uploaded!", "avatar_url": profile.avatar.url}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_friends(request):
+    friends = request.user.friends.all()
+    # Translate them into JSON (many=True because it's a list)
+    serializer = UserSerializer(friends, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_friend(request, user_id):
+    if request.user_id == user_id:
+        return Response({"error": "You cannot add yourself as a friend."}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        target_user = User.objects.get(id=used_id)
+        request.user.friends.add(target_user)
+        return Respone({"message": f"Successfully added {target_user.username} tp friends."}, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def remove_friend(request, user_id):
+    try:
+        target_user = User.objects.get(id=user_id)
+        # Django removes them from the hidden junction table!
+        request.user.friends.remove(target_user)
+        return Response({"message": f"Successfully removed {target_user.username} from friends."}, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
