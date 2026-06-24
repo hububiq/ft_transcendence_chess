@@ -11,11 +11,21 @@ Table Users {
   date_joined timestamp
 }
 
+Table User_Friends {
+  id integer [primary key]
+  from_user_id integer [note: 'Strict Foreign Key']
+  to_user_id integer [note: 'Strict Foreign Key']
+}
+
+Ref: User_Friends.from_user_id > Users.id
+Ref: User_Friends.to_user_id > Users.id
+
 Table Profiles {
   id integer [primary key]
   user_id integer [note: 'Strict Foreign Key']
   username varchar [unique]
   avatar_url varchar
+  is_online boolean [default: false]
   location varchar
   bio text
   theme_color varchar [default: 'dark']
