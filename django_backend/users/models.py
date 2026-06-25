@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 class User(AbstractUser):
     email = models.EmailField(unique=True)
 
+    friends = models.ManyToManyField('self', blank=True, symmetrical=True)
     oauth_provider = models.CharField(max_length=50, null=True, blank=True)
     oauth_id = models.CharField(max_length=100, null=True, blank=True)
 
@@ -24,7 +25,7 @@ class Profile(models.Model):
     location = models.CharField(max_length=100, null=True, blank=True)
     bio = models.TextField(null=True, blank=True)
     theme_color = models.CharField(max_length=20, default='dark')
-    
+    is_online = models.BooleanField(default=False)
     elo_rating = models.IntegerField(default=1200)
     peak_rating = models.IntegerField(default=1200)
     total_games = models.IntegerField(default=0)

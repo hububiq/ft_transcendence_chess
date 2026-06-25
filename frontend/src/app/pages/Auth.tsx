@@ -31,6 +31,7 @@ export function Auth() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const endpoint = isLogin ? "api/login/" : "api/register/";
+  const payload = isLogin ? { email, password } : { username, email, password };
 
   async function handleAuthSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
@@ -40,10 +41,7 @@ export function Auth() {
       const response = await fetch(`http://localhost:8000/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          password,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
       if (!response.ok) {

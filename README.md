@@ -1,6 +1,10 @@
 # ft_transcendence
 
+
 Team-based, final Core Curriculum project in 42 Warsaw coding academy. Assignment is about creating single page application which transcend members more into full-stack developers. While having modular approach and key architectural decisions to make, it also demonstrates technical depth and big-picture-creativity. Our team decided to go with **web chess platform** with 1vs1, multiplayer with spectators mode, AI opponent and more.
+
+## Database scheme
+![Application Screenshot](docs/transcendence-database-schema.png)
 
 ## Architecture summary and technology justification
 
