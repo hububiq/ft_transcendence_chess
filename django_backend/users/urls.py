@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     UserViewSet, register_user, update_elo, 
     update_my_profile, upload_avatar, get_my_profile,
-    list_friends, add_friend, remove_friend 
+    list_friends, add_friend, remove_friend,
+    GithubLogin 
 )
 
 
@@ -23,4 +24,6 @@ urlpatterns = [
     path('friends/add/<int:user_id>/', add_friend, name='add_friend'),
     path('friends/remove/<int:user_id>/', remove_friend, name='remove_friend'),
     path('', include(router.urls)),
+
+    path('github/login/', GithubLogin.as_view(), name='github_login'),
 ]

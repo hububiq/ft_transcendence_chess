@@ -6,6 +6,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from .serializers import RegisterSerializer
+from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from dj_rest_auth.registration.views import SocialLoginView
 
 # This ViewSet automatically generates GET, POST, PUT, and DELETE logic
 class UserViewSet(viewsets.ModelViewSet):
@@ -130,3 +133,8 @@ def remove_friend(request, user_id):
         return Response({"message": f"Successfully removed {target_user.username} from friends."}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+class GithubLogin(SocialLoginView):
+    adapter_class = GitHubOAuth2Adapter
+    callback_url = "http://localhost:3000/auth/github/callback" 
+    client_class = OAuth2Client
