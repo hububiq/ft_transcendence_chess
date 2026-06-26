@@ -6,7 +6,8 @@
 **Step A: Configure Environment Variables (.env)**
 1. Copy the `.env.example` file and rename it to `.env`.
 
-2. **PASSWORD COMPLIANCE:** You must ensure the password defined in `POSTGRES_PASSWORD` perfectly matches the password written inside the `DATABASE_URL` string. If they do not match, PostgreSQL will lock Django out
+2. **PASSWORD COMPLIANCE:** You must ensure the password defined in `POSTGRES_PASSWORD` perfectly matches the password written inside the `DATABASE_URL` string. If they do not match, PostgreSQL will lock Django out.
+**Django project SECRET_KEY** you can generate at https://djecrety.ir/ and copy paste to your own .env.
    ```env
     # Example: 'supersecret42' MUST be exactly the same in both places!
    POSTGRES_USER=admin
