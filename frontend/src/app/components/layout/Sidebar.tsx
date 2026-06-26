@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router";
 import { Play, Trophy, User, Settings, LogOut, Palette } from "lucide-react";
 import clsx from "clsx";
+import type path from "path";
 
 export function Sidebar() {
   const location = useLocation();
@@ -18,7 +19,12 @@ export function Sidebar() {
       <div>
         <div className="p-6">
           <h1 className="text-2xl font-bold tracking-wider text-white flex items-center gap-2">
-            Chess42
+			{<Link
+				key="Play"
+				to={"/"}
+			>
+            	Chess42
+			</Link>}
           </h1>
         </div>
 
@@ -56,10 +62,10 @@ export function Sidebar() {
           />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-neutral-200 truncate">
-              GrandMaster42
+              *GrandMaster42
             </p>
             <p className="text-xs text-blue-500 font-semibold mt-0.5">
-              ELO: 2145
+              *ELO: 2145
             </p>
           </div>
         </Link>

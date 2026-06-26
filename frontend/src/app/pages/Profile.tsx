@@ -43,7 +43,7 @@ export function Profile() {
               <div className="flex items-center gap-2">
                 <div className="bg-blue-600/10 border border-blue-500/30 text-blue-400 px-3 py-1 rounded-lg text-sm font-semibold flex items-center gap-1.5">
                   <Crown className="w-4 h-4" />
-                  ELO: 2145
+                  *ELO: 2145
                 </div>
               </div>
             </div>
@@ -51,25 +51,25 @@ export function Profile() {
             <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-400 mb-4">
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                grandmaster42@42warsaw.pl
+                *grandmaster42@42warsaw.pl
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
-                Warsaw, Poland
+                *Warsaw, Poland
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                Joined January 2024
+                *Joined January 2024
               </div>
             </div>
 
             <p className="text-neutral-300 text-sm max-w-2xl">
-              Passionate chess player specializing in aggressive opening play and endgame tactics. Always looking for challenging opponents and new strategies to master.
+              (Takes from from)Passionate chess player specializing in aggressive opening play and endgame tactics. Always looking for challenging opponents and new strategies to master.
             </p>
           </div>
 
           <button className="bg-neutral-900 hover:bg-neutral-800 text-white font-medium py-2.5 px-6 rounded-lg border border-neutral-800 transition-colors">
-            Edit Profile
+            *Edit Profile
           </button>
         </div>
       </div>

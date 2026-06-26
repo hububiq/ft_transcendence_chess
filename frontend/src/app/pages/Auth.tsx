@@ -46,6 +46,7 @@ export function Auth() {
       if (!response.ok) {
         const backendReason =
           data.error || data.detail || data.message || "Invalid credentials.";
+		console.log(`Backend reason: ${backendReason}`);
         setErrorMessage(backendReason);
         setPassword("");
         return;
