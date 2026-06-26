@@ -37,7 +37,6 @@ export function Auth() {
     e.preventDefault();
     setErrorMessage(null);
     try {
-      // https://httpbin.org/post -- for test
       const response = await fetch(`http://localhost:8000/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,7 +50,8 @@ export function Auth() {
         setPassword("");
         return;
       }
-      localStorage.setItem("access_token", data.access_token);
+      const token = data.access || data.access_token;
+      localStorage.setItem("access_token", token);
       setErrorMessage(null);
       navigate("/");
       console.log("Django's response:", data);
