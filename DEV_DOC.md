@@ -42,12 +42,20 @@ Run make re (to restart with the new commands). Open your browser:
 Now that Django knows about PostgreSQL and our custom users, generate the SQL tables:
 
 *(Do this also after git pull! If someone changed `models.py`, you must update your local database)*
+
+Just type `make migrate`- below commands are for pro.
+
 * `docker exec -it django_backend python manage.py makemigrations`
 * `docker exec -it django_backend python manage.py migrate`
+
+
 
 Migrations has own history. If you are not pulling for the first time, they will add on the top of your local database changes that have been done before
 
 ## 2. Share and manage the Database State
+
+In our setup, it's better to load the data which is in django_backend/fixtures/mock_db_json so we are all synchronized. (type point nr 3 from below (loaddata))
+
 *  **Mock: To generate fake test data (Users, Bots, ELOs):**
     `docker exec -it django_backend python seed_db.py`
 *   **To EXPORT your database to a file (so others can use it):**
