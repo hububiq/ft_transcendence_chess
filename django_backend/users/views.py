@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from .models import User
+from .models import User, Profile
 from .serializers import UserSerializer
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -77,14 +77,35 @@ def get_my_profile(request):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_my_profile(request):
-    profile = request.user.profile 
+    user = request.user
+    profile = user.profile
+    
+    if 'email' in request.data:
+        new_email = request.data['email']
+        if User.objects.filter(email=new_email).exclude(id=user.id).exists():
+            return Response({"error": "This email is already in use."}, status=status.HTTP_400_BAD_REQUEST)
+        user.email = new_email
+        
+    user.save()
 
-    profile.bio = request.data.get('bio', profile.bio)
-    profile.location = request.data.get('location', profile.location)
-    profile.theme_color = request.data.get('theme_color', profile.theme_color)
+    if 'username' in request.data:
+        new_username = request.data['username']
+        if Profile.objects.filter(username=new_username).exclude(id=profile.id).exists():
+            return Response({"error": "This username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+        profile.username = new_username
 
+    if 'bio' in request.data:
+        profile.bio = request.data['bio']
+        
+    if 'location' in request.data:
+        profile.location = request.data['location']
+
+    if 'avatar' in request.FILES:
+        profile.avatar = request.FILES['avatar']
+        
     profile.save()
-    return Response({"message": "Profile updated successfully"}, status=status.HTTP_200_OK)
+    
+    return Response({"message": "Profile updated successfully!"}, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -116,9 +137,9 @@ def add_friend(request, user_id):
         return Response({"error": "You cannot add yourself as a friend."}, status=status.HTTP_400_BAD_REQUEST)
     
     try:
-        target_user = User.objects.get(id=used_id)
+        target_user = User.objects.get(id=user_id)
         request.user.friends.add(target_user)
-        return Respone({"message": f"Successfully added {target_user.username} tp friends."}, status=status.HTTP_200_OK)
+        return Response({"message": f"Successfully added {target_user.username} tp friends."}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
