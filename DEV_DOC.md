@@ -79,7 +79,10 @@ INSTALLED_APPS = [
 ]
 ```
 
-After pushing new requirements or settings.py, anyone pulling must remember to migrate models to update one's local database.
+After pushing new requirements or settings.py, anyone pulling must remember to migrate models to update one's local database and setup OAuth infrastructure (requires client ID and secret github key - ask superuser for that)
+```bash
+sudo docker exec -it django_backend python setup_oauth.py
+```
 
 
 ## 

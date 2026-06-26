@@ -8,5 +8,6 @@ djangorestframework>=3.14           # For building  REST API
 djangorestframework-simplejwt>=5.3  # For creating the JWT tokens
 requests>=2.31.0
 django-allauth[socialaccount]>=0.58
+dj-rest-auth[with_social]>=5.0.1    # bridge between React and allauth 
 cryptography>=41.0.0
 Pillow>=10.0.0                      # for avatar image processing
