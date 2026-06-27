@@ -1,7 +1,17 @@
 import { Link, useLocation } from "react-router";
 import { Play, Trophy, User, Settings, LogOut, Palette } from "lucide-react";
 import clsx from "clsx";
-import type path from "path";
+// import type path from "path";
+// import { customFetch } from "../../../api";
+import axios from "axios";
+import { useEffect, useState } from "react";
+
+interface UserData {
+  username: string;
+  profile: {
+    elo_rating: number;
+  };
+}
 
 export function Sidebar() {
   const location = useLocation();
@@ -14,17 +24,43 @@ export function Sidebar() {
     { name: "Design System", path: "/design-system", icon: Palette },
   ];
 
+  const [items, setItems] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const token = localStorage.getItem("access_token");
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const response = await axios.get("http://localhost:8000/api/me/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setItems(response.data);
+      } catch (err) {
+        setError(`${err}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchItems();
+  });
+
+  console.log(items);
+  console.log(error);
+
   return (
     <aside className="w-64 bg-[#050505] border-r border-neutral-900 flex flex-col justify-between h-full">
       <div>
         <div className="p-6">
           <h1 className="text-2xl font-bold tracking-wider text-white flex items-center gap-2">
-			{<Link
-				key="Play"
-				to={"/"}
-			>
-            	Chess42
-			</Link>}
+            {
+              <Link key="Play" to={"/"}>
+                Chess42
+              </Link>
+            }
           </h1>
         </div>
 
@@ -62,10 +98,10 @@ export function Sidebar() {
           />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-neutral-200 truncate">
-              *GrandMaster42
+              {items?.username}
             </p>
             <p className="text-xs text-blue-500 font-semibold mt-0.5">
-              *ELO: 2145
+              ELO: {items?.profile?.elo_rating}
             </p>
           </div>
         </Link>

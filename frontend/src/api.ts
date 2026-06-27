@@ -1,4 +1,7 @@
-export async function customFetch(endpoint: string, options?: RequestInit): Promise<Response> {
+export async function customFetch(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<Response> {
   const baseUrl = import.meta.env.VITE_BASE_API_URL;
   const token = localStorage.getItem("access_token");
 
@@ -14,16 +17,15 @@ export async function customFetch(endpoint: string, options?: RequestInit): Prom
     ...options,
     headers: {
       ...headers,
-      ...(options?.headers as Record<string, string> || {}),
+      ...((options?.headers as Record<string, string>) || {}),
     },
   };
-
   const response = await fetch(`${baseUrl}/${endpoint}`, finalConfig);
-
   if (response.status === 401) {
     localStorage.removeItem("access_token");
-    window.location.href = "/"; 
+    window.location.href = "/";
   }
 
+  console.log(`Response from api.ts: ${response.status}`);
   return response;
 }

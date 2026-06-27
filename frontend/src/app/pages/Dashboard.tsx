@@ -1,30 +1,91 @@
 import { Link } from "react-router";
 import { Swords, Trophy, Clock, ChevronRight, Bot } from "lucide-react";
 import clsx from "clsx";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 const matchHistory = [
-  { id: 1, opponent: "ChessMaster99", result: "Win", eloChange: "+12", date: "2 hrs ago", type: "Blitz 3|0" },
-  { id: 2, opponent: "KnightRider", result: "Loss", eloChange: "-9", date: "5 hrs ago", type: "Rapid 10|0" },
-  { id: 3, opponent: "QueenGambit", result: "Win", eloChange: "+15", date: "1 day ago", type: "Bullet 1|0" },
+  {
+    id: 1,
+    opponent: "ChessMaster99",
+    result: "Win",
+    eloChange: "+12",
+    date: "2 hrs ago",
+    type: "Blitz 3|0",
+  },
+  {
+    id: 2,
+    opponent: "KnightRider",
+    result: "Loss",
+    eloChange: "-9",
+    date: "5 hrs ago",
+    type: "Rapid 10|0",
+  },
+  {
+    id: 3,
+    opponent: "QueenGambit",
+    result: "Win",
+    eloChange: "+15",
+    date: "1 day ago",
+    type: "Bullet 1|0",
+  },
 ];
 
+interface UserData {
+  username: string;
+  profile: {
+    elo_rating: number;
+  };
+}
+
 export function Dashboard() {
+  const [items, setItems] = useState<UserData | null>(null);
+
+  const token = localStorage.getItem("access_token");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchItems = async () => {
+      try {
+        const response = await axios.get("http://localhost:8000/api/me/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setItems(response.data);
+      } catch (err) {
+        setError(`${err}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchItems();
+  });
+
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
       {/* Header Area */}
       <div className="flex items-center justify-between pt-4">
         <div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">Welcome back, GrandMaster42</h2>
-          <p className="text-neutral-500 mt-1.5 text-sm">Ready for your next challenge?</p>
+          <h2 className="text-3xl font-bold text-white tracking-tight">
+            Welcome back, {items?.username}
+          </h2>
+          <p className="text-neutral-500 mt-1.5 text-sm">
+            Ready for your next challenge?
+          </p>
         </div>
       </div>
 
       {/* Main Action Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-[#0a0a0a] border border-neutral-800 p-10 flex flex-col items-center justify-center text-center">
         <Swords className="w-12 h-12 text-blue-500 mb-6 relative z-10" />
-        <h3 className="text-2xl font-bold text-white mb-2 relative z-10">Find a Match</h3>
+        <h3 className="text-2xl font-bold text-white mb-2 relative z-10">
+          Find a Match
+        </h3>
         <p className="text-neutral-400 mb-8 max-w-md relative z-10 text-sm leading-relaxed">
-          Join the global queue and play against opponents of similar skill level instantly.
+          Join the global queue and play against opponents of similar skill
+          level instantly.
         </p>
         <div className="relative z-10 flex gap-3">
           <Link
@@ -52,17 +113,24 @@ export function Dashboard() {
               <Trophy className="w-4 h-4 text-purple-500" />
               Active Tournaments
             </h3>
-            <Link to="/tournament" className="text-xs font-medium text-blue-500 hover:text-blue-400 flex items-center">
+            <Link
+              to="/tournament"
+              className="text-xs font-medium text-blue-500 hover:text-blue-400 flex items-center"
+            >
               View All <ChevronRight className="w-3 h-3 ml-1" />
             </Link>
           </div>
-          
+
           <div className="space-y-3">
             <div className="bg-black border border-neutral-900 rounded-lg p-4 hover:border-purple-500/30 transition-colors cursor-pointer group">
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <h4 className="text-sm font-medium text-neutral-200 group-hover:text-white transition-colors">Weekend Blitz Arena</h4>
-                  <p className="text-xs text-neutral-500 mt-1">Starts in 2 hours</p>
+                  <h4 className="text-sm font-medium text-neutral-200 group-hover:text-white transition-colors">
+                    Weekend Blitz Arena
+                  </h4>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Starts in 2 hours
+                  </p>
                 </div>
                 <span className="bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] px-2 py-1 rounded font-semibold uppercase tracking-wider">
                   1000 Pts
@@ -70,7 +138,10 @@ export function Dashboard() {
               </div>
               <div className="flex -space-x-2 mt-4">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="w-7 h-7 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-[10px] text-neutral-500 font-medium">
+                  <div
+                    key={i}
+                    className="w-7 h-7 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-[10px] text-neutral-500 font-medium"
+                  >
                     {i}
                   </div>
                 ))}
@@ -93,25 +164,40 @@ export function Dashboard() {
 
           <div className="space-y-2">
             {matchHistory.map((match) => (
-              <div key={match.id} className="flex items-center justify-between p-3 rounded-lg bg-black border border-neutral-900 hover:border-neutral-800 transition-colors">
+              <div
+                key={match.id}
+                className="flex items-center justify-between p-3 rounded-lg bg-black border border-neutral-900 hover:border-neutral-800 transition-colors"
+              >
                 <div className="flex items-center gap-4">
-                  <div className={clsx(
-                    "w-1 h-8 rounded-full",
-                    match.result === "Win" ? "bg-green-500" : "bg-red-500"
-                  )} />
+                  <div
+                    className={clsx(
+                      "w-1 h-8 rounded-full",
+                      match.result === "Win" ? "bg-green-500" : "bg-red-500",
+                    )}
+                  />
                   <div>
-                    <p className="text-sm font-medium text-neutral-300">{match.opponent}</p>
-                    <p className="text-xs text-neutral-600 mt-0.5">{match.type} • {match.date}</p>
+                    <p className="text-sm font-medium text-neutral-300">
+                      {match.opponent}
+                    </p>
+                    <p className="text-xs text-neutral-600 mt-0.5">
+                      {match.type} • {match.date}
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={clsx(
-                    "text-sm font-semibold",
-                    match.result === "Win" ? "text-green-500" : "text-red-500"
-                  )}>
+                  <p
+                    className={clsx(
+                      "text-sm font-semibold",
+                      match.result === "Win"
+                        ? "text-green-500"
+                        : "text-red-500",
+                    )}
+                  >
                     {match.result}
                   </p>
-                  <p className="text-xs text-neutral-500 mt-0.5">{match.eloChange}</p>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    {match.eloChange}
+                  </p>
                 </div>
               </div>
             ))}
