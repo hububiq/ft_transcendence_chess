@@ -15,6 +15,7 @@ router.register(r'users', UserViewSet)
 urlpatterns = [
     path('register/', register_user, name='register'),
     path('update-elo/', update_elo, name='update_elo'),
+	
     path('me/', get_my_profile, name='my_profile'),
     path('me/update/', update_my_profile, name='update_profile'),
     path('me/avatar/', upload_avatar, name='upload_avatar'),
