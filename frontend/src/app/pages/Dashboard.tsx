@@ -9,9 +9,7 @@ import {
   ServerOff,
 } from "lucide-react";
 import clsx from "clsx";
-import { useState, useEffect } from "react";
-import axios from "axios";
-// import { customFetch } from "../../api";
+import { useUser } from "../utils/hooks/useUser";
 
 const matchHistory = [
   {
@@ -40,39 +38,8 @@ const matchHistory = [
   },
 ];
 
-interface UserData {
-  username: string;
-  profile: {
-    elo_rating: number;
-  };
-}
-const token = localStorage.getItem("access_token");
-
 export function Dashboard() {
-  const [items, setItems] = useState<UserData | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const response = await axios.get("http://localhost:8000/api/me/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setItems(response.data);
-      } catch (error) {
-        setError(`Dashboard: ${error.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchItems();
-  }, []);
-
-  console.log(items);
-  console.log(error);
+  const { user, loading, error } = useUser();
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
@@ -82,7 +49,7 @@ export function Dashboard() {
           {loading && <Loader />}
           {!loading && !error && (
             <h2 className="text-3xl font-bold text-white tracking-tight">
-              Welcome back, {items?.username}
+              Welcome back, {user?.username}
             </h2>
           )}
           {error && (

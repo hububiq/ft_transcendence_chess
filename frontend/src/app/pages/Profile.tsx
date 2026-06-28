@@ -1,7 +1,6 @@
 import {
   Crown,
   Trophy,
-  Target,
   TrendingUp,
   Swords,
   Calendar,
@@ -20,8 +19,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import clsx from "clsx";
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useUser } from "../utils/hooks/useUser";
 
 const stats = [
   {
@@ -136,46 +134,9 @@ const achievements = [
   },
 ];
 
-interface UserData {
-  username: string;
-  email: string;
-  date_joined: string;
-  profile: {
-    avatar: string;
-    bio: string;
-    current_streak: number;
-    elo_rating: number;
-    location: string;
-    peak_rating: number;
-    total_games: number;
-  };
-}
-
-const token = localStorage.getItem("access_token");
 
 export function Profile() {
-  const [items, setItems] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        setError("");
-        const response = await axios.get("http://localhost:8000/api/me/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setItems(response.data);
-      } catch (error) {
-        setError(`Profile: ${error.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchItems();
-  }, []);
+  const { user, loading, error } = useUser();
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8">
@@ -192,13 +153,13 @@ export function Profile() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
               {!loading && (
                 <h1 className="text-3xl font-bold text-white tracking-tight">
-                  {items?.username}
+                  {user?.username}
                 </h1>
               )}
               <div className="flex items-center gap-2">
                 <div className="bg-blue-600/10 border border-blue-500/30 text-blue-400 px-3 py-1 rounded-lg text-sm font-semibold flex items-center gap-1.5">
                   <Crown className="w-4 h-4" />
-                  ELO: {items?.profile?.elo_rating}
+                  ELO: {user?.profile?.elo_rating}
                 </div>
               </div>
             </div>
@@ -206,7 +167,7 @@ export function Profile() {
             <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-400 mb-4">
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                {items?.email}
+                {user?.email}
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
@@ -219,7 +180,7 @@ export function Profile() {
             </div>
 
             <p className="text-neutral-300 text-sm max-w-2xl">
-              {items?.profile?.bio}
+              {user?.profile?.bio}
             </p>
           </div>
 
@@ -238,10 +199,10 @@ export function Profile() {
                 <stat.icon className={clsx("w-8 h-8", stat.color)} />
               </div>
               <div key={stat.id} className="text-3xl font-bold text-white mb-1">
-                {stat.label === "Total Games" && items?.profile?.total_games}
+                {stat.label === "Total Games" && user?.profile?.total_games}
                 {stat.label === "Current Streak" &&
-                  items?.profile?.current_streak}
-                {stat.label === "Peak Rating" && items?.profile?.peak_rating}
+                  user?.profile?.current_streak}
+                {stat.label === "Peak Rating" && user?.profile?.peak_rating}
               </div>
               <div className="text-xs text-neutral-500 uppercase tracking-wide">
                 {stat.label}
