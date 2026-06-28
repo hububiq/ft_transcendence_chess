@@ -1,19 +1,41 @@
 from rest_framework import viewsets
-from .models import User
+from .models import User, Profile
 from .serializers import UserSerializer
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from .serializers import RegisterSerializer
+from .serializers import RegisterSerializer, ProfileSerializer
 from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+from redis_client import publish
 
 # This ViewSet automatically generates GET, POST, PUT, and DELETE logic
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login_view(request):
+    username = request.data.get("username")
+    password = request.data.get("password")
+
+    user = authenticate(username=username, password=password)
+    if not user:
+        return Response({"detail": "Invalid credentials"}, status=400)
+
+    refresh = RefreshToken.for_user(user)
+
+    publish("user.online", {"user_id": user.id})
+
+    return Response({
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+    })
 
 # @api_view(['POST']) ensures they can only submit data, not read it.
 # @permission_classes([AllowAny]) is CRITICAL. It overrides global JWT rule, 
@@ -116,9 +138,9 @@ def add_friend(request, user_id):
         return Response({"error": "You cannot add yourself as a friend."}, status=status.HTTP_400_BAD_REQUEST)
     
     try:
-        target_user = User.objects.get(id=used_id)
+        target_user = User.objects.get(id=user_id)
         request.user.friends.add(target_user)
-        return Respone({"message": f"Successfully added {target_user.username} tp friends."}, status=status.HTTP_200_OK)
+        return Response({"message": f"Successfully added {target_user.username} tp friends."}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
