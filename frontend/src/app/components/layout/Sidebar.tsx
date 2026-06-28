@@ -1,5 +1,13 @@
 import { Link, useLocation } from "react-router";
-import { Play, Trophy, User, Settings, LogOut, Palette } from "lucide-react";
+import {
+  Play,
+  Trophy,
+  User,
+  Settings,
+  LogOut,
+  Palette,
+  Loader,
+} from "lucide-react";
 import clsx from "clsx";
 // import type path from "path";
 // import { customFetch } from "../../../api";
@@ -33,6 +41,7 @@ export function Sidebar() {
   useEffect(() => {
     const fetchItems = async () => {
       try {
+        setError("");
         const response = await axios.get("http://localhost:8000/api/me/", {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -46,7 +55,7 @@ export function Sidebar() {
       }
     };
     fetchItems();
-  });
+  }, [items?.profile?.elo_rating, items?.username, token]); // should trigger re-render after state changes
 
   console.log(items);
   console.log(error);
@@ -96,14 +105,18 @@ export function Sidebar() {
             alt="User Avatar"
             className="w-10 h-10 rounded-full border border-neutral-800 object-cover"
           />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-neutral-200 truncate">
-              {items?.username}
-            </p>
-            <p className="text-xs text-blue-500 font-semibold mt-0.5">
-              ELO: {items?.profile?.elo_rating}
-            </p>
-          </div>
+          {loading ? (
+            <Loader />
+          ) : (
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-neutral-200 truncate">
+                {items?.username}
+              </p>
+              <p className="text-xs text-blue-500 font-semibold mt-0.5">
+                ELO: {items?.profile?.elo_rating}
+              </p>
+            </div>
+          )}
         </Link>
         <Link
           to="/auth"

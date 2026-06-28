@@ -1,10 +1,11 @@
+import axios, { AxiosResponse } from "axios";
+
 export async function customFetch(
   endpoint: string,
   options?: RequestInit,
 ): Promise<Response> {
   const baseUrl = import.meta.env.VITE_BASE_API_URL;
   const token = localStorage.getItem("access_token");
-
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };

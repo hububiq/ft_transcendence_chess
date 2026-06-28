@@ -1,8 +1,17 @@
 import { Link } from "react-router";
-import { Swords, Trophy, Clock, ChevronRight, Bot } from "lucide-react";
+import {
+  Swords,
+  Trophy,
+  Clock,
+  ChevronRight,
+  Bot,
+  Loader,
+  ServerOff,
+} from "lucide-react";
 import clsx from "clsx";
 import { useState, useEffect } from "react";
 import axios from "axios";
+// import { customFetch } from "../../api";
 
 const matchHistory = [
   {
@@ -37,11 +46,10 @@ interface UserData {
     elo_rating: number;
   };
 }
+const token = localStorage.getItem("access_token");
 
 export function Dashboard() {
   const [items, setItems] = useState<UserData | null>(null);
-
-  const token = localStorage.getItem("access_token");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -54,23 +62,34 @@ export function Dashboard() {
           },
         });
         setItems(response.data);
-      } catch (err) {
-        setError(`${err}`);
+      } catch (error) {
+        setError(`Dashboard: ${error.message}`);
       } finally {
         setLoading(false);
       }
     };
     fetchItems();
-  });
+  }, []);
+
+  console.log(items);
+  console.log(error);
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
       {/* Header Area */}
       <div className="flex items-center justify-between pt-4">
         <div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">
-            Welcome back, {items?.username}
-          </h2>
+          {loading && <Loader />}
+          {!loading && !error && (
+            <h2 className="text-3xl font-bold text-white tracking-tight">
+              Welcome back, {items?.username}
+            </h2>
+          )}
+          {error && (
+            <h2 className="text-3xl font-bold text-white tracking-tight">
+              <ServerOff />
+            </h2>
+          )}
           <p className="text-neutral-500 mt-1.5 text-sm">
             Ready for your next challenge?
           </p>
