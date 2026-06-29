@@ -20,6 +20,9 @@ import {
 } from "../components/ui/card";
 import clsx from "clsx";
 import { useUser } from "../utils/hooks/useUser";
+import { useState } from "react";
+import { Modal } from "../components/ui/Modal";
+import { EditProfileForm } from "../components/profile/EditProfileForm";
 
 const stats = [
   {
@@ -134,9 +137,9 @@ const achievements = [
   },
 ];
 
-
 export function Profile() {
   const { user, loading, error } = useUser();
+  const [isEditing, setIsEditing] = useState(false);
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8">
@@ -184,9 +187,15 @@ export function Profile() {
             </p>
           </div>
 
-          <button className="bg-neutral-900 hover:bg-neutral-800 text-white font-medium py-2.5 px-6 rounded-lg border border-neutral-800 transition-colors">
-            *Edit Profile
+          <button
+            onClick={() => setIsEditing(true)}
+            className="bg-neutral-900 hover:bg-neutral-800 text-white font-medium py-2.5 px-6 rounded-lg border border-neutral-800 transition-colors"
+          >
+            Edit Profile
           </button>
+          <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+            <EditProfileForm initialName={user?.username} />
+          </Modal>
         </div>
       </div>
 
