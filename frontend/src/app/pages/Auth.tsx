@@ -46,6 +46,7 @@ export function Auth() {
       if (!response.ok) {
         const backendReason =
           data.error || data.detail || data.message || "Invalid credentials.";
+        console.log(`Backend reason: ${backendReason}`);
         setErrorMessage(backendReason);
         setPassword("");
         return;
@@ -56,6 +57,7 @@ export function Auth() {
       navigate("/");
       console.log("Django's response:", data);
     } catch (error) {
+      console.log(error);
       setErrorMessage(`Network problem: ${error}.`);
     }
   }
