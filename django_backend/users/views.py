@@ -18,25 +18,6 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
-@api_view(["POST"])
-@permission_classes([AllowAny])
-def login_view(request):
-    username = request.data.get("username")
-    password = request.data.get("password")
-
-    user = authenticate(username=username, password=password)
-    if not user:
-        return Response({"detail": "Invalid credentials"}, status=400)
-
-    refresh = RefreshToken.for_user(user)
-
-    publish("user.online", {"user_id": user.id})
-
-    return Response({
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
-    })
-
 # @api_view(['POST']) ensures they can only submit data, not read it.
 # @permission_classes([AllowAny]) is CRITICAL. It overrides global JWT rule, 
 # because a new user doesn't have a JWT token yet!

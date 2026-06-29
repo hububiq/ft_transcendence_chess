@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------
     # DATABASE (async PostgreSQL)
     # ---------------------------------------------------------
-    database_url: str = Field(..., alias="FASTAPI_DATABASE_URL")
+    database_url: str = Field(..., alias="FASTAPI_DB_URL")
 
     # ---------------------------------------------------------
     # REDIS (Pub/Sub broker)
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------
     # JWT (shared with Django)
     # ---------------------------------------------------------
-    jwt_secret_key: str = Field(..., alias="FASTAPI_JWT_SECRET_KEY")
+    jwt_secret_key: str = Field(..., alias="SECRET_KEY")
     jwt_algorithm: str = Field(default="HS256", alias="FASTAPI_JWT_ALGORITHM")
 
     # ---------------------------------------------------------

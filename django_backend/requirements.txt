@@ -11,6 +11,5 @@ django-allauth[socialaccount]>=0.58
 dj-rest-auth[with_social]>=5.0.1    # bridge between React and allauth 
 cryptography>=41.0.0
 Pillow>=10.0.0                      # for avatar image processing
-
-# redis==5.0.1                      # The synchronous Redis client for Python
-# python-dotenv==1.0.1              # A library that loads .env files into environment variables
+redis==5.0.1                        # The synchronous Redis client for Python
+python-dotenv==1.0.1                # A library that loads .env files into environment variables

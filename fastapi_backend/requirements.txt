@@ -5,7 +5,5 @@ psycopg2-binary>=2.9      # PostgreSQL driver
 asyncpg>=0.28.0           # Asynchronous PostgreSQL driver (for max speed)
 redis>=5.0.1              # To talk to Redis Broker
 PyJWT>=2.8.0              # To decode the JWT tokens from Django
-  
-# aioredis==2.0.1         # An asynchronous Redis client 
-# pydantic==2.6.1         # The data validation and serialization library used by FastAPI
-# pydantic-settings==2.2.1# A Pydantic extension for loading environment variables into typed settings classes
+pydantic==2.6.1           # The data validation and serialization library used by FastAPI
+pydantic-settings==2.2.1  # A Pydantic extension for loading environment variables into typed settings classes

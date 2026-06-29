@@ -41,7 +41,7 @@ async def game_socket(websocket: WebSocket, user_id: int):
             msg_type = data.get("type")
 
             # ---------------------------------------------------------
-            # PLAYER MOVE → publish to Redis
+            # PLAYER MOVE → publish to Redis // OR PUSH??
             # ---------------------------------------------------------
             if msg_type == "move":
                 await redis.publish("match.update", json.dumps(data))
@@ -54,6 +54,17 @@ async def game_socket(websocket: WebSocket, user_id: int):
                 await websocket.send_json({
                     "type": "ai_move",
                     "move": best_move
+                })
+
+            # ---------------------------------------------------------
+            # JOIN MATCHMAKING QUEUE
+            # ---------------------------------------------------------
+            elif msg_type == "join_queue":
+                # Push the user_id into the Redis list
+                await redis.lpush("matchmaking_queue", user_id)
+                await websocket.send_json({
+                    "type": "info",
+                    "message": "Joined matchmaking queue!"
                 })
 
             # ---------------------------------------------------------

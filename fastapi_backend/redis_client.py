@@ -1,6 +1,6 @@
 from typing import AsyncGenerator
 from config import settings
-import aioredis
+import redis.asyncio as redis
 
 
 # ---------------------------------------------------------
@@ -17,7 +17,7 @@ async def get_redis():
     global redis_pool
 
     if redis_pool is None:
-        redis_pool = await aioredis.from_url(
+        redis_pool = await redis.from_url(
             f"redis://{settings.redis_host}:{settings.redis_port}",
             decode_responses=True
         )
@@ -33,7 +33,7 @@ async def get_pubsub(channel: str) -> AsyncGenerator:
     Subscribes to a Redis Pub/Sub channel and yields messages.
     Used by matchmaking and game update listeners.
     """
-    redis = await get_redis()
+    redis_conn = await get_redis()
     pubsub = redis.pubsub()
     await pubsub.subscribe(channel)
 
