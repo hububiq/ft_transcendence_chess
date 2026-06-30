@@ -193,7 +193,7 @@ export function Profile() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {stats.map((stat) => (
-          <Card className="bg-[#0a0a0a] border-neutral-900">
+          <Card key={stat.id} className="bg-[#0a0a0a] border-neutral-900">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-3">
                 <stat.icon className={clsx("w-8 h-8", stat.color)} />

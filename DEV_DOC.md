@@ -165,3 +165,7 @@ docker exec -it <name_of_container> ls -la /app/media
 ```
 In this case, to check avatars on the backend. placeholder should be replaced with "django_backend"
 
+---
+## How to set-up frontend
+Inside the root of the frontend folder duplicate `.env.example` and rename it `.env`. This (`.env`) file is used inside `frontend/src/api/axios.ts` to make `async` call modulare and less crowded.
+
