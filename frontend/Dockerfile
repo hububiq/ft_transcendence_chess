@@ -9,7 +9,7 @@ FROM base AS development
 COPY . .
 EXPOSE 3000
 # Runs the Vite hot-reloading server. # The "--", "--host" safely passes the 0.0.0.0 flag to Vite so it escapes the Docker container
-# Vite is forces to use port 3000 like historical React-Create-App because we configured CORS already for 3000
+# Vite is forced to use port 3000 like historical React-Create-App because we configured CORS already for 3000
 CMD ["sh", "-c", "npm install && npm run dev -- --host --port 3000"] 
 
 # --- STAGE 3: Production (for eval) ---
