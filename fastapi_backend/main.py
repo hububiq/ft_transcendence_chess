@@ -6,6 +6,9 @@ from ai_engine import compute_best_move
 from matchmaking import matchmaking_loop
 import asyncio
 import json
+from database import init_db
+from models import Game, Tournament 
+
 
 app = FastAPI(debug=settings.debug)
 
@@ -23,6 +26,12 @@ def read_root():
 # ---------------------------------------------------------
 @app.on_event("startup")
 async def startup_event():
+    print("🚀 FastAPI is starting up...")
+    
+    # 1. Automatically build the PostgreSQL tables!
+    await init_db()
+    
+    # 2. Launch the matchmaking loop in the background
     asyncio.create_task(matchmaking_loop())
 
 
