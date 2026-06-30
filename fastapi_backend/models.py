@@ -59,4 +59,4 @@ class GameInvitation(SQLModel, table=True):
     moves_pgn: str = Field(default="")
     
     # Timestamp
-    played_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
