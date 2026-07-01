@@ -2,9 +2,7 @@ from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
 
-# ---------------------------------------------------------
 # 1. TOURNAMENTS
-# ---------------------------------------------------------
 class Tournament(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     creator_id: int  # Soft link to Django User
@@ -12,9 +10,7 @@ class Tournament(SQLModel, table=True):
     winner_id: Optional[int] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-# ---------------------------------------------------------
 # 2. TOURNAMENT PARTICIPANTS (Junction Table)
-# ---------------------------------------------------------
 class TournamentParticipant(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     
@@ -24,9 +20,7 @@ class TournamentParticipant(SQLModel, table=True):
     player_id: int  # Soft link to Django User (or Bot)
     bracket_position: int
 
-# ---------------------------------------------------------
 # 3. GAMES (Updated with Tournament foreign key and Local 1v1!)
-# ---------------------------------------------------------
 class Game(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     
@@ -43,9 +37,7 @@ class Game(SQLModel, table=True):
     moves_pgn: str = Field(default="")
     played_at: datetime = Field(default_factory=datetime.utcnow)
 
-# ---------------------------------------------------------
 # 4. GAME INVITATIONS (For Scikit-Learn Matchmaking & Direct Invites)
-# ---------------------------------------------------------
 class GameInvitation(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     
@@ -53,10 +45,8 @@ class GameInvitation(SQLModel, table=True):
     receiver_id: int   # Soft link (User receiving the invite)
     
     status: str = Field(default="pending") # pending, accepted, declined
-    is_recommendation: bool = Field(default=False) # True if from Scikit-Learn!
-    
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    moves_pgn: str = Field(default="")
+    is_recommendation: bool = Field(default=False) # True if from Scikit-Learn
     
     # Timestamp
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    moves_pgn: str = Field(default="")

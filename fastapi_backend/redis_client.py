@@ -3,11 +3,9 @@ from config import settings
 import redis.asyncio as redis
 
 
-# ---------------------------------------------------------
-# Create a single global Redis connection pool
-# ---------------------------------------------------------
-redis_pool = None
 
+# Create a single global Redis connection pool
+redis_pool = None
 
 async def get_redis():
     """
@@ -25,9 +23,7 @@ async def get_redis():
     return redis_pool
 
 
-# ---------------------------------------------------------
 # Pub/Sub helper (async generator)
-# ---------------------------------------------------------
 async def get_pubsub(channel: str) -> AsyncGenerator:
     """
     Subscribes to a Redis Pub/Sub channel and yields messages.
