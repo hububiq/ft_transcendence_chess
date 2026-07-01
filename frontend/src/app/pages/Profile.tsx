@@ -1,5 +1,6 @@
 import {
   Crown,
+  Check,
   Trophy,
   TrendingUp,
   Swords,
@@ -138,8 +139,13 @@ const achievements = [
 ];
 
 export function Profile() {
-  const { user, loading, error } = useUser();
+  const { user, loading, error, updateUser } = useUser();
   const [isEditing, setIsEditing] = useState(false);
+  if (!user || loading) {
+    return (
+      <div className="text-white text-center mt-20">Loading profile...</div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8">
@@ -194,7 +200,17 @@ export function Profile() {
             Edit Profile
           </button>
           <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
-            <EditProfileForm initialName={user?.username} />
+            <EditProfileForm
+              initialData={user}
+              onCancel={() => setIsEditing(false)}
+              onSave={async (incomingData) => {
+                const success = await updateUser(incomingData);
+                if (success) {
+                  setIsEditing(false);
+                }
+              }}
+              errorMessage={error}
+            />
           </Modal>
         </div>
       </div>
