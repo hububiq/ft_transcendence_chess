@@ -77,7 +77,7 @@ def get_my_profile(request):
     serializer = UserSerializer(request.user) #request.user is populated with JWT token, Django knows rightaway who is making the request.
     return Response(serializer.data)
 
-@api_view(['PUT'])
+@api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def update_my_profile(request):
     user = request.user
