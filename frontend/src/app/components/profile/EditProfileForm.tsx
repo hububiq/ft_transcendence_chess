@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { use, useState } from "react";
 import { X, AlertCircle } from "lucide-react";
 import clsx from "clsx";
 import type { UserData } from "../../utils/interfaces";
@@ -17,11 +17,16 @@ export function EditProfileForm({
   errorMessage,
 }: EditProfileFormProps) {
   const [draftData, setDraftData] = useState<UserData>(initialData);
+  const [localError, setLocalError] = useState("");
 
   // Form Submission Handler
   const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSave(draftData);
+    if (draftData.username.length < 2) {
+      setLocalError("Co ty kurwa robisz.");
+    } else {
+      onSave(draftData);
+    }
   };
 
   return (
@@ -57,6 +62,13 @@ export function EditProfileForm({
                   ...draftData,
                   username: e.target.value,
                 });
+                if (e.target.value.length < 2) {
+                  setLocalError(
+                    "Length of username is too short. Try with 2 or more letters.",
+                  );
+                } else {
+                  setLocalError("");
+                }
               }}
               className={clsx(
                 "w-full bg-black border rounded-lg py-2.5 px-3.5 text-sm text-neutral-200 placeholder:text-neutral-700 focus:outline-none transition-all",
@@ -69,6 +81,11 @@ export function EditProfileForm({
             {errorMessage && (
               <p className="flex items-center gap-1.5 text-xs text-red-400 mt-1.5">
                 <AlertCircle className="w-3 h-3" /> {errorMessage}
+              </p>
+            )}
+            {localError && (
+              <p className="flex items-center gap-1.5 text-xs text-red-400 mt-1.5">
+                <AlertCircle className="w-3 h-3" /> {localError}
               </p>
             )}
           </div>

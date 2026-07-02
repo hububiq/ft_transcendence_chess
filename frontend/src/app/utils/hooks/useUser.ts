@@ -38,14 +38,29 @@ export function useUser() {
     try {
       if (!user) return false;
 
-      await api.patch("/api/me/update/", {
-        username: newUserData.username,
-        email: newUserData.email,
-        profile: {
-          bio: newUserData.profile.bio,
-          location: newUserData.profile.location,
-        },
-      });
+      const patchPayload: any = {};
+      const profilePayload: any = {};
+
+      if (newUserData.email !== user.email) {
+        patchPayload.email = newUserData.email;
+      }
+
+      if (newUserData.username !== user.username) {
+        patchPayload.username = newUserData.username;
+      }
+
+      if (newUserData.profile.bio !== user.profile.bio) {
+        profilePayload.bio = newUserData.profile.bio;
+      }
+
+      if (newUserData.profile.location !== user.profile.location) {
+        profilePayload.location = newUserData.profile.location;
+      }
+
+      if (Object.keys(profilePayload).length > 0) {
+        patchPayload.profile = profilePayload;
+      }
+      await api.patch("/api/me/update/", patchPayload);
       setUser({
         ...user,
         username: newUserData.username,
