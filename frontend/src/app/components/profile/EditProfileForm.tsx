@@ -1,19 +1,11 @@
 import React, { useState } from "react";
 import { X, AlertCircle } from "lucide-react";
 import clsx from "clsx";
-
-interface ProfileFormData {
-  username: string;
-  email: string;
-  profile: {
-    bio: string;
-    location: string;
-  };
-}
+import type { UserData } from "../../utils/interfaces";
 
 interface EditProfileFormProps {
-  initialData: ProfileFormData;
-  onSave: (newName: ProfileFormData) => void;
+  initialData: UserData;
+  onSave: (newName: UserData) => void;
   onCancel: () => void;
   errorMessage?: string;
 }
@@ -24,9 +16,9 @@ export function EditProfileForm({
   onCancel,
   errorMessage,
 }: EditProfileFormProps) {
-  const [draftData, setDraftData] = useState<ProfileFormData>(initialData);
+  const [draftData, setDraftData] = useState<UserData>(initialData);
 
-  // Form Subnission Handler
+  // Form Submission Handler
   const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     onSave(draftData);

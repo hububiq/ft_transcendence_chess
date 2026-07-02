@@ -1,17 +1,4 @@
-import {
-  Crown,
-  Check,
-  Trophy,
-  TrendingUp,
-  Swords,
-  Calendar,
-  Mail,
-  MapPin,
-  Award,
-  Star,
-  Zap,
-  Shield,
-} from "lucide-react";
+import { Crown, Calendar, Mail, MapPin } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -24,28 +11,7 @@ import { useUser } from "../utils/hooks/useUser";
 import { useState } from "react";
 import { Modal } from "../components/ui/Modal";
 import { EditProfileForm } from "../components/profile/EditProfileForm";
-
-const stats = [
-  {
-    id: 0,
-    label: "Total Games",
-    icon: Swords,
-    color: "text-blue-500",
-  },
-  // { label: "Win Rate", value: "71.5%", icon: Target, color: "text-green-500" },
-  {
-    id: 1,
-    label: "Current Streak",
-    icon: TrendingUp,
-    color: "text-purple-500",
-  },
-  {
-    id: 2,
-    label: "Peak Rating",
-    icon: Crown,
-    color: "text-yellow-500",
-  },
-];
+import { achievements, stats } from "../utils/constants";
 
 const matchHistory = [
   {
@@ -92,49 +58,6 @@ const matchHistory = [
     date: "2 days ago",
     type: "Classical 15|10",
     opening: "English Opening",
-  },
-];
-
-const achievements = [
-  {
-    id: 1,
-    name: "Speed Demon",
-    description: "Win 100 bullet games",
-    icon: Zap,
-    unlocked: true,
-    rarity: "rare",
-  },
-  {
-    id: 2,
-    name: "Tournament Victor",
-    description: "Win a tournament with 50+ players",
-    icon: Trophy,
-    unlocked: true,
-    rarity: "epic",
-  },
-  {
-    id: 3,
-    name: "Comeback King",
-    description: "Win a game from a -5 disadvantage",
-    icon: Shield,
-    unlocked: true,
-    rarity: "rare",
-  },
-  {
-    id: 4,
-    name: "Perfectionist",
-    description: "Win a game with 95%+ accuracy",
-    icon: Star,
-    unlocked: false,
-    rarity: "legendary",
-  },
-  {
-    id: 5,
-    name: "Marathon Player",
-    description: "Play 1000 games",
-    icon: Award,
-    unlocked: true,
-    rarity: "common",
   },
 ];
 

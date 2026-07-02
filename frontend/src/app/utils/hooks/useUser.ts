@@ -1,20 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../../../api/axios";
-
-interface UserData {
-  username: string;
-  email: string;
-  date_joined: string;
-  profile: {
-    avatar: string;
-    bio: string;
-    current_streak: number;
-    elo_rating: number;
-    location: string;
-    peak_rating: number;
-    total_games: number;
-  };
-}
+import type { UserData } from "../interfaces";
 
 export function useUser() {
   const [user, setUser] = useState<UserData | null>(null);
@@ -52,7 +38,7 @@ export function useUser() {
     try {
       if (!user) return false;
 
-      await api.patch("/api/me/", {
+      await api.patch("/api/me/update/", {
         username: newUserData.username,
         email: newUserData.email,
         profile: {
