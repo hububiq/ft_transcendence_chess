@@ -1,20 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "../../../api/axios";
-
-interface UserData {
-  username: string;
-  email: string;
-  date_joined: string;
-  profile: {
-    avatar: string;
-    bio: string;
-    current_streak: number;
-    elo_rating: number;
-    location: string;
-    peak_rating: number;
-    total_games: number;
-  };
-}
+import type { UserData } from "../interfaces";
 
 export function useUser() {
   const [user, setUser] = useState<UserData | null>(null);
@@ -48,5 +34,37 @@ export function useUser() {
     }; // cleanup function
   }, []);
 
-  return { user, loading, error };
+  const updateUser = async (newUserData: UserData) => {
+    try {
+      if (!user) return false;
+
+      await api.patch("/api/me/update/", {
+        username: newUserData.username,
+        email: newUserData.email,
+        profile: {
+          bio: newUserData.profile.bio,
+          location: newUserData.profile.location,
+        },
+      });
+      setUser({
+        ...user,
+        username: newUserData.username,
+        email: newUserData.email,
+        profile: {
+          ...user.profile,
+          bio: newUserData.profile.bio,
+          location: newUserData.profile.location,
+        },
+      });
+
+      return true;
+
+      // step 2: update the local react state
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Failed to update profile");
+      return false;
+    }
+  };
+
+  return { user, loading, error, updateUser };
 }

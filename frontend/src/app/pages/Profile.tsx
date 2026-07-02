@@ -1,16 +1,4 @@
-import {
-  Crown,
-  Trophy,
-  TrendingUp,
-  Swords,
-  Calendar,
-  Mail,
-  MapPin,
-  Award,
-  Star,
-  Zap,
-  Shield,
-} from "lucide-react";
+import { Crown, Calendar, Mail, MapPin } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -20,28 +8,10 @@ import {
 } from "../components/ui/card";
 import clsx from "clsx";
 import { useUser } from "../utils/hooks/useUser";
-
-const stats = [
-  {
-    id: 0,
-    label: "Total Games",
-    icon: Swords,
-    color: "text-blue-500",
-  },
-  // { label: "Win Rate", value: "71.5%", icon: Target, color: "text-green-500" },
-  {
-    id: 1,
-    label: "Current Streak",
-    icon: TrendingUp,
-    color: "text-purple-500",
-  },
-  {
-    id: 2,
-    label: "Peak Rating",
-    icon: Crown,
-    color: "text-yellow-500",
-  },
-];
+import { useState } from "react";
+import { Modal } from "../components/ui/Modal";
+import { EditProfileForm } from "../components/profile/EditProfileForm";
+import { achievements, stats } from "../utils/constants";
 
 const matchHistory = [
   {
@@ -91,52 +61,14 @@ const matchHistory = [
   },
 ];
 
-const achievements = [
-  {
-    id: 1,
-    name: "Speed Demon",
-    description: "Win 100 bullet games",
-    icon: Zap,
-    unlocked: true,
-    rarity: "rare",
-  },
-  {
-    id: 2,
-    name: "Tournament Victor",
-    description: "Win a tournament with 50+ players",
-    icon: Trophy,
-    unlocked: true,
-    rarity: "epic",
-  },
-  {
-    id: 3,
-    name: "Comeback King",
-    description: "Win a game from a -5 disadvantage",
-    icon: Shield,
-    unlocked: true,
-    rarity: "rare",
-  },
-  {
-    id: 4,
-    name: "Perfectionist",
-    description: "Win a game with 95%+ accuracy",
-    icon: Star,
-    unlocked: false,
-    rarity: "legendary",
-  },
-  {
-    id: 5,
-    name: "Marathon Player",
-    description: "Play 1000 games",
-    icon: Award,
-    unlocked: true,
-    rarity: "common",
-  },
-];
-
-
 export function Profile() {
-  const { user, loading, error } = useUser();
+  const { user, loading, error, updateUser } = useUser();
+  const [isEditing, setIsEditing] = useState(false);
+  if (!user || loading) {
+    return (
+      <div className="text-white text-center mt-20">Loading profile...</div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8">
@@ -184,9 +116,25 @@ export function Profile() {
             </p>
           </div>
 
-          <button className="bg-neutral-900 hover:bg-neutral-800 text-white font-medium py-2.5 px-6 rounded-lg border border-neutral-800 transition-colors">
-            *Edit Profile
+          <button
+            onClick={() => setIsEditing(true)}
+            className="bg-neutral-900 hover:bg-neutral-800 text-white font-medium py-2.5 px-6 rounded-lg border border-neutral-800 transition-colors"
+          >
+            Edit Profile
           </button>
+          <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+            <EditProfileForm
+              initialData={user}
+              onCancel={() => setIsEditing(false)}
+              onSave={async (incomingData) => {
+                const success = await updateUser(incomingData);
+                if (success) {
+                  setIsEditing(false);
+                }
+              }}
+              errorMessage={error}
+            />
+          </Modal>
         </div>
       </div>
 
