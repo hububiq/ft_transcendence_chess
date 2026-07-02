@@ -93,9 +93,10 @@ def update_my_profile(request):
 
     if 'username' in request.data:
         new_username = request.data['username']
-        if Profile.objects.filter(username=new_username).exclude(id=profile.id).exists():
+        if User.objects.filter(username=new_username).exclude(id=profile.id).exists():
             return Response({"error": "This username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
-        profile.username = new_username
+        user.username = new_username
+        user.save()
 
     if 'bio' in request.data:
         profile.bio = request.data['bio']
