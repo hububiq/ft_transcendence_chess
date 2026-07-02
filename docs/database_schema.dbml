@@ -2,6 +2,7 @@
 
 Table Users {
   id integer [primary key]
+  username varchar [unique]
   email varchar [unique, note: 'Used for login']
   password varchar
   oauth_provider varchar [note: 'e.g., 42, github']
@@ -23,7 +24,6 @@ Ref: User_Friends.to_user_id > Users.id
 Table Profiles {
   id integer [primary key]
   user_id integer [note: 'Strict Foreign Key']
-  username varchar [unique]
   avatar_url varchar
   is_online boolean [default: false]
   location varchar
