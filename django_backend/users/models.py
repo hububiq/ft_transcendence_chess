@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
@@ -36,3 +39,11 @@ class Profile(models.Model):
     
     def __str__(self):
         return f"Profile of {self.user.username}"
+
+#event listener - to allow tables creation upon GitHub login - otherwise it's bypassed.
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    # 'instance' is the User just saved.
+    # 'created' is a boolean. True if it's a brand new user, False if they just changed their password.
+    if created:
+        Profile.objects.create(user=instance)

@@ -44,7 +44,4 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
         
-        # 2. Automatically generate their blank Profile with default ELO and 0 wins!
-        Profile.objects.create(user=user)
-        
         return user
