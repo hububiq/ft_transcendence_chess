@@ -8,6 +8,7 @@ import { DesignSystem } from "./app/pages/DesignSystem";
 import { Profile } from "./app/pages/Profile";
 import { Settings } from "./app/pages/Settings";
 import { BotGame } from "./app/pages/BotGame";
+import { OAuthCallback } from "./app/pages/OAuthCallback";
 
 export const router = createBrowserRouter([
   {
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
       { path: "design-system", Component: DesignSystem },
     ],
   },
+  { path: "/auth/github/callback", Component: OAuthCallback },
   { path: "/auth", Component: Auth },
   { path: "/game", Component: Game },
   { path: "/bot", Component: BotGame },

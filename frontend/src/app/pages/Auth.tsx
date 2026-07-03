@@ -1,66 +1,32 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router";
+// import { useState } from "react";
+// import { useLocation, useNavigate } from "react-router";
 import { Upload, Mail, Lock, User, ArrowRight } from "lucide-react";
 import git_logo from "../assets/github.svg";
-import google_logo from "../assets/google.svg";
+// import google_logo from "../assets/google.svg";
+import { useAuth } from "../utils/hooks/useAuth";
 
 function GitHubIcon() {
   return <img width="7%" src={git_logo} alt="GitHub Logo" />;
 }
-function GoogleIcon() {
-  return <img width="7%" src={google_logo} alt="Google Logo" />;
-}
+// function GoogleIcon() {
+//   return <img width="7%" src={google_logo} alt="Google Logo" />;
+// }
 
 export function Auth() {
-  const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
-  const [oauthLoading, setOauthLoading] = useState<"github" | "google" | null>(
-    null,
-  );
-
-  const handleOAuth = (provider: "github" | "google") => {
-    setOauthLoading(provider);
-    // Simulate redirect — in production this would navigate to the OAuth flow
-    setTimeout(() => setOauthLoading(null), 1500);
-  };
-
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const endpoint = isLogin ? "api/login/" : "api/register/";
-  const payload = isLogin ? { email, password } : { username, email, password };
-
-  async function handleAuthSubmit(e: React.SyntheticEvent) {
-    e.preventDefault();
-    setErrorMessage(null);
-    try {
-      const response = await fetch(`http://localhost:8000/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        const backendReason =
-          data.error || data.detail || data.message || "Invalid credentials.";
-        console.log(`Backend reason: ${backendReason}`);
-        setErrorMessage(backendReason);
-        setPassword("");
-        return;
-      }
-      const token = data.access || data.access_token;
-      localStorage.setItem("access_token", token);
-      setErrorMessage(null);
-      navigate("/");
-      console.log("Django's response:", data);
-    } catch (error) {
-      console.log(error);
-      setErrorMessage(`Network problem: ${error}.`);
-    }
-  }
+  const {
+    username,
+    setUsername,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    isLogin,
+    setIsLogin,
+    errorMessage,
+    handleAuthSubmit,
+    handleGitHubLogin,
+    oauthLoading,
+  } = useAuth();
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
@@ -78,9 +44,10 @@ export function Auth() {
           </div>
 
           {/*OAuth buttons*/}
+          {/*GitHub*/}
           <div className="space-y-3 mb-6">
             <button
-              onClick={() => handleOAuth("github")}
+              onClick={() => handleGitHubLogin("github")}
               disabled={oauthLoading !== null}
               className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 text-white text-sm font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
@@ -92,7 +59,8 @@ export function Auth() {
               {isLogin ? "Continue with GitHub" : "Sign up with GitHub"}
             </button>
 
-            <button
+            {/*Google*/}
+            {/* <button
               onClick={() => handleOAuth("google")}
               disabled={oauthLoading !== null}
               className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 text-white text-sm font-medium transition-all disabled:opacity-60 disabled:cursor-not-allowed"
@@ -103,7 +71,7 @@ export function Auth() {
                 <GoogleIcon />
               )}
               {isLogin ? "Continue with Google" : "Sign up with Google"}
-            </button>
+            </button> */}
           </div>
 
           <form className="space-y-4" onSubmit={handleAuthSubmit}>

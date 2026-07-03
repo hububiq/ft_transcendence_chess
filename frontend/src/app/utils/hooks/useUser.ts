@@ -71,10 +71,7 @@ export function useUser() {
           location: newUserData.profile.location,
         },
       });
-
       return true;
-
-      // step 2: update the local react state
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to update profile");
       return false;
