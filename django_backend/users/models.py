@@ -25,8 +25,8 @@ class Profile(models.Model):
     
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     oauth_avatar_url = models.URLField(null=True, blank=True)
-    location = models.CharField(max_length=100, null=True, blank=True)
-    bio = models.TextField(null=True, blank=True)
+    location = models.CharField(max_length=100, blank=True, default="Warschau")
+    bio = models.TextField(default="", blank=True)
     theme_color = models.CharField(max_length=20, default='dark')
     is_online = models.BooleanField(default=False)
     elo_rating = models.IntegerField(default=1200)
