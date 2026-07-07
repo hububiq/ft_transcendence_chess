@@ -9,8 +9,17 @@ export const api = axios.create({
 // Interceptor
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
+
+  const public_endpoints = ["/register/", "/login/"];
+
+  if (config.url) {
+    const is_public_route = public_endpoints.some((endpoint) =>
+      config.url?.includes(endpoint),
+    );
+
+    if (!is_public_route && token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
