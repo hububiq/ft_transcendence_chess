@@ -7,7 +7,9 @@ from matchmaking import matchmaking_loop
 import asyncio
 import json
 from database import init_db
-from models import Game, Tournament 
+from models import Game, Tournament
+from game_service import handle_game_over
+from game_service import handle_player_move
 
 
 app = FastAPI(debug=settings.debug)
@@ -42,55 +44,38 @@ async def startup_event():
 # ---------------------------------------------------------
 # WEBSOCKET ENDPOINT
 # ---------------------------------------------------------
-@app.websocket("/ws/game/{user_id}")
-async def game_socket(websocket: WebSocket, user_id: int):
-    await manager.connect(user_id, websocket)
+@app.websocket("/ws/game/{game_id}")
+async def game_socket(websocket: WebSocket, game_id: int):
+    await manager.connect(game_id, websocket)
     redis = await get_redis()
 
     try:
         while True:
             data = await websocket.receive_json()
-
             msg_type = data.get("type")
 
-            # ---------------------------------------------------------
-            # PLAYER MOVE → publish to Redis // OR PUSH??
-            # ---------------------------------------------------------
             if msg_type == "move":
-                await redis.publish("match.update", json.dumps(data))
+                await handle_player_move(data, game_id, websocket)
 
-            # ---------------------------------------------------------
-            # AI REQUEST → compute best move
-            # ---------------------------------------------------------
-            elif msg_type == "ai_request":
-                best_move = compute_best_move(data["board"])
-                await websocket.send_json({
-                    "type": "ai_move",
-                    "move": best_move
-                })
-
-            # ---------------------------------------------------------
-            # JOIN MATCHMAKING QUEUE
-            # ---------------------------------------------------------
             elif msg_type == "join_queue":
-                # Push the user_id into the Redis list
+                user_id = data.get("user_id")
                 await redis.lpush("matchmaking_queue", user_id)
-                await websocket.send_json({
-                    "type": "info",
-                    "message": "Joined matchmaking queue!"
-                })
+                await websocket.send_json({"type": "info", "message": "Joined queue!"})
             
             elif msg_type == "chat_message":
-              # Do the chat logic
-              await broadcast_chat(data["text"])
+                #await broadcast_chat(data["text"])
+                pass
 
             elif msg_type == "surrender":
-                # Do the surrender logic
-                await end_game(loser_id=user_id)
+                redis_key = f"game:{game_id}:fen"
+                current_fen = await redis.get(redis_key)
+                board = chess.Board(current_fen) if current_fen else chess.Board()
+                
+                opponent_id = data.get("opponent_id") # React must send this
+                player_id = data.get("player_id") 
 
-            # ---------------------------------------------------------
-            # UNKNOWN MESSAGE TYPE
-            # ---------------------------------------------------------
+                await handle_game_over(board, game_id, winner_id=opponent_id, loser_id=player_id, websocket=websocket)
+
             else:
                 await websocket.send_json({
                     "type": "error",
@@ -98,8 +83,8 @@ async def game_socket(websocket: WebSocket, user_id: int):
                 })
 
     except WebSocketDisconnect:
-        await manager.disconnect(user_id)
+        await manager.disconnect(game_id)
 
     except Exception as e:
-        await manager.disconnect(user_id)
-        print(f"WebSocket error for user {user_id}: {e}")
+        await manager.disconnect(game_id)
+        print(f"WebSocket error for game {game_id}: {e}")

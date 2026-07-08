@@ -7,3 +7,5 @@ redis>=5.0.1              # To talk to Redis Broker
 PyJWT>=2.8.0              # To decode the JWT tokens from Django
 pydantic==2.6.1           # The data validation and serialization library used by FastAPI
 pydantic-settings==2.2.1  # A Pydantic extension for loading environment variables into typed settings classes
+httpx                     # for async requests from FastApi to Django 
+python-chess              # for moves validation 
