@@ -4,9 +4,6 @@ import {
   Shield,
   Star,
   Award,
-  Swords,
-  TrendingUp,
-  Crown,
 } from "lucide-react";
 
 export const USER_REGEX = /^[A-Za-z][A-Za-z0-9_-]{3,23}$/;
@@ -87,24 +84,4 @@ export const achievements = [
   },
 ];
 
-export const stats = [
-  {
-    id: 0,
-    label: "Total Games",
-    icon: Swords,
-    color: "text-blue-500",
-  },
-  // { label: "Win Rate", value: "71.5%", icon: Target, color: "text-green-500" },
-  {
-    id: 1,
-    label: "Current Streak",
-    icon: TrendingUp,
-    color: "text-purple-500",
-  },
-  {
-    id: 2,
-    label: "Peak Rating",
-    icon: Crown,
-    color: "text-yellow-500",
-  },
-];
+

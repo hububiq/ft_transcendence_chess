@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { X, AlertCircle } from "lucide-react";
 import clsx from "clsx";
-import type { UserData } from "../../../utils/interfaces";
+import type { UserData } from "../../utils/interfaces";
 
 interface EditProfileFormProps {
   initialData: UserData;
   onSave: (newName: UserData) => void;
   onCancel: () => void;
   errorMessage?: string;
+  isUpdating?: boolean;
 }
 
 export function EditProfileForm({
@@ -15,15 +16,16 @@ export function EditProfileForm({
   onSave,
   onCancel,
   errorMessage,
+  isUpdating,
 }: EditProfileFormProps) {
   const [draftData, setDraftData] = useState<UserData>(initialData);
   const [localError, setLocalError] = useState("");
 
   // Form Submission Handler
-  const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
-    if (draftData.username.length < 2) {
-      setLocalError("Co ty kurwa robisz.");
+    if (draftData.username.length < 3) {
+      setLocalError("Cannot submit the form.");
     } else {
       onSave(draftData);
     }
@@ -62,7 +64,7 @@ export function EditProfileForm({
                   ...draftData,
                   username: e.target.value,
                 });
-                if (e.target.value.length < 2) {
+                if (e.target.value.length < 3) {
                   setLocalError(
                     "Length of username is too short. Try with 2 or more letters.",
                   );
@@ -88,22 +90,6 @@ export function EditProfileForm({
                 <AlertCircle className="w-3 h-3" /> {localError}
               </p>
             )}
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-xs font-medium text-neutral-400 mb-1.5">
-              Email address
-            </label>
-            <input
-              type="email"
-              value={draftData.email}
-              onChange={(e) =>
-                setDraftData({ ...draftData, email: e.target.value })
-              }
-              className="w-full bg-black border border-neutral-800 rounded-lg py-2.5 px-3.5 text-sm text-neutral-200 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition-all"
-              placeholder="you@example.com"
-            />
           </div>
 
           {/* Bio */}
@@ -133,15 +119,17 @@ export function EditProfileForm({
           <button
             type="button"
             onClick={onCancel} // the form blindly pushed the button!
-            className="px-4 py-2 text-sm font-medium text-neutral-400 hover:text-white bg-transparent hover:bg-neutral-900 rounded-lg border border-neutral-800 transition-colors"
+            disabled={isUpdating}
+            className="px-4 py-2 text-sm font-medium text-neutral-400 hover:text-white bg-transparent hover:bg-neutral-900 rounded-lg border border-neutral-800 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-5 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center gap-2 transition-all"
+            disabled={isUpdating}
+            className="px-5 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save Changes
+            {isUpdating ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </form>

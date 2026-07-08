@@ -1,74 +1,43 @@
 import { Crown, Calendar, Mail, MapPin } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../components/card";
-import clsx from "clsx";
+// import {
+//   Card,
+//   CardContent,
+//   CardDescription,
+//   CardHeader,
+//   CardTitle,
+// } from "../../components/card";
+// import clsx from "clsx";
 import { useUser } from "../../hooks/useUser";
 import { useState } from "react";
 import { Modal } from "../../components/Modal";
 import { EditProfileForm } from "./EditProfileFormModal";
-import { achievements, stats } from "../../utils/constants";
-
-const matchHistory = [
-  {
-    id: 1,
-    opponent: "ChessMaster99",
-    result: "Win",
-    eloChange: "+12",
-    date: "2 hrs ago",
-    type: "Blitz 3|0",
-    opening: "Sicilian Defense",
-  },
-  {
-    id: 2,
-    opponent: "KnightRider",
-    result: "Loss",
-    eloChange: "-9",
-    date: "5 hrs ago",
-    type: "Rapid 10|0",
-    opening: "Queen's Gambit",
-  },
-  {
-    id: 3,
-    opponent: "QueenGambit",
-    result: "Win",
-    eloChange: "+15",
-    date: "1 day ago",
-    type: "Bullet 1|0",
-    opening: "King's Indian",
-  },
-  {
-    id: 4,
-    opponent: "RookMaster",
-    result: "Win",
-    eloChange: "+11",
-    date: "1 day ago",
-    type: "Blitz 5|0",
-    opening: "French Defense",
-  },
-  {
-    id: 5,
-    opponent: "PawnStorm",
-    result: "Draw",
-    eloChange: "0",
-    date: "2 days ago",
-    type: "Classical 15|10",
-    opening: "English Opening",
-  },
-];
+import { StatsGrid } from "./ProfileStatsGrid";
+// import { achievements } from "../../utils/constants";
+import { useUpdateUser } from "../../hooks/useUpdateUser";
+import type { UserData } from "../../utils/interfaces";
 
 export function Profile() {
-  const { user, loading, error, updateUser } = useUser();
+  const { user, setUser, loading, error } = useUser();
+  const { updateUser, isUpdating, updateError } = useUpdateUser();
   const [isEditing, setIsEditing] = useState(false);
+
   if (!user || loading) {
     return (
       <div className="text-white text-center mt-20">Loading profile...</div>
     );
   }
+
+  const handleSave = async (formData: UserData) => {
+    if (!user) return;
+    const updatedUser = await updateUser(user, formData);
+    if (updatedUser) {
+      setUser(updatedUser);
+      setIsEditing(false);
+    }
+  };
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>{error}</p>;
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8">
@@ -116,6 +85,7 @@ export function Profile() {
             </p>
           </div>
 
+          {/* Edit Profile Button & Modal */}
           <button
             onClick={() => setIsEditing(true)}
             className="bg-neutral-900 hover:bg-neutral-800 text-white font-medium py-2.5 px-6 rounded-lg border border-neutral-800 transition-colors"
@@ -123,47 +93,28 @@ export function Profile() {
             Edit Profile
           </button>
           <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
-            <EditProfileForm
-              initialData={user}
-              onCancel={() => setIsEditing(false)}
-              onSave={async (incomingData) => {
-                const success = await updateUser(incomingData);
-                if (success) {
-                  setIsEditing(false);
-                }
-              }}
-              errorMessage={error}
-            />
+            {isEditing && (
+              <EditProfileForm
+                initialData={user}
+                onCancel={() => setIsEditing(false)}
+                onSave={handleSave}
+                errorMessage={updateError}
+                isUpdating={isUpdating}
+              />
+            )}
           </Modal>
         </div>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stats.map((stat) => (
-          <Card key={stat.id} className="bg-[#0a0a0a] border-neutral-900">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-3">
-                <stat.icon className={clsx("w-8 h-8", stat.color)} />
-              </div>
-              <div key={stat.id} className="text-3xl font-bold text-white mb-1">
-                {stat.label === "Total Games" && user?.profile?.total_games}
-                {stat.label === "Current Streak" &&
-                  user?.profile?.current_streak}
-                {stat.label === "Peak Rating" && user?.profile?.peak_rating}
-              </div>
-              <div className="text-xs text-neutral-500 uppercase tracking-wide">
-                {stat.label}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <StatsGrid user={user} />
       </div>
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Match History - Takes 2 columns */}
-        <div className="lg:col-span-2">
+        {/* <div className="lg:col-span-2">
           <Card className="bg-[#0a0a0a] border-neutral-900">
             <CardHeader>
               <CardTitle className="text-white">Match History</CardTitle>
@@ -243,10 +194,10 @@ export function Profile() {
               </button>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
 
         {/* Rating Progress - Takes 1 column */}
-        <div className="space-y-6">
+        {/* <div className="space-y-6">
           <Card className="bg-[#0a0a0a] border-neutral-900">
             <CardHeader>
               <CardTitle className="text-white">Rating Progress</CardTitle>
@@ -312,11 +263,11 @@ export function Profile() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
       </div>
 
       {/* Achievements */}
-      <Card className="bg-[#0a0a0a] border-neutral-900">
+      {/* <Card className="bg-[#0a0a0a] border-neutral-900">
         <CardHeader>
           <CardTitle className="text-white">Achievements</CardTitle>
           <CardDescription className="text-neutral-500">
@@ -381,7 +332,7 @@ export function Profile() {
             ))}
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 }

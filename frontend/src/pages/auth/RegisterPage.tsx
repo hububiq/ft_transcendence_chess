@@ -15,26 +15,21 @@ const Register = () => {
   const errRef = useRef<HTMLParagraphElement | null>(null);
 
   const [user, setUser] = useState("");
-  const [validName, setValidName] = useState(false);
-  const [userFocus, setUserFocus] = useState(false);
-
   const [email, setEmail] = useState("");
-  const [validEmail, setValidEmail] = useState(false);
-  const [emailFocus, setEmailFocus] = useState(false);
-
   const [pwd, setPassword] = useState("");
-  const [validPwd, setValidPwd] = useState(false);
-  const [pwdFocus, setPwdFocus] = useState(false);
-
   const [matchPwd, setMatchPwd] = useState("");
-  const [validMatch, setValidMatch] = useState(false);
-  const [matchFocus, setMatchFocus] = useState(false);
+  const [localErr, setLocalErr] = useState("");
 
-  const { errMsg, success, executeRegister } = useRegister();
+  const { errMsg, executeRegister } = useRegister();
   const { oauthLoading, handleGitHubLogin } = useOAuth();
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+
+    if (pwd !== matchPwd) {
+      setLocalErr("Passwords do not match");
+      return;
+    }
 
     const payload = {
       username: user,
@@ -51,23 +46,9 @@ const Register = () => {
     }
   }, []);
 
-  // Maybe transfer this to a new hook
-  useEffect(() => {
-    const result = USER_REGEX.test(user);
-    setValidName(result);
-  }, [user]);
+  // Display either the local validation error or the server error
+  const displayError = localErr || errMsg;
 
-  useEffect(() => {
-    const result = PWD_REGEX.test(pwd);
-    setValidPwd(result);
-    const match = pwd === matchPwd;
-    console.log(`Match: ${match}`);
-  }, [pwd, matchPwd]);
-  /*
-  useEffect(() => {
-    setErrMsg("");
-  }, [user, pwd, matchPwd]);
-*/
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
       <div className="w-full max-w-md bg-[#050505] border border-neutral-900 rounded-2xl shadow-2xl relative z-10 overflow-hidden">
@@ -108,12 +89,12 @@ const Register = () => {
 
           {/* Registration */}
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {errMsg && (
+            {displayError && (
               <div
                 ref={errRef}
                 className="p-3 bg-red-950/50 border border-red-800 rounded-lg text-red-400 text-sm text-center"
               >
-                {errMsg}
+                {displayError}
               </div>
             )}
             {/* Username */}
@@ -126,10 +107,9 @@ const Register = () => {
                 id="username"
                 ref={userRef}
                 autoComplete="off"
+                value={user}
                 onChange={(e) => setUser(e.target.value)}
                 required
-                onFocus={() => setUserFocus(true)}
-                onBlur={() => setUserFocus(false)}
                 placeholder="Username"
                 className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
               />
@@ -143,6 +123,7 @@ const Register = () => {
               <input
                 type="email"
                 id="email"
+                value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="Email address"
@@ -158,11 +139,10 @@ const Register = () => {
               <input
                 type="password"
                 id="password"
+                value={pwd}
                 required
                 autoComplete="off"
                 onChange={(e) => setPassword(e.target.value)}
-                onFocus={() => setPwdFocus(true)}
-                onBlur={() => setPwdFocus(false)}
                 placeholder="Password"
                 className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
               />
@@ -176,11 +156,10 @@ const Register = () => {
               <input
                 type="password"
                 id="confirm_pwd"
+                value={matchPwd}
                 required
                 autoComplete="off"
                 onChange={(e) => setMatchPwd(e.target.value)}
-                onFocus={() => setPwdFocus(true)}
-                onBlur={() => setPwdFocus(false)}
                 placeholder="Confirm password"
                 className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
               />
@@ -194,15 +173,12 @@ const Register = () => {
             </button>
           </form>
           <div className="mt-6 text-center">
-            <button className="text-sm font-medium text-neutral-500 hover:text-white transition-colors">
-              <Link
-                to="/login"
-                className="text-sm font-medium text-neutral-500 hover:text-white transition-colors"
-              >
-                Already have an account? {/* Router Link Here */}
-                Log in
-              </Link>
-            </button>
+            <Link
+              to="/login"
+              className="text-sm font-medium text-neutral-500 hover:text-white transition-colors"
+            >
+              Already have an account? Log in
+            </Link>
           </div>
         </div>
       </div>

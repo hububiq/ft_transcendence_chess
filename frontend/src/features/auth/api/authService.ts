@@ -1,19 +1,15 @@
-// The pure Axios calls for login/register
-// It is purely responsible for talking to your Django/FastAPI backend.
+// This file is responsible for talking to your Django/FastAPI backend.
+// and returns Promise (via Axios)
+import { api } from "../../../api/axios";
 
-// returns Promise (via Axios)
-function loginRequest(credentials) {}
+export const loginRequest = async (credentials: object) => {
+  return api.post("/api/login/", credentials);
+};
 
-// returns Promise (via Axios)
-function registerRequest(newUserData) {}
+export const registerRequest = async (newUserData: object) => {
+  return api.post("/api/register/", newUserData);
+};
 
-/* 
-Define function loginRequest(credentials):
-    Return axios.post to "/api/login/" with credentials
-
-Define function registerRequest(newUserData):
-    Return axios.post to "/api/register/" with newUserData
-
-Define function fetchCurrentUser():
-    Return axios.get to "/api/me/"
-*/
+export const fetchCurrentUser = async () => {
+  return api.get("/api/me/");
+};

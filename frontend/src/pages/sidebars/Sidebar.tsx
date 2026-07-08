@@ -11,13 +11,14 @@ import {
 import clsx from "clsx";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { useUser } from "../../hooks/useUser";
 
-interface UserData {
-  username: string;
-  profile: {
-    elo_rating: number;
-  };
-}
+// interface UserData {
+//   username: string;
+//   profile: {
+//     elo_rating: number;
+//   };
+// }
 
 export function Sidebar() {
   const location = useLocation();
@@ -29,34 +30,7 @@ export function Sidebar() {
     { name: "Settings", path: "/settings", icon: Settings },
     { name: "Design System", path: "/design-system", icon: Palette },
   ];
-
-  const [items, setItems] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const token = localStorage.getItem("access_token");
-
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        setError("");
-        const response = await axios.get("http://localhost:8000/api/me/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setItems(response.data);
-      } catch (err) {
-        setError(`${err}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchItems();
-  }, [items?.profile?.elo_rating, items?.username, token]); // should trigger re-render after state changes
-
-  console.log(items);
-  console.log(error);
+  const { user, loading } = useUser();
 
   return (
     <aside className="w-64 bg-[#050505] border-r border-neutral-900 flex flex-col justify-between h-full">
@@ -108,10 +82,10 @@ export function Sidebar() {
           ) : (
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-neutral-200 truncate">
-                {items?.username}
+                {user?.username}
               </p>
               <p className="text-xs text-blue-500 font-semibold mt-0.5">
-                ELO: {items?.profile?.elo_rating}
+                ELO: {user?.profile?.elo_rating}
               </p>
             </div>
           )}

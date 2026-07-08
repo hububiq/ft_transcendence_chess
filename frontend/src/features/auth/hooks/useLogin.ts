@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { api } from "../../../api/axios";
 import { useNavigate } from "react-router";
 import axios from "axios";
-
-const LOGIN_URL = "/api/login/";
+import { loginRequest } from "../api/authService";
 
 export function useLogin() {
   const navigate = useNavigate();
@@ -12,16 +10,23 @@ export function useLogin() {
   const [success, setSuccess] = useState(false);
 
   const executeLogin = async (payload: object) => {
+    setErrMsg(null);
     try {
-      const response = await api.post(LOGIN_URL, payload);
+      const response = await loginRequest(payload);
 
-      console.log(`Response data: ${response.data}`);
+      const token = response.data.access;
+      if (token) {
+        localStorage.setItem("access_token", token);
+      } else {
+        console.log(
+          "Login successful, but no token was found in the response.",
+        );
+      }
       setSuccess(true);
-
       navigate("/");
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        setErrMsg(error.response?.data?.detail || "Registration failed");
+        setErrMsg(error.response?.data?.detail || "Login failed");
       } else {
         setErrMsg("An unexpected error occurred.");
       }
