@@ -34,9 +34,6 @@ def register_user(request):
     # If the data is bad, send the exact error back to React (e.g. "Email already exists")
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-# Should we check is email valid? (with @)
-
 # users/views.py
 
 @api_view(['POST'])

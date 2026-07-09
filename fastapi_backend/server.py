@@ -9,31 +9,31 @@ class ConnectionManager:
     """
 
     def __init__(self):
-        # user_id → WebSocket
+        # game_id → WebSocket
         self.active_connections: Dict[int, WebSocket] = {}
 
-    async def connect(self, user_id: int, websocket: WebSocket):
+    async def connect(self, game_id: int, websocket: WebSocket):
         """
-        Accepts a WebSocket connection and registers it under a user_id.
+        Accepts a WebSocket connection and registers it under a game_id.
         """
         await websocket.accept()
-        self.active_connections[user_id] = websocket
-        print(f"[WS] User {user_id} connected")
+        self.active_connections[game_id] = websocket
+        print(f"[WS] Game {game_id} connected")
 
-    async def disconnect(self, user_id: int):
+    async def disconnect(self, game_id: int):
         """
-        Removes a WebSocket connection for a given user_id.
+        Removes a WebSocket connection for a given game_id.
         """
-        websocket = self.active_connections.pop(user_id, None)
+        websocket = self.active_connections.pop(game_id, None)
         if websocket:
             await websocket.close()
-            print(f"[WS] User {user_id} disconnected")
+            print(f"[WS] Game {game_id} disconnected")
 
-    async def send_to_user(self, user_id: int, message: dict):
+    async def send_to_user(self, game_id: int, message: dict):
         """
         Sends a JSON message to a specific user.
         """
-        websocket = self.active_connections.get(user_id)
+        websocket = self.active_connections.get(game_id)
         if websocket:
             await websocket.send_json(message)
 
@@ -41,7 +41,7 @@ class ConnectionManager:
         """
         Sends a JSON message to all connected users.
         """
-        for user_id, websocket in self.active_connections.items():
+        for game_id, websocket in self.active_connections.items():
             await websocket.send_json(message)
 
     # ---------------------------------------------------------
