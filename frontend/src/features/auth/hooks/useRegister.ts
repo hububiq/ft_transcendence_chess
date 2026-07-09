@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import axios from "axios";
-import { registerRequest } from "../api/authService";
+import { registerRequest, fetchCurrentUser } from "../api/authService";
+import { useAuth } from "../context/AuthProvider";
 
 interface RegisterPayload {
   username: string;
@@ -14,15 +15,20 @@ export function useRegister() {
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const { setUser } = useAuth();
+
   const executeRegister = async (payload: RegisterPayload) => {
     setErrMsg(null);
     setSuccess(false);
+
     try {
       const response = await registerRequest(payload);
-
       const token = response.data.access;
+
       if (token) {
         localStorage.setItem("access_token", token);
+        const userResponse = await fetchCurrentUser();
+        setUser(userResponse.data);
       } else {
         console.log(
           "Register successful, but no token was found in the response.",

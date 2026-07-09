@@ -1,4 +1,4 @@
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { User, Lock, ArrowRight } from "lucide-react";
 import gitHubLogo from "../../assets/github.svg";
 import React, { useState, useRef, useEffect } from "react";
 import { useLogin } from "../../features/auth/hooks/useLogin";
@@ -13,22 +13,15 @@ const Login = () => {
   const userRef = useRef<HTMLInputElement | null>(null);
   const errRef = useRef<HTMLParagraphElement | null>(null);
 
-  const [email, setEmail] = useState("");
-  const [emailFocus, setEmailFocus] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
-  const [pwd, setPassword] = useState("");
-  const { errMsg, success, executeLogin } = useLogin();
+  const { errMsg, executeLogin } = useLogin();
   const { oauthLoading, handleGitHubLogin } = useOAuth();
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-
-    const payload = {
-      email: email,
-      password: pwd,
-    };
-
-    await executeLogin(payload);
+    await executeLogin({ username, password });
   };
 
   useEffect(() => {
@@ -84,20 +77,19 @@ const Login = () => {
               </div>
             )}
 
-            {/* Email */}
+            {/* Username */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="w-5 h-5 text-neutral-600" />
+                <User className="w-5 h-5 text-neutral-600" />
               </div>
               <input
-                type="email"
-                id="email"
+                type="text"
+                id="username"
                 ref={userRef}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setUsername(e.target.value)}
                 required
-                onFocus={() => setEmailFocus(true)}
-                onBlur={() => setEmailFocus(false)}
-                placeholder="Email address"
+                autoComplete="username"
+                placeholder="Username"
                 className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
               />
             </div>
@@ -111,7 +103,7 @@ const Login = () => {
                 type="password"
                 id="password"
                 required
-                autoComplete="off"
+                autoComplete="current-password"
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
@@ -127,14 +119,12 @@ const Login = () => {
             </button>
           </form>
           <div className="mt-6 text-center">
-            <button className="text-sm font-medium text-neutral-500 hover:text-white transition-colors">
-              <Link
-                to="/register"
-                className="text-sm font-medium text-neutral-500 hover:text-white transition-colors"
-              >
-                New here? Create an account
-              </Link>
-            </button>
+            <Link
+              to="/register"
+              className="text-sm font-medium text-neutral-500 hover:text-white transition-colors"
+            >
+              New here? Create an account
+            </Link>
           </div>
         </div>
       </div>

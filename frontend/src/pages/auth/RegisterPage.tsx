@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Upload, Mail, Lock, User, ArrowRight } from "lucide-react";
 import { useRegister } from "../../features/auth/hooks/useRegister";
 import gitHubLogo from "../../assets/github.svg";
-import { USER_REGEX, PWD_REGEX } from "../../utils/constants";
+// import { USER_REGEX, PWD_REGEX } from "../../utils/constants";
 import { useOAuth } from "../../features/auth/hooks/useOAuth";
 import { Link } from "react-router";
 

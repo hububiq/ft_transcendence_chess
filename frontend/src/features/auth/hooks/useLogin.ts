@@ -1,28 +1,35 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import axios from "axios";
-import { loginRequest } from "../api/authService";
+import { loginRequest, fetchCurrentUser } from "../api/authService";
+import { useAuth } from "../context/AuthProvider";
+
+interface LoginCredentials {
+  username: string;
+  password: string;
+}
 
 export function useLogin() {
   const navigate = useNavigate();
-
   const [errMsg, setErrMsg] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
-  const executeLogin = async (payload: object) => {
+  const { setUser } = useAuth();
+
+  const executeLogin = async (payload: LoginCredentials) => {
     setErrMsg(null);
     try {
       const response = await loginRequest(payload);
-
       const token = response.data.access;
+
       if (token) {
         localStorage.setItem("access_token", token);
+        const userResponse = await fetchCurrentUser();
+        setUser(userResponse.data);
       } else {
         console.log(
           "Login successful, but no token was found in the response.",
         );
       }
-      setSuccess(true);
       navigate("/");
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -33,5 +40,5 @@ export function useLogin() {
     }
   };
 
-  return { executeLogin, success, errMsg };
+  return { executeLogin, errMsg };
 }
