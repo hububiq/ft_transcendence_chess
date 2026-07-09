@@ -5,7 +5,7 @@ import { loginRequest, fetchCurrentUser } from "../api/authService";
 import { useAuth } from "../context/AuthProvider";
 
 interface LoginCredentials {
-  username: string;
+  email: string;
   password: string;
 }
 

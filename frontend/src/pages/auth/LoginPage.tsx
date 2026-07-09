@@ -1,4 +1,4 @@
-import { User, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight } from "lucide-react";
 import gitHubLogo from "../../assets/github.svg";
 import React, { useState, useRef, useEffect } from "react";
 import { useLogin } from "../../features/auth/hooks/useLogin";
@@ -13,7 +13,7 @@ const Login = () => {
   const userRef = useRef<HTMLInputElement | null>(null);
   const errRef = useRef<HTMLParagraphElement | null>(null);
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const { errMsg, executeLogin } = useLogin();
@@ -21,7 +21,7 @@ const Login = () => {
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    await executeLogin({ username, password });
+    await executeLogin({ email, password });
   };
 
   useEffect(() => {
@@ -77,19 +77,18 @@ const Login = () => {
               </div>
             )}
 
-            {/* Username */}
+            {/* Email */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <User className="w-5 h-5 text-neutral-600" />
+                <Mail className="w-5 h-5 text-neutral-600" />
               </div>
               <input
-                type="text"
-                id="username"
+                type="email"
+                id="email"
                 ref={userRef}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="username"
-                placeholder="Username"
+                placeholder="Email"
                 className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
               />
             </div>
