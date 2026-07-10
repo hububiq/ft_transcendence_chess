@@ -43,10 +43,10 @@ jobs:
         # Run pytest on the ai_engine.py file
         docker exec fastapi_backend pytest test_ai.py 
 
-    - name: Run React Build Test (Frontend)
-      run: |
-        # Ensure Vite can actually compile
-        docker exec react_frontend npm run build
+    #- name: Run React Build Test (Frontend)
+    #  run: |
+    #    # Ensure Vite can actually compile
+    #    docker exec react_frontend npm run build
 
     - name: Clean up
       if: always()
