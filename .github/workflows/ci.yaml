@@ -25,7 +25,7 @@ jobs:
         echo "REDIS_PORT=6379" >> .env
 
     - name: Build and Start Docker Containers
-      run: docker-compose up -d --build
+      run: docker compose up -d --build
 
     - name: Wait for PostgreSQL to Initialize
       run: sleep 10 # Give the init.sql script time to create django_db and fastapi_db
