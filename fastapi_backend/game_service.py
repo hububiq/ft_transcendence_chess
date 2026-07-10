@@ -18,14 +18,14 @@ async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, los
     game_pgn = chess.pgn.Game.from_board(replay_board)
     pgn_string = str(game_pgn)
 
-    await redis.delete(f"game:{game_id}:fen")
-    await redis.delete(f"game:{game_id}:moves")
-
     await websocket.send_json({
         "type": "game_over",
         "winner_id": winner_id,
         "pgn": pgn_string
     })
+
+    await redis.delete(f"game:{game_id}:fen")
+    await redis.delete(f"game:{game_id}:moves")
 
     # SAVE TO FASTAPI DATABASE
     from sqlmodel import Session
@@ -41,9 +41,6 @@ async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, los
             session.add(game)
             session.commit()
             print(f"[DB] Game {game_id} permanently saved to PostgreSQL")
-
-    redis = await get_redis()
-    await redis.delete(f"game:{game_id}:fen")
 
     async with httpx.AsyncClient() as client:
         try:
