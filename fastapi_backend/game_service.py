@@ -8,8 +8,18 @@ from ai_engine import compute_best_move
 async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, loser_id: int, websocket):
     """Generates the game history, cleans RAM, and updates ELO in Django."""
     
-    game_pgn = chess.pgn.Game.from_board(board)
+    redis = await get_redis()
+    moves_list = await redis.lrange(f"game:{game_id}:moves", 0, -1)
+    
+    # Replay the game on a fresh board to generate the history
+    replay_board = chess.Board()
+    for move_uci in moves_list:
+        replay_board.push_san(move_uci)
+    game_pgn = chess.pgn.Game.from_board(replay_board)
     pgn_string = str(game_pgn)
+
+    await redis.delete(f"game:{game_id}:fen")
+    await redis.delete(f"game:{game_id}:moves")
 
     await websocket.send_json({
         "type": "game_over",
@@ -62,6 +72,7 @@ async def handle_player_move(data: dict, game_id: str, websocket):
     if move in board.legal_moves:
         board.push(move)
         await redis.set(redis_key, board.fen())
+        await redis.rpush(f"game:{game_id}:moves", move.uci()) 
         await websocket.send_json({"type": "move", "move": move.uci(), "fen": board.fen()})
         
         if board.is_game_over():
@@ -78,7 +89,7 @@ async def handle_player_move(data: dict, game_id: str, websocket):
                 ai_move = chess.Move.from_uci(ai_uci)
                 board.push(ai_move)
                 await redis.set(redis_key, board.fen())
-                
+                await redis.rpush(f"game:{game_id}:moves", ai_uci)
                 await websocket.send_json({"type": "move", "move": ai_uci, "fen": board.fen()})
 
                 if board.is_game_over():
