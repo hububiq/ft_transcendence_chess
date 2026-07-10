@@ -71,7 +71,7 @@ async def handle_player_move(data: dict, game_id: str, websocket):
         if data.get("is_vs_bot") == True:
             print(f"Triggering AI for Game {game_id}...") 
             
-            safe_depth = 3
+            safe_depth = 4
             ai_uci = compute_best_move(board.fen(), depth=safe_depth)
             
             if ai_uci:

@@ -88,11 +88,17 @@ INSTALLED_APPS = [
 ]
 ```
 
-After pushing new requirements or settings.py, anyone pulling must remember to migrate models to update one's local database and setup OAuth infrastructure (requires client ID and secret github key - ask superuser for that)
+After pushing new requirements or settings.py, anyone pulling must remember to migrate models to update one's local database and **setup OAuth infrastructure (requires client ID and secret github key - ask superuser for that)**
 ```bash
 sudo docker exec -it django_backend python setup_oauth.py
 ```
-
+ 
+### How to create superuser to manage CRUD
+If you wanna create new super user with terminal CLI, you should type:
+```python
+docker exec -it django_backend python manage.py createsuperuser
+```
+It will prompt you to type in email, username and password (min 8 characters). Write your credentials down.
 
 ## 
 ## DJANGO API CHEAT SHEET (For Frontend & FastAPI)
