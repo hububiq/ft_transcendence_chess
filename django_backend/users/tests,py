@@ -1,0 +1,13 @@
+from django.test import TestCase
+from .models import User, Profile
+
+class UserModelTest(TestCase):
+    def test_profile_signal_creation(self):
+        """ Creates user, check if the profile was created automatically and check if ELO is correct"""
+        
+        user = User.objects.create_user(username="TestUser", email="test@42.fr", password="123")
+        
+        profile_exists = Profile.objects.filter(user=user).exists()
+        self.assertTrue(profile_exists)
+        
+        self.assertEqual(user.profile.elo_rating, 1200)
