@@ -1,0 +1,53 @@
+name: Transcendence CI pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Create temporary .env file for CI
+      run: |
+        echo "POSTGRES_USER=admin" > .env
+        echo "POSTGRES_PASSWORD=supersecret42" >> .env
+        echo "DATABASE_URL=postgres://admin:supersecret42@postgres_db:5432/django_db" >> .env
+        echo "FASTAPI_DB_URL=postgres://admin:supersecret42@postgres_db:5432/fastapi_db" >> .env
+        echo "SECRET_KEY=github_actions_dummy_secret_key_123" >> .env
+        echo "REDIS_HOST=redis_broker" >> .env
+        echo "REDIS_PORT=6379" >> .env
+
+    - name: Build and Start Docker Containers
+      run: docker-compose up -d --build
+
+    - name: Wait for PostgreSQL to Initialize
+      run: sleep 10 # Give the init.sql script time to create django_db and fastapi_db
+
+    - name: Run Django Tests (Auth, Signals, API)
+      run: |
+        docker exec django_backend python manage.py makemigrations
+        docker exec django_backend python manage.py migrate
+        docker exec django_backend python manage.py test users
+
+    - name: Run FastAPI Tests (AI Engine & Logic)
+      run: |
+        # Install pytest inside the container just for this run
+        docker exec fastapi_backend pip install pytest
+        # Run pytest on the ai_engine.py file
+        docker exec fastapi_backend pytest test_ai.py 
+
+    - name: Run React Build Test (Frontend)
+      run: |
+        # Ensure Vite can actually compile
+        docker exec react_frontend npm run build
+
+    - name: Clean up
+      if: always()
+      run: docker-compose down -v
