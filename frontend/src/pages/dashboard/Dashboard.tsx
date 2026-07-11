@@ -70,8 +70,8 @@ export function Dashboard() {
           Find a Match
         </h3>
         <p className="text-neutral-400 mb-8 max-w-md relative z-10 text-sm leading-relaxed">
-          Join the global queue and play against opponents of similar skill
-          level instantly.
+          Join our localhost:3000 queue and play against opponent of probably
+          similar skill level instantly.
         </p>
         <div className="relative z-10 flex gap-3">
           <Link
@@ -93,7 +93,7 @@ export function Dashboard() {
       {/* Grid Layout for Tournaments & History */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Active Tournaments */}
-        <div className="bg-[#0a0a0a] border border-neutral-900 rounded-xl p-6">
+        {/* <div className="bg-[#0a0a0a] border border-neutral-900 rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
               <Trophy className="w-4 h-4 text-purple-500" />
@@ -137,10 +137,10 @@ export function Dashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Match History */}
-        <div className="bg-[#0a0a0a] border border-neutral-900 rounded-xl p-6">
+        {/* <div className="bg-[#0a0a0a] border border-neutral-900 rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-sm font-semibold text-white flex items-center gap-2">
               <Clock className="w-4 h-4 text-blue-500" />
@@ -188,7 +188,7 @@ export function Dashboard() {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

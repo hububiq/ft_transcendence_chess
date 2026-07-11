@@ -1,4 +1,4 @@
-import React, {
+import {
   createContext,
   useState,
   useContext,
@@ -6,15 +6,21 @@ import React, {
   useEffect,
 } from "react";
 import { fetchCurrentUser } from "../api/authService";
-import type { User, AuthContextType } from "../../../utils/interfaces";
+import type { User } from "../../../utils/interfaces";
+
+interface AuthContextType {
+  user: User | null;
+  setUser: (user: User | null) => void;
+  isInitializing: boolean;
+  logout: () => void;
+}
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 interface AuthProviderProps {
   children: ReactNode;
 }
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
@@ -31,6 +37,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(response.data);
       } catch (error) {
         setUser(null);
+        console.error(error);
       } finally {
         setIsInitializing(false);
       }
@@ -38,13 +45,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initAuth();
   }, []);
 
+  const logout = () => {
+    localStorage.removeItem("access_token");
+    setUser(null);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, setUser, isInitializing }}>
+    <AuthContext.Provider value={{ user, setUser, isInitializing, logout }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -52,5 +65,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
-// The broadcast tower (React Context)

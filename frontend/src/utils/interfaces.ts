@@ -22,9 +22,3 @@ export interface User {
   bot_difficulty: number | null;
   date_join: string;
 }
-
-export interface AuthContextType {
-  user: User | null;
-  setUser: (user: User | null) => void;
-  isInitializing: boolean;
-}

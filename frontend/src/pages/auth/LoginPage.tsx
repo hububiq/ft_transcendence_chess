@@ -9,7 +9,7 @@ function GitHubIcon() {
   return <img width="7%" src={gitHubLogo} alt="GitHub Logo" />;
 }
 
-const Login = () => {
+export function Login() {
   const userRef = useRef<HTMLInputElement | null>(null);
   const errRef = useRef<HTMLParagraphElement | null>(null);
 
@@ -129,6 +129,6 @@ const Login = () => {
       </div>
     </div>
   );
-};
+}
 
-export default Login;
+// export default Login;

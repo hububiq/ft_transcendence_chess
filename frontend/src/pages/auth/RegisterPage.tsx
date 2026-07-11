@@ -10,7 +10,7 @@ function GitHubIcon() {
   return <img width="7%" src={gitHubLogo} alt="GitHub Logo" />;
 }
 
-const Register = () => {
+export function Register() {
   const userRef = useRef<HTMLInputElement | null>(null);
   const errRef = useRef<HTMLParagraphElement | null>(null);
 
@@ -184,6 +184,4 @@ const Register = () => {
       </div>
     </div>
   );
-};
-
-export default Register;
+}

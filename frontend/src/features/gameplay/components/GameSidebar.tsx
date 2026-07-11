@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { RotateCcw, Flag } from "lucide-react";
-import { type Difficulty, DIFFICULTY_CONFIG } from "../../utils/constants";
+import { type Difficulty, DIFFICULTY_CONFIG } from "../../../utils/constants";
 
 export type MoveRecord = {
   n: number;
@@ -26,8 +26,8 @@ export function GameSidebar({
   return (
     <div className="w-72 bg-[#050505] border border-neutral-900 rounded-xl h-[600px] flex flex-col p-4">
       {/* Difficulty badge */}
-      <div className="mb-4 flex items-center justify-between">
-        <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">
+      <div className="mb-4 pb-2 border-b border-neutral-900 flex items-center justify-between">
+        <span className="text-[10px]  font-bold text-neutral-600 uppercase tracking-widest">
           Bot Difficulty
         </span>
         <span

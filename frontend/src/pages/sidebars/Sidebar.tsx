@@ -9,9 +9,8 @@ import {
   Loader,
 } from "lucide-react";
 import clsx from "clsx";
-import axios from "axios";
-import { useEffect, useState } from "react";
 import { useUser } from "../../hooks/useUser";
+import { useAuth } from "../../features/auth/context/AuthProvider";
 
 // interface UserData {
 //   username: string;
@@ -22,6 +21,12 @@ import { useUser } from "../../hooks/useUser";
 
 export function Sidebar() {
   const location = useLocation();
+  const { logout } = useAuth();
+  const { user, loading } = useUser();
+
+  const handleSignOut = () => {
+    logout();
+  };
 
   const navItems = [
     { name: "Play", path: "/", icon: Play },
@@ -30,7 +35,6 @@ export function Sidebar() {
     { name: "Settings", path: "/settings", icon: Settings },
     { name: "Design System", path: "/design-system", icon: Palette },
   ];
-  const { user, loading } = useUser();
 
   return (
     <aside className="w-64 bg-[#050505] border-r border-neutral-900 flex flex-col justify-between h-full">
@@ -90,13 +94,13 @@ export function Sidebar() {
             </div>
           )}
         </Link>
-        <Link
-          to="/login"
+        <button
+          onClick={handleSignOut}
           className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-neutral-500 hover:text-neutral-300 transition-colors"
         >
           <LogOut className="w-4 h-4" />
           Sign Out
-        </Link>
+        </button>
       </div>
     </aside>
   );

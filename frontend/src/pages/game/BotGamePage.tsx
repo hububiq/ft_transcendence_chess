@@ -1,95 +1,161 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
 import { ArrowLeft, Bot } from "lucide-react";
-import { ChessBoardUI } from "../../features/gameplay/components/ChessBoard";
+import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
 import {
   type Difficulty,
   type GameOutcome,
   DIFFICULTY_CONFIG,
 } from "../../utils/constants";
-import { PreGameMenu } from "../../features/gameplay/PreGameMenu";
-import { GameOverModal } from "../../features/gameplay/GameOverModal";
+import { PreGameMenu } from "../../features/gameplay/components/PreGameMenu";
+import { GameOverModal } from "../../features/gameplay/components/GameOverModal";
+import { ParticipantBanner } from "../../features/gameplay/components/ParticipantBanner";
 import {
   GameSidebar,
   type MoveRecord,
-} from "../../features/gameplay/GameSidebar";
-import { ParticipantBanner } from "../../features/gameplay/ParticipantBanner";
+} from "../../features/gameplay/components/GameSidebar";
 import clsx from "clsx";
-
 import playerAvatar from "../../assets/a_logo.png";
+import { useUser } from "../../hooks/useUser";
 
-const INITIAL_CLOCK_SEC = 600;
+// Hardcoded for now based
+const MOCK_PLAYER_ID = 5;
+const MOCK_BOT_ID = 26;
 
 export function BotGame() {
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
-  const [gameStarted, setGameStarted] = useState(false);
-  const [isPlayerTurn, setIsPlayerTurn] = useState(true);
-  const [botThinking, setBotThinking] = useState(false);
+  const [gameStarted, setGameStarted] = useState<boolean>(false);
+  const { user } = useUser();
+
+  // game state
+  const [currentFen, setCurrentFen] = useState<string>("start"); // board state for API
+  const [botThinking, setBotThinking] = useState<boolean>(false);
   const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
-  const [playerTime, setPlayerTime] = useState(INITIAL_CLOCK_SEC);
-  const [botTime, setBotTime] = useState(INITIAL_CLOCK_SEC);
   const [gameOver, setGameOver] = useState<GameOutcome | null>(null);
-  const [isTimed, setIsTimed] = useState(true);
 
-  // Player timer
+  // WebSocket connection
+  const ws = useRef<WebSocket | null>(null);
+
+  // 1. Establishing WS connection when game starts
   useEffect(() => {
-    const isMatchActive = gameStarted && !gameOver;
-    if (!isMatchActive || !isPlayerTurn || !isTimed) return;
-    const t = setInterval(() => setPlayerTime((p) => Math.max(0, p - 1)), 1000);
-    return () => clearInterval(t);
-  }, [gameStarted, isPlayerTurn, gameOver, isTimed]);
+    if (!gameStarted) return;
 
-  // Bot timer
-  useEffect(() => {
-    const isMatchActive = gameStarted && !gameOver;
-    if (!isMatchActive || isPlayerTurn) return;
-    const t = setInterval(() => setBotTime((p) => Math.max(0, p - 1)), 1000);
-    return () => clearInterval(t);
-  }, [gameStarted, isPlayerTurn, gameOver]);
+    // TODO: replace with actual beckend WebSocket URL
+    ws.current = new WebSocket("ws://localhost:8000/ws/bot-match");
 
-  const handleResign = () => setGameOver("loss");
+    ws.current.onopen = () => {
+      console.log("Connected to Chess Backend!");
+    };
+
+    // 2. Listening to the backend's JSON stream
+    ws.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Recieved from server: ", data);
+
+      switch (data.type) {
+        case "board_state":
+          setCurrentFen(data.fen);
+          break;
+        case "move":
+          setCurrentFen(data.fen);
+
+          // update history
+          setMoveHistory((prev) => {
+            const newHistory: MoveRecord[] = [...prev];
+            const lastIndex: number = newHistory.length - 1;
+
+            if (lastIndex < 0 || newHistory[lastIndex].black) {
+              newHistory.push({ n: newHistory.length + 1, white: data.move });
+              setBotThinking(true);
+            } else {
+              newHistory[lastIndex] = {
+                ...newHistory[lastIndex],
+                black: data.move,
+              };
+              setBotThinking(false);
+            }
+            return newHistory;
+          });
+          break;
+
+        case "game_over":
+          if (data.winner_id === MOCK_PLAYER_ID) {
+            setGameOver("win");
+          } else if (data.winner_id === MOCK_BOT_ID) {
+            setGameOver("loss");
+          } else {
+            setGameOver("draw");
+          }
+          break;
+      }
+    };
+
+    // Cleanup connection when component unmounts or game restarts
+    return () => {
+      if (ws.current) {
+        ws.current.close();
+      }
+    };
+  }, [gameStarted]);
+
+  // 3. Sending the Move Payload to FastAPI
+  const handlePlayerMove = (move: string) => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      const payload = {
+        type: "move",
+        move: move, // e.g., "e2e4"
+        player_id: MOCK_PLAYER_ID,
+        opponent_id: MOCK_BOT_ID,
+        is_vs_bot: true,
+      };
+
+      ws.current.send(JSON.stringify(payload));
+    } else {
+      console.error("WebSocket is not connected");
+    }
+  };
+
+  const handleResign = () => {
+    setGameOver("loss");
+    // MAYBE send a socket message here if the backend expects it!
+  };
+
   const handleRestart = () => {
-    setIsPlayerTurn(true);
     setBotThinking(false);
     setMoveHistory([]);
-    setPlayerTime(INITIAL_CLOCK_SEC);
-    setBotTime(INITIAL_CLOCK_SEC);
+    setCurrentFen("start");
     setGameOver(null);
-    setGameStarted(true);
+    // Toggling this off and on will disconnect and reconnect the WebSocket cleanly
+    setGameStarted(false);
+    setTimeout(() => setGameStarted(true), 100);
   };
 
   const cfg = DIFFICULTY_CONFIG[difficulty];
 
   return (
     <div className="min-h-screen bg-black flex flex-col text-neutral-200">
-      {/* Header */}
       <header className="p-4 border-b border-neutral-900 flex items-center justify-between">
         <Link
           to="/"
           className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors text-sm font-medium"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Hub
+          <ArrowLeft className="w-4 h-4" /> *Back to Home
         </Link>
         <div className="text-xs font-bold tracking-widest text-neutral-600 uppercase flex items-center gap-2">
           <Bot className="w-3.5 h-3.5" />
-          {isTimed ? "Player vs Bot • Blitz 10|0" : "Time control is off"}
+          {`${user?.username} vs Bot • Untimed`}
         </div>
         <div className="w-24" />
       </header>
 
-      {/* Difficulty picker overlay (pre-game) */}
       {!gameStarted && (
         <PreGameMenu
           difficulty={difficulty}
           onDifficultyChange={setDifficulty}
           onStartGame={() => setGameStarted(true)}
-          timeMode={isTimed}
-          onTimeModeChange={setIsTimed}
         />
       )}
 
-      {/* Game Over overlay */}
       {gameOver && (
         <GameOverModal
           outcome={gameOver}
@@ -98,44 +164,41 @@ export function BotGame() {
         />
       )}
 
-      {/* Main game */}
       {gameStarted && (
         <main className="flex-1 flex items-center justify-center p-8 gap-12">
           <div className="flex flex-col gap-6 max-w-[600px] w-full">
-            {/* Bot panel */}
             <ParticipantBanner
               avatar={<Bot className={clsx("w-6 h-6")} />}
               name="chess42 Bot"
-              subText={`${cfg.label} (${cfg.elo})`}
-              subTextColor={cfg.color}
-              time={isTimed ? botTime : undefined}
+              eloRating={`${cfg.label} (${cfg.elo})`}
+              eloRatingColor={cfg.color}
               isThinking={botThinking}
               graveyard={<span>♟</span>}
             />
 
-            {/* Chess Board */}
             <div className="w-[600px] h-[600px] rounded-sm overflow-hidden border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
-              <ChessBoardUI onGameEnd={setGameOver} />
+              <ChessBoard
+                fen={currentFen}
+                onMove={handlePlayerMove}
+                onGameEnd={setGameOver}
+              />
             </div>
 
-            {/* Player panel */}
             <ParticipantBanner
               avatar={
                 <img
                   src={playerAvatar}
-                  alt="Player's avatar"
+                  alt="Player avatar"
                   className="w-12 h-12 rounded-lg border-2 border-blue-500 object-cover"
                 />
               }
-              name="GrandMaster42"
+              name={user?.username}
               nameColor="text-blue-500"
-              subText="(2145)"
-              time={isTimed ? playerTime : undefined}
+              eloRating={user?.profile?.elo_rating}
               graveyard={<span>♙</span>}
             />
           </div>
 
-          {/* Sidebar */}
           <GameSidebar
             difficulty={difficulty}
             onRestart={handleRestart}
