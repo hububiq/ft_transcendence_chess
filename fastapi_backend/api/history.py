@@ -1,5 +1,3 @@
-# fastapi_backend/api/history.py
-
 from fastapi import APIRouter, Depends
 from sqlmodel import select
 from db import async_session

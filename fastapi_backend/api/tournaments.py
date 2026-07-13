@@ -1,5 +1,3 @@
-# fastapi_backend/api/tournaments.py
-
 from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 from db import async_session
