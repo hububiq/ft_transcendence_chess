@@ -58,14 +58,7 @@ async def game_socket(websocket: WebSocket, game_id: int):
             msg_type = data.get("type")
 
             if msg_type == "move":
-                await redis.publish("match.update", json.dumps(data))
-
-            elif msg_type == "ai_request":
-                best_move = compute_best_move(data["board"])
-                await websocket.send_json({
-                    "type": "ai_move",
-                    "move": best_move
-                })
+                await handle_player_move(data, game_id, websocket)
 
             elif msg_type == "join_queue":
                 user_id = data.get("user_id")
