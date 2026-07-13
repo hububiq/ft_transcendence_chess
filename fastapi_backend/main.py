@@ -1,3 +1,5 @@
+# fastapi_backend/main.py
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from config import settings
 from server import manager
@@ -11,8 +13,14 @@ from database import init_db
 from models import Game, Tournament
 from game_service import handle_game_over
 from game_service import handle_player_move
+from api.history import router as history_router
+from api.tournaments import router as tournaments_router
+
 
 app = FastAPI(debug=settings.debug)
+
+app.include_router(history_router)
+app.include_router(tournaments_router)
 
 @app.get("/")
 def read_root():
@@ -23,12 +31,11 @@ def read_root():
 async def startup_event():
     print("FastAPI is starting up...")
     
-    # 1. Automatically build the PostgreSQL tables reachging to .env for urls in separate volume for database (config directs to correct url)
+    # 1. Build PostgreSQL tables
     await init_db()
     
-    # 2. Launch the matchmaking loop in the background
+    # 2. Launch matchmaking loop
     asyncio.create_task(matchmaking_loop())
-
 
 @app.websocket("/ws/game/{game_id}")
 async def game_socket(websocket: WebSocket, game_id: int):
@@ -51,13 +58,23 @@ async def game_socket(websocket: WebSocket, game_id: int):
             msg_type = data.get("type")
 
             if msg_type == "move":
-                await handle_player_move(data, game_id, websocket)
+                await redis.publish("match.update", json.dumps(data))
+
+            elif msg_type == "ai_request":
+                best_move = compute_best_move(data["board"])
+                await websocket.send_json({
+                    "type": "ai_move",
+                    "move": best_move
+                })
 
             elif msg_type == "join_queue":
                 user_id = data.get("user_id")
                 await redis.lpush("matchmaking_queue", user_id)
-                await websocket.send_json({"type": "info", "message": "Joined queue!"})
-            
+                await websocket.send_json({
+                    "type": "info",
+                    "message": "Joined matchmaking queue!"
+                })
+
             elif msg_type == "chat_message":
                 #await broadcast_chat(data["text"])
                 pass
