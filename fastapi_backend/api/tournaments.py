@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from sqlmodel import select
-from db import async_session
+from database import async_session
 from models import Tournament, TournamentParticipant, Game
 
 router = APIRouter(prefix="/api/tournaments", tags=["tournaments"])

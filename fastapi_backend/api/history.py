@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlmodel import select
-from db import async_session
+from database import async_session #secure channel to talk with Postgre. FastApi doesnt communicate that easy like Django
 from models import Game
 from auth import get_current_user
 
