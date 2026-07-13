@@ -59,7 +59,7 @@ async def handle_player_move(data: dict, game_id: str, websocket):
 
     current_fen = await redis.get(redis_key)
     board = chess.Board(current_fen) if current_fen else chess.Board()
-
+    
     try:
         move = chess.Move.from_uci(data["move"])
     except ValueError:
@@ -78,7 +78,7 @@ async def handle_player_move(data: dict, game_id: str, websocket):
 
         if data.get("is_vs_bot") == True:
             print(f"Triggering AI for Game {game_id}...") 
-            
+            await websocket.send_json({"type": "info", "message": "Bot is thinking..."})
             safe_depth = 4
             ai_uci = compute_best_move(board.fen(), depth=safe_depth)
             
@@ -93,4 +93,4 @@ async def handle_player_move(data: dict, game_id: str, websocket):
                     await handle_game_over(board, game_id, winner_id=data["opponent_id"], loser_id=data["player_id"], websocket=websocket)
                     return
     else:
-        await websocket.send_json({"type": "error", "message": "Illegal move!"})
+        await websocket.send_json({"type": "error", "message": "Illegal move"})

@@ -41,32 +41,32 @@ def update_elo(request):
     winner_id = request.data.get('winner_id')
     loser_id = request.data.get('loser_id')
     
-    if not winner_id or not loser_id:
-        return Response({"error": "Please provide winner_id and loser_id"}, status=status.HTTP_400_BAD_REQUEST)
+    if not winner_id:
+        return Response({"error": "Winner ID required"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # Find their profiles in the database
         winner_profile = Profile.objects.get(user__id=winner_id)
-        loser_profile = Profile.objects.get(user__id=loser_id)
+        if not loser_id:
+            winner_profile.elo_rating += 30
+            winner_profile.wins += 1
+            winner_profile.total_games += 1
+            winner_profile.save()
+            return Response({"message": "Bot match recorded! +10 ELO."}, status=status.HTTP_200_OK)
         
-        # Simple MVP Math (we can replace this with the real ELO curve later)
-        # What about winning with player higher in ranking? Getting more points?
+        loser_profile = Profile.objects.get(user__id=loser_id)
         winner_profile.elo_rating += 30
         winner_profile.wins += 1
         winner_profile.total_games += 1
-        
         loser_profile.elo_rating -= 30
         loser_profile.losses += 1
         loser_profile.total_games += 1
-        
-        # Save to PostgreSQL
         winner_profile.save()
         loser_profile.save()
-        
-        return Response({"message": "ELO updated successfully"}, status=status.HTTP_200_OK)
-        
+
+        return Response({"message": "Human ELO updated successfully"}, status=status.HTTP_200_OK)
+
     except Profile.DoesNotExist:
-        return Response({"error": "One or both users not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
