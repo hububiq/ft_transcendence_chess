@@ -26,7 +26,7 @@ export function GameOverModal({
     win: {
       icon: "♔",
       title: "You Won!",
-      desc: "Excelent play against bot.",
+      desc: "Excellent play against the bot.",
     },
     loss: {
       icon: "♚",
@@ -36,7 +36,7 @@ export function GameOverModal({
     draw: {
       icon: "½",
       title: "Draw",
-      desc: "The game is draw.", // idea for future updates, to recognize which type of draw
+      desc: "The game ended in a draw.", // idea for future updates, to recognize which type of draw
     },
   };
 

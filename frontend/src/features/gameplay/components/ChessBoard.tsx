@@ -1,10 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { type Square, Chess } from "chess.js";
-import {
-  Chessboard,
-  type PieceDropHandlerArgs,
-  type SquareHandlerArgs,
-} from "react-chessboard";
+import { Chessboard } from "react-chessboard";
 import { type GameOutcome } from "../../../utils/constants";
 
 interface ChessBoardProps {
@@ -14,18 +10,15 @@ interface ChessBoardProps {
 }
 
 export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
-  // create a chess game using a ref to always have access to the latest game state within closures and maintain the game state across renders
   const chessGameRef = useRef(new Chess());
   const chessGame = chessGameRef.current;
 
-  // track the current position of the chess game in state to trigger a re-render of the chessboard
   const [chessPosition, setChessPosition] = useState<string>(fen);
   const [moveFrom, setMoveFrom] = useState<string>("");
   const [optionSquares, setOptionSquares] = useState<
     Record<string, React.CSSProperties>
   >({});
 
-  // sync internal chess.js whenever the backend sends a new FEN via props
   useEffect(() => {
     if (fen === "start") {
       chessGame.reset();
@@ -34,7 +27,7 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
       try {
         chessGame.load(fen);
         setChessPosition(chessGame.fen());
-      } catch (e) {
+      } catch {
         console.error("Backend sent an invalid FEN:", fen);
       }
     }
@@ -64,8 +57,9 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
     return true;
   }
 
-  // Handle tap/click to move
-  function onSquareClick({ square, piece }: SquareHandlerArgs) {
+  function onSquareClick(square: string, piece?: string) {
+    if (chessGame.turn() === "b") return;
+
     if (!moveFrom && piece) {
       const hasMoveOptions = getMoveOptions(square as Square);
       if (hasMoveOptions) setMoveFrom(square);
@@ -81,6 +75,7 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
     if (!foundMove) {
       const hasMoveOptions = getMoveOptions(square as Square);
       setMoveFrom(hasMoveOptions ? square : "");
+      console.log("Did found the move");
       return;
     }
 
@@ -91,16 +86,13 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
         promotion: "q",
       });
 
-      // 1. Optimistic UI update locally
       setChessPosition(chessGame.fen());
       setMoveFrom("");
       setOptionSquares({});
 
-      // 2. Format move for FastAPI (UCI format: e.g., "e2e4" or "e7e8q")
       const uciMove = `${move.from}${move.to}${move.promotion ? move.promotion : ""}`;
+      console.log("Sending:", uciMove);
       onMove(uciMove);
-
-      // 3. Local Game Over fallback
       checkLocalGameOver();
     } catch {
       const hasMoveOptions = getMoveOptions(square as Square);
@@ -108,9 +100,9 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
     }
   }
 
-  // Handle drag and drop
-  function onPieceDrop({ sourceSquare, targetSquare }: PieceDropHandlerArgs) {
+  function onPieceDrop(sourceSquare: string, targetSquare: string) {
     if (!targetSquare) return false;
+    if (chessGame.turn() === "b") return false;
 
     try {
       const move = chessGame.move({
@@ -119,16 +111,12 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
         promotion: "q",
       });
 
-      // 1. Optimistic UI update locally
       setChessPosition(chessGame.fen());
       setMoveFrom("");
       setOptionSquares({});
 
-      // 2. Format move for FastAPI (UCI format)
       const uciMove = `${move.from}${move.to}${move.promotion ? move.promotion : ""}`;
       onMove(uciMove);
-
-      // 3. Local Game Over fallback
       checkLocalGameOver();
 
       return true;
@@ -137,10 +125,9 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
     }
   }
 
-  // Fallback in case backend WebSocket takes too long to announce game over
   function checkLocalGameOver() {
     if (chessGame.isCheckmate()) {
-      onGameEnd("win"); // If human just moved and it's checkmate, human won.
+      onGameEnd("win");
     } else if (chessGame.isDraw() || chessGame.isStalemate()) {
       onGameEnd("draw");
     }
@@ -148,7 +135,6 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
 
   return (
     <Chessboard
-      id="click-or-drag-to-move"
       position={chessPosition}
       onPieceDrop={onPieceDrop}
       onSquareClick={onSquareClick}

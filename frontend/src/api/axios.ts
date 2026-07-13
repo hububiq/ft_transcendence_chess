@@ -11,15 +11,15 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
   const public_endpoints = ["/register/", "/login/"];
 
-  console.log(`[Axios] Requesting: ${config.url}`);
-  console.log(`[Axios] Token in storage:`, token ? "YES" : "NO");
+  // console.log(`[Axios] Requesting: ${config.url}`);
+  // console.log(`[Axios] Token in storage:`, token ? "YES" : "NO");
 
   if (config.url) {
     const is_public_route = public_endpoints.some((endpoint) =>
       config.url?.includes(endpoint),
     );
 
-    console.log(`[Axios] Is public route:`, is_public_route);
+    // console.log(`[Axios] Is public route:`, is_public_route);
 
     if (
       !is_public_route &&
@@ -28,7 +28,7 @@ api.interceptors.request.use((config) => {
       token !== "null"
     ) {
       config.headers.set("Authorization", `Bearer ${token}`);
-      console.log(`[Axios] Attached Bearer token successfully!`);
+      // console.log(`[Axios] Attached Bearer token successfully!`);
     } else if (!is_public_route) {
       console.error(
         `[Axios] FAILED TO ATTACH: Route requires token, but token is invalid or missing.`,

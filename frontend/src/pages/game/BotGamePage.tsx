@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Link } from "react-router";
 import { ArrowLeft, Bot } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
@@ -17,8 +17,8 @@ import {
 import clsx from "clsx";
 import playerAvatar from "../../assets/a_logo.png";
 import { useUser } from "../../hooks/useUser";
+import { useWebSocket } from "../../hooks/useWebSocket";
 
-// Hardcoded for now based
 const MOCK_PLAYER_ID = 5;
 const MOCK_BOT_ID = 26;
 
@@ -28,96 +28,81 @@ export function BotGame() {
   const { user } = useUser();
 
   // game state
-  const [currentFen, setCurrentFen] = useState<string>("start"); // board state for API
+  const [currentFen, setCurrentFen] = useState<string>("start"); 
   const [botThinking, setBotThinking] = useState<boolean>(false);
   const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
   const [gameOver, setGameOver] = useState<GameOutcome | null>(null);
+  
+  // NEW: State to control the restart confirmation modal
+  const [showRestartConfirm, setShowRestartConfirm] = useState<boolean>(false);
 
-  // WebSocket connection
-  const ws = useRef<WebSocket | null>(null);
+  // Random ID for stateless bot games
+  const [botGameId] = useState(() => Math.floor(Math.random() * 1000000) + 1);
 
-  // 1. Establishing WS connection when game starts
-  useEffect(() => {
-    if (!gameStarted) return;
+  const handleServerMessage = (data: any) => {
+    console.log("Received from server: ", data);
 
-    // TODO: replace with actual beckend WebSocket URL
-    ws.current = new WebSocket("ws://localhost:8000/ws/bot-match");
+    switch (data.type) {
+      case "board_state":
+        setCurrentFen(data.fen);
+        break;
+      case "move":
+        setCurrentFen(data.fen);
 
-    ws.current.onopen = () => {
-      console.log("Connected to Chess Backend!");
-    };
+        setMoveHistory((prev) => {
+          const newHistory: MoveRecord[] = [...prev];
+          const lastIndex: number = newHistory.length - 1;
 
-    // 2. Listening to the backend's JSON stream
-    ws.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("Recieved from server: ", data);
-
-      switch (data.type) {
-        case "board_state":
-          setCurrentFen(data.fen);
-          break;
-        case "move":
-          setCurrentFen(data.fen);
-
-          // update history
-          setMoveHistory((prev) => {
-            const newHistory: MoveRecord[] = [...prev];
-            const lastIndex: number = newHistory.length - 1;
-
-            if (lastIndex < 0 || newHistory[lastIndex].black) {
-              newHistory.push({ n: newHistory.length + 1, white: data.move });
-              setBotThinking(true);
-            } else {
-              newHistory[lastIndex] = {
-                ...newHistory[lastIndex],
-                black: data.move,
-              };
-              setBotThinking(false);
-            }
-            return newHistory;
-          });
-          break;
-
-        case "game_over":
-          if (data.winner_id === MOCK_PLAYER_ID) {
-            setGameOver("win");
-          } else if (data.winner_id === MOCK_BOT_ID) {
-            setGameOver("loss");
+          if (lastIndex < 0 || newHistory[lastIndex].black) {
+            newHistory.push({ n: newHistory.length + 1, white: data.move });
+            setBotThinking(true);
           } else {
-            setGameOver("draw");
+            newHistory[lastIndex] = {
+              ...newHistory[lastIndex],
+              black: data.move,
+            };
+            setBotThinking(false);
           }
-          break;
-      }
-    };
+          return newHistory;
+        });
+        break;
 
-    // Cleanup connection when component unmounts or game restarts
-    return () => {
-      if (ws.current) {
-        ws.current.close();
-      }
-    };
-  }, [gameStarted]);
-
-  // 3. Sending the Move Payload to FastAPI
-  const handlePlayerMove = (move: string) => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      const payload = {
-        type: "move",
-        move: move, // e.g., "e2e4"
-        player_id: MOCK_PLAYER_ID,
-        opponent_id: MOCK_BOT_ID,
-        is_vs_bot: true,
-      };
-
-      ws.current.send(JSON.stringify(payload));
-    } else {
-      console.error("WebSocket is not connected");
+      case "game_over":
+        if (data.winner_id === MOCK_PLAYER_ID) {
+          setGameOver("win");
+        } else if (data.winner_id === MOCK_BOT_ID) {
+          setGameOver("loss");
+        } else {
+          setGameOver("draw");
+        }
+        break;
     }
   };
 
+  const { sendMessage } = useWebSocket({
+    url: `ws://localhost:8001/ws/game/${botGameId}`,
+    enabled: gameStarted,
+    onMessage: handleServerMessage,
+  });
+
+  const handlePlayerMove = (move: string) => {
+    sendMessage({
+      type: "move",
+      move: move,
+      player_id: MOCK_PLAYER_ID,
+      opponent_id: MOCK_BOT_ID,
+      is_vs_bot: true,
+    });
+  };
+
   const handleResign = () => {
+    // Tell the backend we gave up
+    sendMessage({
+      type: "surrender",
+      player_id: MOCK_PLAYER_ID,
+      opponent_id: MOCK_BOT_ID,
+    });
     setGameOver("loss");
-    // MAYBE send a socket message here if the backend expects it!
   };
 
   const handleRestart = () => {
@@ -125,7 +110,8 @@ export function BotGame() {
     setMoveHistory([]);
     setCurrentFen("start");
     setGameOver(null);
-    // Toggling this off and on will disconnect and reconnect the WebSocket cleanly
+    setShowRestartConfirm(false); // Ensure modal is closed
+    
     setGameStarted(false);
     setTimeout(() => setGameStarted(true), 100);
   };
@@ -139,11 +125,11 @@ export function BotGame() {
           to="/"
           className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors text-sm font-medium"
         >
-          <ArrowLeft className="w-4 h-4" /> *Back to Home
+          <ArrowLeft className="w-4 h-4" /> Back to Home
         </Link>
         <div className="text-xs font-bold tracking-widest text-neutral-600 uppercase flex items-center gap-2">
           <Bot className="w-3.5 h-3.5" />
-          {`${user?.username} vs Bot • Untimed`}
+          {`${user?.username || "Player"} vs Bot • Untimed`}
         </div>
         <div className="w-24" />
       </header>
@@ -154,6 +140,34 @@ export function BotGame() {
           onDifficultyChange={setDifficulty}
           onStartGame={() => setGameStarted(true)}
         />
+      )}
+
+      {/* Restart Confirmation Modal Overlay */}
+      {showRestartConfirm && !gameOver && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">Restart Game?</h2>
+              <p className="text-neutral-500 text-sm">
+                Are you sure you want to abandon this match and start over?
+              </p>
+            </div>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => setShowRestartConfirm(false)}
+                className="flex-1 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg text-sm font-medium transition-colors"
+              >
+                No, continue
+              </button>
+              <button
+                onClick={handleRestart}
+                className="flex-1 py-2.5 bg-red-950/30 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded-lg text-sm font-medium transition-colors"
+              >
+                Yes, restart
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {gameOver && (
@@ -192,16 +206,16 @@ export function BotGame() {
                   className="w-12 h-12 rounded-lg border-2 border-blue-500 object-cover"
                 />
               }
-              name={user?.username}
+              name={user?.username || "Player"}
               nameColor="text-blue-500"
-              eloRating={user?.profile?.elo_rating}
+              eloRating={user?.profile?.elo_rating || 1200}
               graveyard={<span>♙</span>}
             />
           </div>
 
           <GameSidebar
             difficulty={difficulty}
-            onRestart={handleRestart}
+            onRestart={() => setShowRestartConfirm(true)} // Intercepts the click to show modal
             onResign={handleResign}
             moveHistory={moveHistory}
           />
