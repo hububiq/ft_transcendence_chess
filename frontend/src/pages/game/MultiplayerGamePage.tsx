@@ -1,7 +1,30 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { ArrowLeft, Flag, Handshake } from "lucide-react";
-import { ChessBoardUI } from "../../features/gameplay/components/ChessBoard";
+import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
+
+// This is a skeleton
+interface Player {
+  id: string;
+  username: string;
+  elo_rating: number;
+  avatar: string;
+  capturedPieces: string[];
+}
+
+interface Move {
+  number: number;
+  white: string;
+  black?: string;
+}
+
+interface GameState {
+  status: "active" | "draw" | "checkmate" | "resigned";
+  turn: "white" | "black";
+  moves: Move[];
+  playerTime: number;
+  opponentTime: number;
+}
 
 export function Game() {
   const [playerTime, setPlayerTime] = useState(300); // 5 mins in seconds
@@ -62,7 +85,7 @@ export function Game() {
 
             {/* Board */}
             <div className="w-[600px] h-[600px] rounded-sm overflow-hidden border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
-              <ChessBoardUI />
+              <ChessBoard />
             </div>
 
             {/* Player Panel */}

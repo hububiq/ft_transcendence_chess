@@ -1,23 +1,19 @@
 import { useState } from "react";
 import { Bot, ChevronDown } from "lucide-react";
 import clsx from "clsx";
-import { DIFFICULTY_CONFIG } from "../../utils/constants";
-import type { Difficulty } from "../../utils/constants";
+import { DIFFICULTY_CONFIG } from "../../../utils/constants";
+import type { Difficulty } from "../../../utils/constants";
 
 interface PreGameMenuProps {
   difficulty: Difficulty;
   onDifficultyChange: (difficulty: Difficulty) => void;
   onStartGame: () => void;
-  timeMode: boolean;
-  onTimeModeChange: (timeMode: boolean) => void;
 }
 
 export function PreGameMenu({
   difficulty,
   onDifficultyChange,
   onStartGame,
-  timeMode,
-  onTimeModeChange,
 }: PreGameMenuProps) {
   const [showDifficultyMenu, setShowDifficultyMenu] = useState(false);
   const cfg = DIFFICULTY_CONFIG[difficulty];
@@ -96,23 +92,6 @@ export function PreGameMenu({
             </div>
           )}
         </div>
-
-        <button
-          onClick={() => onTimeModeChange(!timeMode)}
-          className={clsx(
-            "w-full py-3 px-4 rounded-xl border flex items-center justify-between text-sm font-medium transition-all",
-            timeMode
-              ? "bg-purple-950/20 border-purple-500/30 text-purple-300"
-              : "bg-neutral-900 border-neutral-800 text-neutral-400",
-          )}
-        >
-          <span className="flex items-center gap-2">
-            <span>⏱️</span> Blitz Clock (10:00)
-          </span>
-          <span className="text-xs px-2 py-0.5 rounded bg-black">
-            {timeMode ? "ON" : "OFF"}
-          </span>
-        </button>
 
         <button
           onClick={onStartGame}

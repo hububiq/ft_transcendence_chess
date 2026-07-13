@@ -71,20 +71,6 @@ export function Settings() {
 
           <div className="flex items-center justify-between p-4 bg-black border border-neutral-900 rounded-lg">
             <div>
-              <h3 className="text-sm font-medium text-white mb-1">
-                Email Address
-              </h3>
-              <p className="text-xs text-neutral-500">
-                grandmaster42@42warsaw.pl
-              </p>
-            </div>
-            <button className="bg-transparent hover:bg-neutral-900 text-neutral-400 hover:text-white font-medium py-2 px-4 rounded-lg border border-neutral-800 transition-colors text-xs">
-              Change
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between p-4 bg-black border border-neutral-900 rounded-lg">
-            <div>
               <h3 className="text-sm font-medium text-white mb-1">Password</h3>
               <p className="text-xs text-neutral-500">••••••••••••</p>
             </div>
