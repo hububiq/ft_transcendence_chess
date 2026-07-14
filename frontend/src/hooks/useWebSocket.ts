@@ -8,7 +8,7 @@ interface UseWebSocketProps {
 
 export function useWebSocket({ url, enabled, onMessage }: UseWebSocketProps) {
   const wsRef = useRef<WebSocket | null>(null);
-  
+
   const savedOnMessage = useRef(onMessage);
 
   useEffect(() => {
@@ -22,10 +22,11 @@ export function useWebSocket({ url, enabled, onMessage }: UseWebSocketProps) {
     wsRef.current = socket;
 
     socket.onopen = () => console.log("Connected to Chess Backend!");
-    
+
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log("Data: ", data);
         savedOnMessage.current(data);
       } catch (err) {
         console.error("Failed to parse WebSocket message:", err);
