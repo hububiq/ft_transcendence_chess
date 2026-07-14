@@ -11,29 +11,36 @@ interface ChessBoardProps {
 
 export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
   const chessGameRef = useRef(new Chess());
-  const chessGame = chessGameRef.current;
 
   const [chessPosition, setChessPosition] = useState<string>(fen);
+  const [prevFen, setPrevFen] = useState<string>(fen);
   const [moveFrom, setMoveFrom] = useState<string>("");
   const [optionSquares, setOptionSquares] = useState<
     Record<string, React.CSSProperties>
   >({});
 
+  if (fen !== prevFen) {
+    setPrevFen(fen);
+    setChessPosition(fen);
+    setMoveFrom("");
+    setOptionSquares({});
+  }
+
   useEffect(() => {
+    const chessGame = chessGameRef.current;
     if (fen === "start") {
       chessGame.reset();
-      setChessPosition(chessGame.fen());
     } else if (fen !== chessGame.fen()) {
       try {
         chessGame.load(fen);
-        setChessPosition(chessGame.fen());
       } catch {
         console.error("Backend sent an invalid FEN:", fen);
       }
     }
-  }, [fen, chessGame]);
+  }, [fen]);
 
   function getMoveOptions(square: Square) {
+    const chessGame = chessGameRef.current;
     const moves = chessGame.moves({ square, verbose: true });
     if (moves.length === 0) {
       setOptionSquares({});
@@ -58,6 +65,7 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
   }
 
   function onSquareClick(square: string, piece?: string) {
+    const chessGame = chessGameRef.current;
     if (chessGame.turn() === "b") return;
 
     if (!moveFrom && piece) {
@@ -75,7 +83,6 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
     if (!foundMove) {
       const hasMoveOptions = getMoveOptions(square as Square);
       setMoveFrom(hasMoveOptions ? square : "");
-      console.log("Did found the move");
       return;
     }
 
@@ -101,6 +108,7 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
   }
 
   function onPieceDrop(sourceSquare: string, targetSquare: string) {
+    const chessGame = chessGameRef.current;
     if (!targetSquare) return false;
     if (chessGame.turn() === "b") return false;
 
@@ -126,6 +134,7 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
   }
 
   function checkLocalGameOver() {
+    const chessGame = chessGameRef.current;
     if (chessGame.isCheckmate()) {
       onGameEnd("win");
     } else if (chessGame.isDraw() || chessGame.isStalemate()) {

@@ -9,7 +9,7 @@ import {
 } from "../../utils/constants";
 import { PreGameMenu } from "../../features/gameplay/components/PreGameMenu";
 import { GameOverModal } from "../../features/gameplay/components/GameOverModal";
-import { ParticipantBanner } from "../../features/gameplay/components/ParticipantBanner";
+import { ParticipantBannerBot } from "../../features/gameplay/components/ParticipantBannerBot";
 import {
   GameSidebar,
   type MoveRecord,
@@ -28,15 +28,13 @@ export function BotGame() {
   const { user } = useUser();
 
   // game state
-  const [currentFen, setCurrentFen] = useState<string>("start"); 
+  const [currentFen, setCurrentFen] = useState<string>("start");
   const [botThinking, setBotThinking] = useState<boolean>(false);
   const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
   const [gameOver, setGameOver] = useState<GameOutcome | null>(null);
-  
-  // NEW: State to control the restart confirmation modal
   const [showRestartConfirm, setShowRestartConfirm] = useState<boolean>(false);
 
-  // Random ID for stateless bot games
+  // Temporary
   const [botGameId] = useState(() => Math.floor(Math.random() * 1000000) + 1);
 
   const handleServerMessage = (data: any) => {
@@ -96,7 +94,6 @@ export function BotGame() {
   };
 
   const handleResign = () => {
-    // Tell the backend we gave up
     sendMessage({
       type: "surrender",
       player_id: MOCK_PLAYER_ID,
@@ -110,8 +107,8 @@ export function BotGame() {
     setMoveHistory([]);
     setCurrentFen("start");
     setGameOver(null);
-    setShowRestartConfirm(false); // Ensure modal is closed
-    
+    setShowRestartConfirm(false);
+
     setGameStarted(false);
     setTimeout(() => setGameStarted(true), 100);
   };
@@ -134,6 +131,7 @@ export function BotGame() {
         <div className="w-24" />
       </header>
 
+      {/* Pre Game Menu */}
       {!gameStarted && (
         <PreGameMenu
           difficulty={difficulty}
@@ -147,7 +145,9 @@ export function BotGame() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
           <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
             <div>
-              <h2 className="text-xl font-bold text-white mb-2">Restart Game?</h2>
+              <h2 className="text-xl font-bold text-white mb-2">
+                Restart Game?
+              </h2>
               <p className="text-neutral-500 text-sm">
                 Are you sure you want to abandon this match and start over?
               </p>
@@ -170,6 +170,7 @@ export function BotGame() {
         </div>
       )}
 
+      {/* Game Over Modal */}
       {gameOver && (
         <GameOverModal
           outcome={gameOver}
@@ -181,7 +182,7 @@ export function BotGame() {
       {gameStarted && (
         <main className="flex-1 flex items-center justify-center p-8 gap-12">
           <div className="flex flex-col gap-6 max-w-[600px] w-full">
-            <ParticipantBanner
+            <ParticipantBannerBot
               avatar={<Bot className={clsx("w-6 h-6")} />}
               name="chess42 Bot"
               eloRating={`${cfg.label} (${cfg.elo})`}
@@ -190,7 +191,7 @@ export function BotGame() {
               graveyard={<span>♟</span>}
             />
 
-            <div className="w-[600px] h-[600px] rounded-sm overflow-hidden border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
+            <div className="w-[600px] h-[600px] rounded-sm overflow border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
               <ChessBoard
                 fen={currentFen}
                 onMove={handlePlayerMove}
@@ -198,7 +199,7 @@ export function BotGame() {
               />
             </div>
 
-            <ParticipantBanner
+            <ParticipantBannerBot
               avatar={
                 <img
                   src={playerAvatar}
@@ -215,7 +216,7 @@ export function BotGame() {
 
           <GameSidebar
             difficulty={difficulty}
-            onRestart={() => setShowRestartConfirm(true)} // Intercepts the click to show modal
+            onRestart={() => setShowRestartConfirm(true)}
             onResign={handleResign}
             moveHistory={moveHistory}
           />
