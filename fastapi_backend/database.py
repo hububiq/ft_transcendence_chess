@@ -1,4 +1,5 @@
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker 
 from sqlmodel import SQLModel
 from config import settings
 
@@ -9,6 +10,11 @@ async_db_url = settings.database_url.replace("postgres://", "postgresql+asyncpg:
 # Create the Engine (The connection to the database)
 # echo=True means it will print the raw SQL it generates to the terminal
 engine = create_async_engine(async_db_url, echo=True)
+
+# This generates secure, temporary connections to PostgreSQL
+async_session = sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)
 
 # The function to automatically build the tables
 async def init_db():

@@ -1,3 +1,5 @@
+# fastapi_backend/main.py
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from config import settings
 from server import manager
@@ -6,48 +8,49 @@ from ai_engine import compute_best_move
 from matchmaking import matchmaking_loop
 import asyncio
 import json
+import chess
 from database import init_db
 from models import Game, Tournament
 from game_service import handle_game_over
 from game_service import handle_player_move
+from api.history import router as history_router
+from api.tournaments import router as tournaments_router
 
 
 app = FastAPI(debug=settings.debug)
 
+app.include_router(history_router)
+app.include_router(tournaments_router)
 
-# ---------------------------------------------------------
-# ROOT ENDPOINT
-# ---------------------------------------------------------
 @app.get("/")
 def read_root():
     return {"message": "FastAPI Microservice is running!"}
 
 
-# ---------------------------------------------------------
-# STARTUP: Launch matchmaking loop
-# ---------------------------------------------------------
 @app.on_event("startup")
 async def startup_event():
-    print("🚀 FastAPI is starting up...")
+    print("FastAPI is starting up...")
     
-    # 1. Automatically build the PostgreSQL tables reachging to .env for urls in separate volume for database (config directs to correct url)
+    # 1. Build PostgreSQL tables
     await init_db()
     
-    # 2. Launch the matchmaking loop in the background
+    # 2. Launch matchmaking loop
     asyncio.create_task(matchmaking_loop())
-    # more tasks soon?
-    # it is the place for background workers, like matchmaking loop or:
-    # Inactive Game Cleaner: asyncio.create_task(clean_dead_games()) -> A loop that runs every 10 minutes, 
-    # checks Redis for games where players haven't moved in 24 hours, and automatically declares them abandoned.
 
-
-# ---------------------------------------------------------
-# WEBSOCKET ENDPOINT
-# ---------------------------------------------------------
 @app.websocket("/ws/game/{game_id}")
 async def game_socket(websocket: WebSocket, game_id: int):
     await manager.connect(game_id, websocket)
     redis = await get_redis()
+
+    redis_key = f"game:{game_id}:fen"
+    current_fen = await redis.get(redis_key)
+    
+    if not current_fen:
+        starting_fen = chess.Board().fen()
+        await redis.set(redis_key, starting_fen)
+        current_fen = starting_fen
+        
+    await websocket.send_json({"type": "board_state", "fen": current_fen})
 
     try:
         while True:
@@ -60,14 +63,16 @@ async def game_socket(websocket: WebSocket, game_id: int):
             elif msg_type == "join_queue":
                 user_id = data.get("user_id")
                 await redis.lpush("matchmaking_queue", user_id)
-                await websocket.send_json({"type": "info", "message": "Joined queue!"})
-            
+                await websocket.send_json({
+                    "type": "info",
+                    "message": "Joined matchmaking queue!"
+                })
+
             elif msg_type == "chat_message":
                 #await broadcast_chat(data["text"])
                 pass
 
             elif msg_type == "surrender":
-                redis_key = f"game:{game_id}:fen"
                 current_fen = await redis.get(redis_key)
                 board = chess.Board(current_fen) if current_fen else chess.Board()
                 
