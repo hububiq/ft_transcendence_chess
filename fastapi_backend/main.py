@@ -1,6 +1,5 @@
-# fastapi_backend/main.py
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from server import manager
 from redis_client import get_redis
@@ -19,6 +18,18 @@ from api.games import router as games_router
 
 
 app = FastAPI(debug=settings.debug)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1.3000",
+        # "http://192.168.X.X:3000", for campus 1vs1 2 machines testing
+    ],
+    allow_credentialls=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(history_router)
 app.include_router(tournaments_router)
