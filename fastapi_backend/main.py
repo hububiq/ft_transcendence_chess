@@ -26,7 +26,7 @@ app.add_middleware(
         "http://127.0.0.1.3000",
         # "http://192.168.X.X:3000", for campus 1vs1 2 machines testing
     ],
-    allow_credentialls=True,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
