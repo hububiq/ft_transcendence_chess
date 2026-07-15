@@ -15,12 +15,14 @@ from game_service import handle_game_over
 from game_service import handle_player_move
 from api.history import router as history_router
 from api.tournaments import router as tournaments_router
+from api.games import router as games_router
 
 
 app = FastAPI(debug=settings.debug)
 
 app.include_router(history_router)
 app.include_router(tournaments_router)
+app.include_router(games_router)
 
 @app.get("/")
 def read_root():
@@ -88,8 +90,8 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 })
 
     except WebSocketDisconnect:
-        await manager.disconnect(game_id)
+        await manager.disconnect(game_id, websocket)
 
     except Exception as e:
-        await manager.disconnect(game_id)
+        await manager.disconnect(game_id, websocket)
         print(f"WebSocket error for game {game_id}: {e}")

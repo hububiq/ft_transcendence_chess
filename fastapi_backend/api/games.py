@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from database import async_session
 from models import Game
 from pydantic import BaseModel
 
-router = APIRouter()
+router = APIRouter(tags=["games"])
 
-class BotMatchRequest(BaseModel):
+class BotMatchRequest(BaseModel): #pydantic parsing method
     user_id: int
 
 @router.post("/api/games/vs-bot/")
