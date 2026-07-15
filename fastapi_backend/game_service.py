@@ -28,12 +28,11 @@ async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, los
     await redis.delete(f"game:{game_id}:moves")
 
     # SAVE TO FASTAPI DATABASE
-    from sqlmodel import Session
-    from database import engine
+    from database import async_session
     from models import Game
 
-    with Session(engine) as session:
-        game = session.get(Game, int(game_id))
+    async with async_session() as session:
+        game = await session.get(Game, int(game_id))
         if game:
             game.moves_pgn = pgn_string
             game.winner_id = winner_id
