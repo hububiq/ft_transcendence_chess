@@ -27,7 +27,7 @@ class ConnectionManager:
         """
         if game_id in self.rooms:
             self.rooms[game_id].remove(websocket)
-        if len(self.rooms[game.id]) == 0:
+        if len(self.rooms[game_id]) == 0:
                 del self.rooms[game_id]
         print(f"[WS] User disconnected from Game {game_id}")
 

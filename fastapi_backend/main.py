@@ -49,6 +49,7 @@ async def startup_event():
     
     # 2. Launch matchmaking loop
     asyncio.create_task(matchmaking_loop())
+    asyncio.create_task(clean_dead_games())
 
 @app.websocket("/ws/game/{game_id}")
 async def game_socket(websocket: WebSocket, game_id: int):

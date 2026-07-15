@@ -38,14 +38,15 @@ async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, los
             game.winner_id = winner_id
             game.status = "completed"
             session.add(game)
-            session.commit()
+            await session.commit()
             print(f"[DB] Game {game_id} permanently saved to PostgreSQL")
 
     async with httpx.AsyncClient() as client:
         try:
             await client.post(
                 "http://django_backend:8000/api/update-elo/",
-                json={"winner_id": winner_id, "loser_id": loser_id}
+                json={"winner_id": winner_id, "loser_id": loser_id},
+                headers={"Host": "localhost"}
             )
             print(f"[GAME OVER] ELO updated for Game {game_id}")
         except Exception as e:
