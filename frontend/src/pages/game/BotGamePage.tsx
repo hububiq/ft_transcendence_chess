@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, Bot } from "lucide-react";
+import { ArrowLeft, Bot, Loader2 } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
 import {
   type Difficulty,
@@ -18,9 +18,9 @@ import clsx from "clsx";
 import playerAvatar from "../../assets/a_logo.png";
 import { useUser } from "../../hooks/useUser";
 import { useWebSocket } from "../../hooks/useWebSocket";
+import { createBotGame } from "../../api/gameApi";
 
-const MOCK_PLAYER_ID = 5;
-const MOCK_BOT_ID = 26;
+const SYSTEM_BOT_ID = 0;
 
 export function BotGame() {
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
@@ -34,8 +34,30 @@ export function BotGame() {
   const [gameOver, setGameOver] = useState<GameOutcome | null>(null);
   const [showRestartConfirm, setShowRestartConfirm] = useState<boolean>(false);
 
-  // Temporary
-  const [botGameId] = useState(() => Math.floor(Math.random() * 1000000) + 1);
+  const [gameId, setGameId] = useState<string | number | null>(null);
+  const [isCreatingGame, setIsCreatingGame] = useState<boolean>(false);
+
+  // Fallback to 0 if user is a guest or still loading
+  const currentPlayerId = user?.id || 0;
+
+  // Axios API
+  const initGame = async () => {
+    try {
+      setIsCreatingGame(true);
+
+      const data = await createBotGame({
+        user_id: currentPlayerId,
+      });
+
+      setGameId(data.game_id);
+      setGameStarted(true);
+    } catch (error) {
+      console.error("Failed to initialize game:", error);
+      // Optional: Add UI error handling (e.g., toast notification)
+    } finally {
+      setIsCreatingGame(false);
+    }
+  };
 
   const handleServerMessage = (data: any) => {
     console.log("Received from server: ", data);
@@ -66,9 +88,9 @@ export function BotGame() {
         break;
 
       case "game_over":
-        if (data.winner_id === MOCK_PLAYER_ID) {
+        if (data.winner_id === currentPlayerId) {
           setGameOver("win");
-        } else if (data.winner_id === MOCK_BOT_ID) {
+        } else if (data.winner_id === SYSTEM_BOT_ID) {
           setGameOver("loss");
         } else {
           setGameOver("draw");
@@ -78,8 +100,8 @@ export function BotGame() {
   };
 
   const { sendMessage } = useWebSocket({
-    url: `ws://localhost:8001/ws/game/${botGameId}`,
-    enabled: gameStarted,
+    url: gameId ? `ws://localhost:8001/ws/game/${gameId}` : "",
+    enabled: gameStarted && !!gameId,
     onMessage: handleServerMessage,
   });
 
@@ -87,8 +109,8 @@ export function BotGame() {
     sendMessage({
       type: "move",
       move: move,
-      player_id: MOCK_PLAYER_ID,
-      opponent_id: MOCK_BOT_ID,
+      player_id: currentPlayerId,
+      opponent_id: SYSTEM_BOT_ID,
       is_vs_bot: true,
     });
   };
@@ -96,8 +118,8 @@ export function BotGame() {
   const handleResign = () => {
     sendMessage({
       type: "surrender",
-      player_id: MOCK_PLAYER_ID,
-      opponent_id: MOCK_BOT_ID,
+      player_id: currentPlayerId,
+      opponent_id: SYSTEM_BOT_ID,
     });
     setGameOver("loss");
   };
@@ -108,9 +130,10 @@ export function BotGame() {
     setCurrentFen("start");
     setGameOver(null);
     setShowRestartConfirm(false);
-
     setGameStarted(false);
-    setTimeout(() => setGameStarted(true), 100);
+    setGameId(null);
+
+    initGame();
   };
 
   const cfg = DIFFICULTY_CONFIG[difficulty];
@@ -131,13 +154,22 @@ export function BotGame() {
         <div className="w-24" />
       </header>
 
-      {/* Pre Game Menu */}
+      {/* Pre Game with Loading State */}
       {!gameStarted && (
-        <PreGameMenu
-          difficulty={difficulty}
-          onDifficultyChange={setDifficulty}
-          onStartGame={() => setGameStarted(true)}
-        />
+        <div className="flex-1 flex flex-col items-center justify-center">
+          {isCreatingGame ? (
+            <div className="flex flex-col items-center gap-4 text-neutral-400">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              <p className="text-sm font-medium">Initializing game engine...</p>
+            </div>
+          ) : (
+            <PreGameMenu
+              difficulty={difficulty}
+              onDifficultyChange={setDifficulty}
+              onStartGame={initGame}
+            />
+          )}
+        </div>
       )}
 
       {/* Restart Confirmation Modal Overlay */}
