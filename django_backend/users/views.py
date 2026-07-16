@@ -34,39 +34,53 @@ def register_user(request):
     # If the data is bad, send the exact error back to React (e.g. "Email already exists")
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# users/views.py
 
 @api_view(['POST'])
 def update_elo(request):
     winner_id = request.data.get('winner_id')
     loser_id = request.data.get('loser_id')
     
-    if not winner_id:
-        return Response({"error": "Winner ID required"}, status=status.HTTP_400_BAD_REQUEST)
+    if not winner_id and not loser_id:
+        return Response({"error": "Provide at least one ID"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        winner_profile = Profile.objects.get(user__id=winner_id)
-        if not loser_id:
-            winner_profile.elo_rating += 30
+        # HUMAN BEAT THE BOT (loser is null)
+        if winner_id and not loser_id:
+            winner_profile = Profile.objects.get(user__id=winner_id)
+            winner_profile.elo_rating += 10  # Flat reward for beating AI
             winner_profile.wins += 1
             winner_profile.total_games += 1
             winner_profile.save()
-            return Response({"message": "Bot match recorded! +10 ELO."}, status=status.HTTP_200_OK)
-        
+            return Response({"message": "Bot match won! +10 ELO."}, status=status.HTTP_200_OK)
+
+        # HUMAN LOST TO THE BOT (winner is null)
+        if loser_id and not winner_id:
+            loser_profile = Profile.objects.get(user__id=loser_id)
+            loser_profile.elo_rating -= 10  # Flat penalty for losing to AI
+            loser_profile.losses += 1
+            loser_profile.total_games += 1
+            loser_profile.save()
+            return Response({"message": "Bot match lost! -10 ELO."}, status=status.HTTP_200_OK)
+
+        # HUMAN VS HUMAN (Both IDs exist)
+        winner_profile = Profile.objects.get(user__id=winner_id)
         loser_profile = Profile.objects.get(user__id=loser_id)
+        
         winner_profile.elo_rating += 30
         winner_profile.wins += 1
         winner_profile.total_games += 1
+        
         loser_profile.elo_rating -= 30
         loser_profile.losses += 1
         loser_profile.total_games += 1
+        
         winner_profile.save()
         loser_profile.save()
-
-        return Response({"message": "Human ELO updated successfully"}, status=status.HTTP_200_OK)
-
+        
+        return Response({"message": "Human vs Human ELO updated!"}, status=status.HTTP_200_OK)
+        
     except Profile.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
