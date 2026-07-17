@@ -15,6 +15,7 @@ from game_service import handle_player_move
 from api.history import router as history_router
 from api.tournaments import router as tournaments_router
 from api.games import router as games_router
+from garbage_games_collector import clean_dead_games
 
 
 app = FastAPI(debug=settings.debug)
@@ -35,6 +36,7 @@ app.include_router(history_router)
 app.include_router(tournaments_router)
 app.include_router(games_router)
 
+
 @app.get("/")
 def read_root():
     return {"message": "FastAPI Microservice is running!"}
@@ -43,13 +45,14 @@ def read_root():
 @app.on_event("startup")
 async def startup_event():
     print("FastAPI is starting up...")
-    
+
     # 1. Build PostgreSQL tables
     await init_db()
-    
+
     # 2. Launch matchmaking loop
     asyncio.create_task(matchmaking_loop())
     asyncio.create_task(clean_dead_games())
+
 
 @app.websocket("/ws/game/{game_id}")
 async def game_socket(websocket: WebSocket, game_id: int):
@@ -58,12 +61,12 @@ async def game_socket(websocket: WebSocket, game_id: int):
 
     redis_key = f"game:{game_id}:fen"
     current_fen = await redis.get(redis_key)
-    
+
     if not current_fen:
         starting_fen = chess.Board().fen()
         await redis.set(redis_key, starting_fen)
         current_fen = starting_fen
-        
+
     await websocket.send_json({"type": "board_state", "fen": current_fen})
 
     try:
@@ -83,15 +86,16 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 })
 
             elif msg_type == "chat_message":
-                #await broadcast_chat(data["text"])
+                # await broadcast_chat(data["text"])
                 pass
 
             elif msg_type == "surrender":
                 current_fen = await redis.get(redis_key)
-                board = chess.Board(current_fen) if current_fen else chess.Board()
-                
-                opponent_id = data.get("opponent_id") # React must send this
-                player_id = data.get("player_id") 
+                board = chess.Board(
+                    current_fen) if current_fen else chess.Board()
+
+                opponent_id = data.get("opponent_id")  # React must send this
+                player_id = data.get("player_id")
 
                 await handle_game_over(board, game_id, winner_id=opponent_id, loser_id=player_id, websocket=websocket)
 
