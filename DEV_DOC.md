@@ -147,17 +147,9 @@ Milos (React): Because we allow both local uploads and GitHub OAuth logins, the 
 1. `avatar` (Local uploaded file URL, like `/media/avatars/me.jpg`)
 2. `oauth_avatar_url` (External link, like `https://github.com/...`)
 When building the UI, check if `avatar` exists first. If it is null, fallback to `oauth_avatar_url`. If both are null, show a default blank picture "grey silhouette"
-##
-### How to test GitHub OAuth 
-We cannot test GitHub login with curl. OAuth strictly requires a web browser because it forces the user to click an "Authorize" button on GitHub's actual website. We must do this: (i did it on my github)
-Go to GitHub.com -> Settings -> Developer Settings -> OAuth Apps. Create an app. Set the callback URL to http://localhost:8000/accounts/github/login/callback/. GitHub gives a Client ID and Secret.
-Go to Django Admin Panel (http://localhost:8000/admin/).
-Click on Social Applications. Add GitHub, and paste the Client ID and Secret in there.
-Now, if we go to http://localhost:8000/accounts/github/login/ in browser, it will redirect you to GitHub, ask for permission, and create and account.
-**I was able to be redirected, but after clicking "Authorize", I had "This-Party login failure" on django admin panel. - TO BE RESOLVED**
 
 
-##
+
 ### Useful commands
 
 * To check if avatars are uploading to volumes, we can run this command which will create temporary apline container, list files of the volume directory from given path, close container and delete it leaving no trace after it
@@ -175,3 +167,14 @@ In this case, to check avatars on the backend. placeholder should be replaced wi
 ## How to set-up frontend
 Inside the root of the frontend folder duplicate `.env.example` and rename it `.env`. This (`.env`) file is used inside `frontend/src/api/axios.ts` to make `async` call modulare and less crowded.
 
+## How to sneak-peek database table "Game"
+
+To check if consecutive games data was correctly saved to database, after the game you can type:
+```
+sudo docker exec -it postgres_db psql -U admin -d fastapi_db -c "SELECT id, white_player_id, black_player_id, status, winner_id FROM game ORDER BY id DESC LIMIT 1;"
+```
+
+```
+sudo docker exec -it postgres_db psql -U admin -d fastapi_db -c "SELECT id, status, winner_id, moves_pgn FROM game ORDER BY id DESC LIMIT 1;"
+```
+We should think of writting bash scripts to automatically fetch this data.

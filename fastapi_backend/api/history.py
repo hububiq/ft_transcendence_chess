@@ -13,5 +13,5 @@ async def get_my_history(user=Depends(get_current_user)):
             (Game.white_player_id == user.id) |
             (Game.black_player_id == user.id)
         )
-        result = await session.exec(query)
-        return result.all()
+        result = await session.execute(query)
+        return result.scalars().all()

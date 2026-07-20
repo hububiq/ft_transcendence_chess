@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 async def clean_dead_games():
     """Background loop that runs every 10 minutes to close abandoned games."""
-    print("🧹 Garbage Collector started!")
+    print("Garbage Collector started!")
     
     while True:
         try:
@@ -21,8 +21,8 @@ async def clean_dead_games():
                     Game.status == "ongoing",
                     Game.played_at < one_hour_ago
                 )
-                result = await session.exec(query)
-                dead_games = result.all()
+                result = await session.execute(query)
+                dead_games = result.scalars().all()
                 
                 if dead_games:
                     for game in dead_games:
