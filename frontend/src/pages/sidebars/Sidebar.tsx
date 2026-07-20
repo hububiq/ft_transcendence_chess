@@ -12,13 +12,6 @@ import clsx from "clsx";
 import { useUser } from "../../hooks/useUser";
 import { useAuth } from "../../features/auth/context/AuthProvider";
 
-// interface UserData {
-//   username: string;
-//   profile: {
-//     elo_rating: number;
-//   };
-// }
-
 export function Sidebar() {
   const location = useLocation();
   const { logout } = useAuth();
