@@ -1,26 +1,50 @@
 import chess
 
 PIECE_VALUES = {
-    chess.PAWN: 10,
-    chess.KNIGHT: 30,
-    chess.BISHOP: 30,
-    chess.ROOK: 50,
-    chess.QUEEN: 90,
-    chess.KING: 9000
+    chess.PAWN: 100,
+    chess.KNIGHT: 300,
+    chess.BISHOP: 300,
+    chess.ROOK: 500,
+    chess.QUEEN: 900,
+    chess.KING: 10000
 }
+
+# The best squares to control in the opening
+CENTER_SQUARES = [chess.D4, chess.E4, chess.D5, chess.E5]
+INNER_RING = [
+    chess.C3, chess.D3, chess.E3, chess.F3,
+    chess.C4, chess.F4, chess.C5, chess.F5,
+    chess.C6, chess.D6, chess.E6, chess.F6
+]
 
 def evaluate_board(board: chess.Board) -> int:
     """Calculates who is winning. Positive - white, negative - black"""
     if board.is_checkmate():
-        return -9999 if board.turn == chess.WHITE else 9999
+        return -999999 if board.turn == chess.WHITE else 999999
     # if the game is over and it ISN'T checkmate, it's a draw
     if board.is_game_over():
         return 0
     score = 0
-    for piece_type in PIECE_VALUES:
-        score += len(board.pieces(piece_type, chess.WHITE)) * PIECE_VALUES[piece_type]
-        score -= len(board.pieces(piece_type, chess.BLACK)) * PIECE_VALUES[piece_type]
+    for square, piece in board.piece_map().items():
+        val = PIECE_VALUES[piece.piece_type]
+
+        # Bonuses for playing more in the center
+        if square in CENTER_SQUARES:
+            val += 20
+        elif square in INNER_RING:
+            val += 10
+        
+        # Assure no knight on th edge
+        if piece.piece_type == chess.KNIGHT:
+            if chess.square_file(square) in (0, 7):
+                val -= 15
+
+        if piece.color == chess.WHITE:
+            score += val 
+        else: 
+            score -= val
     return score
+
 
 def minimax(board: chess.Board, depth: int, alpha: float, beta: float, maximizing: bool) -> int:
     """The recursive tree search algorithm with Alpha-Beta pruning"""
