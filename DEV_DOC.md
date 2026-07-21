@@ -178,3 +178,11 @@ sudo docker exec -it postgres_db psql -U admin -d fastapi_db -c "SELECT id, whit
 sudo docker exec -it postgres_db psql -U admin -d fastapi_db -c "SELECT id, status, winner_id, moves_pgn FROM game ORDER BY id DESC LIMIT 1;"
 ```
 We should think of writting bash scripts to automatically fetch this data.
+
+## How to test if Redis holds the game FEN
+
+```
+sudo docker exect -it redis_broker redis-cli
+```
+Go and type "GET game:x:fen" with X being the number of game you are trying to track.
+"Exit" to leave redis-cli.

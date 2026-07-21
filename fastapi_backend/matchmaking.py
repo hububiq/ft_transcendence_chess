@@ -3,9 +3,10 @@ import asyncio
 from redis_client import get_redis
 from database import async_session
 from models import Game
+from server import manager 
 
 async def matchmaking_loop():
-    print("[MATCHMAKING] Listening on Redis queue...")
+    print(f"[MATCHMAKING] Listening on Redis queue...")
     redis = await get_redis()
 
     waiting_player_id = None
@@ -42,13 +43,20 @@ async def matchmaking_loop():
                     
                 official_game_id = new_game.id
             
-            match_payload = {
+            # Tell Player 1 (White) what room to go to
+            await manager.broadcast_to_game(waiting_player_id, {
+                "type": "match_start",
                 "game_id": official_game_id,
-                "white_id": waiting_player_id,
-                "black_id": joined_id
-            }
-            
-            await redis.publish("match.start", json.dumps(match_payload))
+                "color": "white"
+            })
+                
+            # Tell Player 2 (Black) what room to go to
+            await manager.broadcast_to_game(joined_id, {
+                "type": "match_start",
+                "game_id": official_game_id,
+                "color": "black"
+            })
+
             print(f"[MATCHMAKING] Match created: Game {official_game_id} ({waiting_player_id} vs {joined_id})")
             
             waiting_player_id = None

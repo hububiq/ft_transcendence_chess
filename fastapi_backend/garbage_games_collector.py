@@ -2,7 +2,7 @@ import asyncio
 from sqlmodel import select
 from database import async_session
 from models import Game
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 async def clean_dead_games():
     """Background loop that runs every 10 minutes to close abandoned games."""
@@ -15,7 +15,7 @@ async def clean_dead_games():
             
             async with async_session() as session:
                 # Find games that are 'ongoing' but were created over 1 hour ago
-                one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
+                one_hour_ago = datetime.utcnow() - timedelta(hours=1)
                 
                 query = select(Game).where(
                     Game.status == "ongoing",

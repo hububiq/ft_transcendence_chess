@@ -1,4 +1,5 @@
 import chess
+import math
 
 PIECE_VALUES = {
     chess.PAWN: 100,
@@ -52,7 +53,7 @@ def minimax(board: chess.Board, depth: int, alpha: float, beta: float, maximizin
         return evaluate_board(board)
     
     if maximizing: # white's pawn turn
-        max_eval = -99999
+        max_eval = -math.inf
         for move in board.legal_moves:
             board.push(move)
             eval = minimax(board, depth - 1, alpha, beta, False)
@@ -63,7 +64,7 @@ def minimax(board: chess.Board, depth: int, alpha: float, beta: float, maximizin
                 break
         return max_eval
     else: # black turns
-        min_eval = 99999
+        min_eval = math.inf
         for move in board.legal_moves:
             board.push(move)
             eval = minimax(board, depth - 1, alpha, beta, True)
@@ -76,28 +77,33 @@ def minimax(board: chess.Board, depth: int, alpha: float, beta: float, maximizin
 
 
 def compute_best_move(fen_string: str, depth: int = 3) -> str:
-    """The entrypoint for FastAPI. Return the best move in: type: xx, move: e7e5 format (json)"""
+    """The entrypoint for FastAPI. Return the best move in: type: xx, move: e7e5 uci format, only after game_service packs it into json"""
     board = chess.Board(fen_string)
-    best_move = None
+
+    if board.is_game_over():
+        return None
+
+    # If the AI is doomed to forced checkmate, it will just play this move instead of crashing.
+    best_move = list(board.legal_moves)[0]
     maximizing = board.turn == chess.WHITE 
 
     if maximizing:
-        best_val = -99999
+        best_val = -math.inf
         for move in board.legal_moves:
             board.push(move)
-            move_val = minimax(board, depth - 1, -99999, 99999, False)
+            move_val = minimax(board, depth - 1, -math.inf, math.inf, False)
             board.pop()
             if move_val > best_val:
                 best_val = move_val
                 best_move = move
     else:
-        best_val = 99999
+        best_val = math.inf
         for move in board.legal_moves:
             board.push(move)
-            move_val = minimax(board, depth - 1, -99999, 99999, True)
+            move_val = minimax(board, depth - 1, -math.inf, math.inf, True)
             board.pop()
             if move_val < best_val:
                 best_val = move_val
                 best_move = move
 
-    return best_move.uci() if best_move else None
+    return best_move.uci()
