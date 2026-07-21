@@ -54,6 +54,22 @@ async def startup_event():
     asyncio.create_task(clean_dead_games())
 
 
+@app.websocket("/ws/lobby/{user_id}")
+async def lobby_socket(websocket: WebSocket, user_id: int):
+    # Connect them to the manager using their USER ID (not a game ID)
+    await manager.connect(user_id, websocket)
+    redis = await get_redis()
+    try:
+        while True:
+            data = await websocket.receive_json()
+            if data.get("type") == "join_queue":
+                await redis.lpush("matchmaking_queue", user_id)
+                await websocket.send_json({"type": "info", "message": "Joined matchmaking queue!"})
+    except WebSocketDisconnect:
+        await manager.disconnect(user_id)
+    except Exception as e:
+        await manager.disconnect(user_id, websocket)
+
 @app.websocket("/ws/game/{game_id}")
 async def game_socket(websocket: WebSocket, game_id: int):
     await manager.connect(game_id, websocket)

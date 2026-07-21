@@ -73,7 +73,9 @@ async def handle_player_move(data: dict, game_id: str, websocket):
         await websocket.send_json({"type": "move", "move": move.uci(), "fen": board.fen()})
         
         if board.is_game_over():
-            await handle_game_over(board, game_id, winner_id=data["player_id"], loser_id=data["opponent_id"], websocket=websocket)
+            actual_winner = data["player_id"] if board.is_checkmate() else None
+            actual_loser = data["opponent_id"] if board.is_checkmate() else None
+            await handle_game_over(board, game_id, winner_id=actual_winner, loser_id=actual_loser, websocket=websocket)
             return
 
         if data.get("is_vs_bot") == True:
@@ -90,7 +92,9 @@ async def handle_player_move(data: dict, game_id: str, websocket):
                 await websocket.send_json({"type": "move", "move": ai_uci, "fen": board.fen()})
 
                 if board.is_game_over():
-                    await handle_game_over(board, game_id, winner_id=data["opponent_id"], loser_id=data["player_id"], websocket=websocket)
+                    actual_winner = data["player_id"] if board.is_checkmate() else None
+                    actual_loser = data["opponent_id"] if board.is_checkmate() else None
+                    await handle_game_over(board, game_id, winner_id=actual_winner, loser_id=actual_loser, websocket=websocket)
                     return
     else:
         await websocket.send_json({"type": "error", "message": "Illegal move"})
