@@ -41,12 +41,18 @@ export function BotGame() {
 
   // Axios API
   const initGame = async () => {
+    if (!user) {
+      console.warn("Waiting for user profile to load...");
+      return; 
+    }
     try {
       // setIsCreatingGame(true);
 
       const data = await createBotGame({
-        user_id: currentPlayerId,
+        user_id: user.id,
       });
+
+      console.log("SERVER RESPONSE:", data);
 
       setGameId(data.game_id);
       setGameStarted(true);
@@ -58,9 +64,11 @@ export function BotGame() {
   };
 
   useEffect(() => {
-    initGame();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+   // Only try to start the game if the user has officially loaded AND we don't have a game yet!
+    if (user && user.id && !gameStarted) {
+      initGame();
+    }
+  }, [user, gameStarted]); // <--- React will now re-run this when the user loads!
 
   const handleServerMessage = (data: any) => {
     console.log("Received from server: ", data);
@@ -91,12 +99,12 @@ export function BotGame() {
         break;
 
       case "game_over":
-        if (data.winner_id === currentPlayerId) {
-          setGameOver("win");
-        } else if (data.winner_id === SYSTEM_BOT_ID) {
-          setGameOver("loss");
-        } else {
-          setGameOver("draw");
+        if (data.result === "1/2-1/2") {
+          setGameOver("draw"); // It's a tie!
+        } else if (data.loser_id === currentPlayerId) {
+          setGameOver("loss"); // The human's ID matches the loser!
+        } else if (data.winner_id === currentPlayerId) {
+          setGameOver("win");  // The human's ID matches the winner!
         }
         break;
     }

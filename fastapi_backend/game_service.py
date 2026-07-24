@@ -7,7 +7,7 @@ from ai_engine import compute_best_move
 from database import async_session
 from models import Game
 
-async def handle_game_over(board: chess.Board, game_id: str, websocket):
+async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surrender: bool = False, surrender_loser_id: int = None):
     """Generates the game history, cleans RAM, and updates ELO in Django."""
     
     redis = await get_redis()
@@ -30,25 +30,34 @@ async def handle_game_over(board: chess.Board, game_id: str, websocket):
     async with async_session() as session:
         game = await session.get(Game, int(game_id))
         if game:
-            # Match the python-chess result to the database IDs!
-            if result == '1-0':
-                winner_id = game.white_player_id
-                loser_id = game.black_player_id
-            elif result == '0-1':
-                winner_id = game.black_player_id
-                loser_id = game.white_player_id
-            
-            game.moves_pgn = pgn_string
-            game.winner_id = winner_id
-            game.status = "completed"
-            session.add(game)
-            await session.commit()
-            print(f"[DB] Game {game_id} permanently saved. Winner: {winner_id}")
+            if is_surrender:
+                # If someone surrendered, override the python-chess referee
+                loser_id = surrender_loser_id
+                # The winner is whoever DIDN'T surrender
+                winner_id = game.white_player_id if loser_id == game.black_player_id else game.black_player_id
+                result = "Surrender"
+            else:
+                # Match the python-chess result to the database IDs!
+                if result == '1-0':
+                    winner_id = game.white_player_id
+                    loser_id = game.black_player_id
+                elif result == '0-1':
+                    winner_id = game.black_player_id
+                    loser_id = game.white_player_id
+
+                game.moves_pgn = pgn_string
+                game.winner_id = winner_id
+                game.status = "completed"
+                session.add(game)
+                await session.commit()
+                print(f"[DB] Game {game_id} permanently saved. Winner: {winner_id}")
 
 
     await websocket.send_json({
         "type": "game_over",
         "winner_id": winner_id,
+        "loser_id": loser_id,
+        "result": result, 
         "pgn": pgn_string
     })
 

@@ -39,8 +39,10 @@ def register_user(request):
 def update_elo(request):
     winner_id = request.data.get('winner_id')
     loser_id = request.data.get('loser_id')
+
+    print(f"DEBUG: FastAPI sent winner_id={winner_id}, loser_id={loser_id}")
     
-    if not winner_id and not loser_id:
+    if winner_id is None and loser_id is None:
         return Response({"error": "Provide at least one ID"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
@@ -142,8 +144,8 @@ def upload_avatar(request):
     profile.avatar = request.FILES['avatar']
     profile.save()
     
-    # Django automatically saves the file to /app/media/avatars/ and generates a new URL!
-    return Response({"message": "Avatar uploaded!", "avatar_url": profile.avatar.url}, status=status.HTTP_200_OK)
+    serializer = UserSerializer(user)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -157,7 +159,7 @@ def list_friends(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_friend(request, user_id):
-    if request.user_id == user_id:
+    if request.user.id == user_id:
         return Response({"error": "You cannot add yourself as a friend."}, status=status.HTTP_400_BAD_REQUEST)
     
     try:
