@@ -15,7 +15,7 @@ export function useUser() {
       try {
         setError("");
         const response = await fetchCurrentUser();
-
+        console.log(response.data);
         if (isMounted) setUser(response.data);
       } catch (error) {
         if (isMounted && axios.isAxiosError(error)) {

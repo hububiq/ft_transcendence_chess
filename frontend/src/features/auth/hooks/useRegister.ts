@@ -28,6 +28,7 @@ export function useRegister() {
     try {
       const response = await registerRequest(payload);
       let token = response.data?.access;
+      let refreshToken = response.data?.refresh;
 
       if (!token) {
         const loginResponse = await loginRequest({
@@ -35,6 +36,7 @@ export function useRegister() {
           password: payload.password,
         });
         token = loginResponse.data.access;
+        refreshToken = loginResponse.data.refresh;
       }
 
       if (token) {
