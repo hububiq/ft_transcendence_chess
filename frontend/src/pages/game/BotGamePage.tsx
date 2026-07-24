@@ -20,7 +20,7 @@ import { useUser } from "../../hooks/useUser";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { createBotGame } from "../../api/gameApi";
 
-const SYSTEM_BOT_ID = 0;
+const SYSTEM_BOT_ID = null;
 
 export function BotGame() {
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");

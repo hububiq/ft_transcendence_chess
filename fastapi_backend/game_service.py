@@ -4,8 +4,10 @@ import httpx
 import json
 from redis_client import get_redis
 from ai_engine import compute_best_move
+from database import async_session
+from models import Game
 
-async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, loser_id: int, websocket):
+async def handle_game_over(board: chess.Board, game_id: str, websocket):
     """Generates the game history, cleans RAM, and updates ELO in Django."""
     
     redis = await get_redis()
@@ -18,6 +20,32 @@ async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, los
     game_pgn = chess.pgn.Game.from_board(replay_board)
     pgn_string = str(game_pgn)
 
+    # DETERMINE THE WINNER USING PYTHON-CHESS RULES
+    result = board.result() # Returns '1-0' (White), '0-1' (Black), or '1/2-1/2' (Draw)
+    
+    winner_id = None
+    loser_id = None
+
+    # SAVE TO POSTGRESQL AND GRAB THE TRUE IDs
+    async with async_session() as session:
+        game = await session.get(Game, int(game_id))
+        if game:
+            # Match the python-chess result to the database IDs!
+            if result == '1-0':
+                winner_id = game.white_player_id
+                loser_id = game.black_player_id
+            elif result == '0-1':
+                winner_id = game.black_player_id
+                loser_id = game.white_player_id
+            
+            game.moves_pgn = pgn_string
+            game.winner_id = winner_id
+            game.status = "completed"
+            session.add(game)
+            await session.commit()
+            print(f"[DB] Game {game_id} permanently saved. Winner: {winner_id}")
+
+
     await websocket.send_json({
         "type": "game_over",
         "winner_id": winner_id,
@@ -26,20 +54,6 @@ async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, los
 
     await redis.delete(f"game:{game_id}:fen")
     await redis.delete(f"game:{game_id}:moves")
-
-    # SAVE TO FASTAPI DATABASE
-    from database import async_session
-    from models import Game
-
-    async with async_session() as session:
-        game = await session.get(Game, int(game_id))
-        if game:
-            game.moves_pgn = pgn_string
-            game.winner_id = winner_id
-            game.status = "completed"
-            session.add(game)
-            await session.commit()
-            print(f"[DB] Game {game_id} permanently saved to PostgreSQL")
 
     async with httpx.AsyncClient() as client:
         try:
@@ -79,9 +93,7 @@ async def handle_player_move(data: dict, game_id: str, websocket):
         })
         
         if board.is_game_over():
-            actual_winner = data["player_id"] if board.is_checkmate() else None
-            actual_loser = data["opponent_id"] if board.is_checkmate() else None
-            await handle_game_over(board, game_id, winner_id=actual_winner, loser_id=actual_loser, websocket=websocket)
+            await handle_game_over(board, game_id, websocket=websocket)
             return
 
         if data.get("is_vs_bot") == True:
@@ -104,9 +116,7 @@ async def handle_player_move(data: dict, game_id: str, websocket):
                 })
 
                 if board.is_game_over():
-                    actual_winner = data["player_id"] if board.is_checkmate() else None
-                    actual_loser = data["opponent_id"] if board.is_checkmate() else None
-                    await handle_game_over(board, game_id, winner_id=actual_winner, loser_id=actual_loser, websocket=websocket)
+                    await handle_game_over(board, game_id, websocket=websocket)
                     return
     else:
         await websocket.send_json({"type": "error", "message": "Illegal move"})
