@@ -50,6 +50,9 @@ def update_elo(request):
             winner_profile.elo_rating += 10  # Flat reward for beating AI
             winner_profile.wins += 1
             winner_profile.total_games += 1
+            winner_profile.current_streak += 1
+            if winner_profile.elo_rating > winner_profile.peak_rating:
+                winner_profile.peak_rating = winner_profile.elo_rating
             winner_profile.save()
             return Response({"message": "Bot match won! +10 ELO."}, status=status.HTTP_200_OK)
 
@@ -59,6 +62,7 @@ def update_elo(request):
             loser_profile.elo_rating -= 10  # Flat penalty for losing to AI
             loser_profile.losses += 1
             loser_profile.total_games += 1
+            loser_profile.current_streak = 0
             loser_profile.save()
             return Response({"message": "Bot match lost! -10 ELO."}, status=status.HTTP_200_OK)
 
@@ -69,10 +73,14 @@ def update_elo(request):
         winner_profile.elo_rating += 30
         winner_profile.wins += 1
         winner_profile.total_games += 1
+        winner_profile.current_streak += 1
+        if winner_profile.elo_rating > winner_profile.peak_rating:
+            winner_profile.peak_rating = winner_profile.elo_rating
         
         loser_profile.elo_rating -= 30
         loser_profile.losses += 1
         loser_profile.total_games += 1
+        loser_profile.current_streak = 0
         
         winner_profile.save()
         loser_profile.save()
@@ -81,6 +89,7 @@ def update_elo(request):
         
     except Profile.DoesNotExist:
         return Response({"error": "User profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
