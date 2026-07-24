@@ -33,9 +33,11 @@ export function OAuthCallback() {
         console.log("DJANGO RESPONSE:", data);
 
         const realToken = data.access || data.access_token || data.token;
+        const refreshToken = data.refresh || data.refresh_token;
 
         if (realToken) {
           localStorage.setItem("access_token", realToken);
+          if (refreshToken) localStorage.setItem("refresh_token", refreshToken);
 
           const userResponse = await fetchCurrentUser();
           setUser(userResponse.data);

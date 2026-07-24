@@ -1,16 +1,11 @@
-import { useState } from "react";
-import { Link } from "react-router";
+import { useState, useCallback, useEffect } from "react";
+import { Link, useParams } from "react-router";
 import { ArrowLeft, Flag, Handshake } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
-
-// This is a skeleton
-interface Player {
-  id: string;
-  username: string;
-  elo_rating: number;
-  avatar: string;
-  capturedPieces: string[];
-}
+import { useUser } from "../../hooks/useUser";
+import { useWebSocket } from "../../hooks/useWebSocket";
+import avatar_1 from "../../assets/avatar_1.png";
+import avatar_2 from "../../assets/avatar_2.png";
 
 interface Move {
   number: number;
@@ -18,19 +13,79 @@ interface Move {
   black?: string;
 }
 
-interface GameState {
-  status: "active" | "draw" | "checkmate" | "resigned";
-  turn: "white" | "black";
-  moves: Move[];
-  playerTime: number;
-  opponentTime: number;
-}
-
 export function Game() {
-  const [playerTime, setPlayerTime] = useState(300); // 5 mins in seconds
-  const [opponentTime, setOpponentTime] = useState(300);
+  const { gameId } = useParams<{ gameId: string }>();
+  const { user } = useUser();
 
-  // Simple formatting for timer
+  // Game States
+  const [currentFen, setCurrentFen] = useState("start");
+  const [moveHistory, setMoveHistory] = useState<Move[]>([]);
+  const [playerTime, setPlayerTime] = useState(600); //
+  const [opponentTime, setOpponentTime] = useState(600);
+
+  // Placeholder for opponent state
+  const [opponent, setOpponent] = useState({
+    username: "Waiting...",
+    elo_rating: "?",
+    avatar: avatar_1,
+  });
+
+  // WebSocket Setup
+  const handleServerMessage = useCallback((data: any) => {
+    switch (data.type) {
+      case "move":
+        setCurrentFen(data.fen);
+
+        setMoveHistory((prev) => {
+          const lastMove = prev[prev.length - 1];
+          if (!lastMove || lastMove.black) {
+            return [...prev, { number: prev.length + 1, white: data.move }];
+          } else {
+            const updated = [...prev];
+            updated[updated.length - 1].black = data.move;
+            return updated;
+          }
+        });
+        break;
+
+      case "init": // Receive initial opponent data & game state
+        // setCurrentFen(data.fen);
+        // setOpponent(data.opponent);
+        break;
+      default:
+        console.warn("Unhandled WS message:", data);
+    }
+  }, []);
+
+  const { sendMessage } = useWebSocket({
+    url: gameId ? `ws://localhost:8001/ws/game/${gameId}` : "",
+    enabled: !!gameId,
+    onMessage: handleServerMessage,
+  });
+
+  // Actions
+  const handlePlayerMove = (move: string) => {
+    sendMessage({
+      type: "move",
+      move: move,
+    });
+  };
+
+  const handleResign = () => {
+    sendMessage({ type: "resign" });
+  };
+
+  const handleDrawOffer = () => {
+    sendMessage({ type: "offer_draw" });
+  };
+
+  const handleGameOver = (result: string) => {
+    console.log("Game Over:", result);
+    // backend handles official game over
+    // to update local UI state here
+  };
+
+  // Helpers
   const formatTime = (time: number) => {
     const m = Math.floor(time / 60);
     const s = time % 60;
@@ -46,10 +101,10 @@ export function Game() {
             className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors text-sm font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Hub
+            Back to Home
           </Link>
           <div className="text-xs font-bold tracking-widest text-neutral-600 uppercase">
-            Blitz 5|0 • Ranked
+            Rapid 10|0 • Ranked
           </div>
           <div className="w-24" /> {/* Spacer */}
         </header>
@@ -61,21 +116,21 @@ export function Game() {
             <div className="flex justify-between items-end">
               <div className="flex items-center gap-4">
                 <img
-                  src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=150&h=150"
+                  src={opponent.avatar}
                   alt="Opponent"
                   className="w-12 h-12 rounded-lg border border-neutral-800 object-cover"
                 />
                 <div>
                   <h3 className="font-semibold text-lg text-white">
-                    ChessKing{" "}
+                    {opponent.username}{" "}
                     <span className="text-sm font-normal text-neutral-500">
-                      (2150)
+                      ({opponent.elo_rating})
                     </span>
                   </h3>
-                  <div className="flex gap-1 text-neutral-600 text-lg">
+                  {/* <div className="flex gap-1 text-neutral-600 text-lg">
                     <span>♟</span>
                     <span>♞</span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
               <div className="bg-[#050505] border border-neutral-900 px-6 py-2 rounded-lg font-mono text-2xl font-bold text-neutral-300">
@@ -84,28 +139,32 @@ export function Game() {
             </div>
 
             {/* Board */}
-            <div className="w-[600px] h-[600px] rounded-sm overflow-hidden border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
-              <ChessBoard />
+            <div className="w-[600px] h-[600px] rounded-sm overflow-hidden border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800 pointer-events-auto">
+              <ChessBoard
+                fen={currentFen}
+                onMove={handlePlayerMove}
+                onGameEnd={handleGameOver}
+              />
             </div>
 
             {/* Player Panel */}
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-4">
                 <img
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150&h=150"
+                  src={user?.profile?.avatar || avatar_2}
                   alt="Player"
                   className="w-12 h-12 rounded-lg border-2 border-blue-500 object-cover"
                 />
                 <div>
                   <h3 className="font-semibold text-lg text-blue-500">
-                    GrandMaster99{" "}
+                    {user?.username || "Loading..."}{" "}
                     <span className="text-sm font-normal text-neutral-500">
-                      (2145)
+                      ({user?.profile?.elo_rating || "1200"})
                     </span>
                   </h3>
-                  <div className="flex gap-1 text-neutral-100 text-lg drop-shadow-[0_1px_1px_rgba(0,0,0,1)]">
+                  {/* <div className="flex gap-1 text-neutral-100 text-lg drop-shadow-[0_1px_1px_rgba(0,0,0,1)]">
                     <span>♙</span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
               <div className="bg-[#050505] border border-blue-500/30 px-6 py-2 rounded-lg font-mono text-2xl font-bold text-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.1)]">
@@ -121,24 +180,38 @@ export function Game() {
                 Move History
               </h4>
               <div className="space-y-1 text-sm font-mono">
-                <div className="flex px-2 py-1.5 bg-neutral-900 rounded">
-                  <span className="w-8 text-neutral-500">1.</span>
-                  <span className="flex-1 text-neutral-300">e4</span>
-                  <span className="flex-1 text-neutral-300">e5</span>
-                </div>
-                <div className="flex px-2 py-1.5">
-                  <span className="w-8 text-neutral-500">2.</span>
-                  <span className="flex-1 text-neutral-300">Nf3</span>
-                  <span className="flex-1 text-neutral-300">Nc6</span>
-                </div>
+                {moveHistory.length === 0 ? (
+                  <div className="text-neutral-600 italic text-xs">
+                    No moves yet...
+                  </div>
+                ) : (
+                  moveHistory.map((m) => (
+                    <div
+                      key={m.number}
+                      className="flex px-2 py-1.5 hover:bg-neutral-900 rounded transition-colors"
+                    >
+                      <span className="w-8 text-neutral-500">{m.number}.</span>
+                      <span className="flex-1 text-neutral-300">{m.white}</span>
+                      <span className="flex-1 text-neutral-300">
+                        {m.black || ""}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
             <div className="pt-4 mt-4 border-t border-neutral-900 flex gap-2">
-              <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg transition-colors text-sm font-medium">
+              <button
+                onClick={handleDrawOffer}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg transition-colors text-sm font-medium"
+              >
                 <Handshake className="w-4 h-4" /> Draw
               </button>
-              <button className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-950/30 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded-lg transition-colors text-sm font-medium">
+              <button
+                onClick={handleResign}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-950/30 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded-lg transition-colors text-sm font-medium"
+              >
                 <Flag className="w-4 h-4" /> Resign
               </button>
             </div>

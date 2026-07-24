@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { ArrowLeft, Bot, Loader2 } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
@@ -7,7 +7,7 @@ import {
   type GameOutcome,
   DIFFICULTY_CONFIG,
 } from "../../utils/constants";
-import { PreGameMenu } from "../../features/gameplay/components/PreGameMenu";
+// import { PreGameMenu } from "../../features/gameplay/components/PreGameMenu";
 import { GameOverModal } from "../../features/gameplay/components/GameOverModal";
 import { ParticipantBannerBot } from "../../features/gameplay/components/ParticipantBannerBot";
 import {
@@ -15,15 +15,15 @@ import {
   type MoveRecord,
 } from "../../features/gameplay/components/GameSidebar";
 import clsx from "clsx";
-import playerAvatar from "../../assets/a_logo.png";
+import playerAvatar from "../../assets/avatar_1.png";
 import { useUser } from "../../hooks/useUser";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { createBotGame } from "../../api/gameApi";
 
-const SYSTEM_BOT_ID = 0;
+const SYSTEM_BOT_ID = -1;
 
 export function BotGame() {
-  const [difficulty, setDifficulty] = useState<Difficulty>("easy");
+  const [difficulty] = useState<Difficulty>("easy");
   const [gameStarted, setGameStarted] = useState<boolean>(false);
   const { user } = useUser();
 
@@ -35,15 +35,14 @@ export function BotGame() {
   const [showRestartConfirm, setShowRestartConfirm] = useState<boolean>(false);
 
   const [gameId, setGameId] = useState<string | number | null>(null);
-  const [isCreatingGame, setIsCreatingGame] = useState<boolean>(false);
+  const [isCreatingGame, setIsCreatingGame] = useState<boolean>(true);
 
-  // Fallback to 0 if user is a guest or still loading
   const currentPlayerId = user?.id || 0;
 
   // Axios API
   const initGame = async () => {
     try {
-      setIsCreatingGame(true);
+      // setIsCreatingGame(true);
 
       const data = await createBotGame({
         user_id: currentPlayerId,
@@ -53,11 +52,15 @@ export function BotGame() {
       setGameStarted(true);
     } catch (error) {
       console.error("Failed to initialize game:", error);
-      // Optional: Add UI error handling (e.g., toast notification)
     } finally {
       setIsCreatingGame(false);
     }
   };
+
+  useEffect(() => {
+    initGame();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleServerMessage = (data: any) => {
     console.log("Received from server: ", data);
@@ -74,12 +77,12 @@ export function BotGame() {
           const lastIndex: number = newHistory.length - 1;
 
           if (lastIndex < 0 || newHistory[lastIndex].black) {
-            newHistory.push({ n: newHistory.length + 1, white: data.move });
+            newHistory.push({ n: newHistory.length + 1, white: data.san_move });
             setBotThinking(true);
           } else {
             newHistory[lastIndex] = {
               ...newHistory[lastIndex],
-              black: data.move,
+              black: data.san_move,
             };
             setBotThinking(false);
           }
@@ -106,6 +109,9 @@ export function BotGame() {
   });
 
   const handlePlayerMove = (move: string) => {
+    const isWhiteTurn =
+      currentFen === "start" || currentFen.split(" ")[1] === "w";
+    if (!isWhiteTurn) return;
     sendMessage({
       type: "move",
       move: move,
@@ -132,6 +138,7 @@ export function BotGame() {
     setShowRestartConfirm(false);
     setGameStarted(false);
     setGameId(null);
+    setIsCreatingGame(true);
 
     initGame();
   };
@@ -155,7 +162,7 @@ export function BotGame() {
       </header>
 
       {/* Pre Game with Loading State */}
-      {!gameStarted && (
+      {/* {!gameStarted && (
         <div className="flex-1 flex flex-col items-center justify-center">
           {isCreatingGame ? (
             <div className="flex flex-col items-center gap-4 text-neutral-400">
@@ -163,14 +170,15 @@ export function BotGame() {
               <p className="text-sm font-medium">Initializing game engine...</p>
             </div>
           ) : (
-            <PreGameMenu
-              difficulty={difficulty}
-              onDifficultyChange={setDifficulty}
-              onStartGame={initGame}
-            />
+            // <PreGameMenu
+            //   difficulty={difficulty}
+            //   onDifficultyChange={setDifficulty}
+            //   onStartGame={initGame}
+            // />
+            <div>Starting game...</div>
           )}
         </div>
-      )}
+      )} */}
 
       {/* Restart Confirmation Modal Overlay */}
       {showRestartConfirm && !gameOver && (
@@ -220,7 +228,7 @@ export function BotGame() {
               eloRating={`${cfg.label} (${cfg.elo})`}
               eloRatingColor={cfg.color}
               isThinking={botThinking}
-              graveyard={<span>♟</span>}
+              // graveyard={<span>♟</span>}
             />
 
             <div className="w-[600px] h-[600px] rounded-sm overflow border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
@@ -234,7 +242,7 @@ export function BotGame() {
             <ParticipantBannerBot
               avatar={
                 <img
-                  src={playerAvatar}
+                  src={user?.profile?.avatar || playerAvatar}
                   alt="Player avatar"
                   className="w-12 h-12 rounded-lg border-2 border-blue-500 object-cover"
                 />
@@ -242,7 +250,7 @@ export function BotGame() {
               name={user?.username || "Player"}
               nameColor="text-blue-500"
               eloRating={user?.profile?.elo_rating || 1200}
-              graveyard={<span>♙</span>}
+              // graveyard={<span>♙</span>}
             />
           </div>
 

@@ -18,7 +18,7 @@ export function ParticipantBannerBot({
   eloRating,
   eloRatingColor = "text-neutral-500",
   isThinking = false,
-  graveyard,
+  // graveyard,
 }: ParticipantBannerProps) {
   return (
     <div className="flex justify-between items-end">
@@ -47,7 +47,7 @@ export function ParticipantBannerBot({
             </span>
           </h3>
 
-          <div className="flex gap-1 text-neutral-600 text-lg">{graveyard}</div>
+          {/* <div className="flex gap-1 text-neutral-600 text-lg">{graveyard}</div> */}
         </div>
       </div>
     </div>
