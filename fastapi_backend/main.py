@@ -10,10 +10,8 @@ import json
 import chess
 from database import init_db
 from models import Game, Tournament
-
 # NEW: import tournament advancement
 from game_service import handle_game_over, handle_player_move, advance_tournament_round
-
 from api.history import router as history_router
 from api.tournaments import router as tournaments_router
 from api.games import router as games_router
@@ -27,6 +25,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1.3000",
+        # "http://192.168.X.X:3000", for campus 1vs1 2 machines testing
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -47,8 +46,10 @@ def read_root():
 async def startup_event():
     print("FastAPI is starting up...")
 
+    # 1. Build PostgreSQL tables
     await init_db()
 
+    # 2. Launch matchmaking loop
     asyncio.create_task(matchmaking_loop())
     asyncio.create_task(clean_dead_games())
 
@@ -76,6 +77,7 @@ async def tournament_event_listener():
 
 @app.websocket("/ws/lobby/{user_id}")
 async def lobby_socket(websocket: WebSocket, user_id: int):
+    # Connect them to the manager using their USER ID (not a game ID)
     await manager.connect(user_id, websocket)
     redis = await get_redis()
     try:
@@ -86,9 +88,8 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
                 await websocket.send_json({"type": "info", "message": "Joined matchmaking queue!"})
     except WebSocketDisconnect:
         await manager.disconnect(user_id)
-    except Exception:
+    except Exception as e:
         await manager.disconnect(user_id, websocket)
-
 
 @app.websocket("/ws/game/{game_id}")
 async def game_socket(websocket: WebSocket, game_id: int):
@@ -116,20 +117,30 @@ async def game_socket(websocket: WebSocket, game_id: int):
             elif msg_type == "join_queue":
                 user_id = data.get("user_id")
                 await redis.lpush("matchmaking_queue", user_id)
-                await websocket.send_json({"type": "info", "message": "Joined matchmaking queue!"})
+                await websocket.send_json({
+                    "type": "info",
+                    "message": "Joined matchmaking queue!"
+                })
+
+            elif msg_type == "chat_message":
+                # await broadcast_chat(data["text"])
+                pass
 
             elif msg_type == "surrender":
                 current_fen = await redis.get(redis_key)
-                board = chess.Board(current_fen) if current_fen else chess.Board()
+                board = chess.Board(
+                    current_fen) if current_fen else chess.Board()
 
-                opponent_id = data.get("opponent_id")
+                opponent_id = data.get("opponent_id")  # React must send this
                 player_id = data.get("player_id")
 
-                # handle_game_over now triggers tournament advancement internally
                 await handle_game_over(board, game_id, winner_id=opponent_id, loser_id=player_id, websocket=websocket)
 
             else:
-                await websocket.send_json({"type": "error", "message": f"Unknown message type: {msg_type}"})
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Unknown message type: {msg_type}"
+                })
 
     except WebSocketDisconnect:
         await manager.disconnect(game_id, websocket)
@@ -137,3 +148,4 @@ async def game_socket(websocket: WebSocket, game_id: int):
     except Exception as e:
         await manager.disconnect(game_id, websocket)
         print(f"WebSocket error for game {game_id}: {e}")
+
