@@ -1,9 +1,7 @@
-# fastapi_backend/game_service.py
-
-import json
 import chess
 import chess.pgn
 import httpx
+import json
 from sqlmodel import select
 
 from redis_client import get_redis
@@ -12,9 +10,6 @@ from database import async_session
 from models import Game, Tournament
 
 
-# ---------------------------------------------------------
-# 1. PLAYER MOVE HANDLER
-# ---------------------------------------------------------
 async def handle_player_move(data: dict, game_id: str, websocket):
     """
     Handles a player's move:
@@ -96,9 +91,6 @@ async def handle_player_move(data: dict, game_id: str, websocket):
                     return
 
 
-# ---------------------------------------------------------
-# 2. GAME OVER HANDLER
-# ---------------------------------------------------------
 async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, loser_id: int, websocket):
     """
     Generates PGN, cleans Redis, saves to PostgreSQL,
@@ -106,9 +98,9 @@ async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, los
     """
 
     redis = await get_redis()
-
-    # Rebuild PGN from stored moves
     moves_list = await redis.lrange(f"game:{game_id}:moves", 0, -1)
+
+    # Replay the game on a fresh board to generate the history
     replay_board = chess.Board()
     for move_uci in moves_list:
         replay_board.push(chess.Move.from_uci(move_uci.decode() if isinstance(move_uci, bytes) else move_uci))
@@ -122,11 +114,9 @@ async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, los
         "pgn": pgn_string
     })
 
-    # Cleanup Redis
     await redis.delete(f"game:{game_id}:fen")
     await redis.delete(f"game:{game_id}:moves")
 
-    # Save to PostgreSQL
     async with async_session() as session:
         game = await session.get(Game, int(game_id))
         if game:
