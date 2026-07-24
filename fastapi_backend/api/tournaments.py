@@ -6,20 +6,12 @@ import httpx
 
 router = APIRouter(prefix="/api/tournaments", tags=["tournaments"])
 
-
-# ---------------------------------------------------------
-# 1. LIST ALL TOURNAMENTS
-# ---------------------------------------------------------
 @router.get("/")
 async def list_tournaments():
     async with async_session() as session:
         result = await session.execute(select(Tournament))
         return result.scalars().all()
 
-
-# ---------------------------------------------------------
-# 2. GET SINGLE TOURNAMENT (Bracket + Games)
-# ---------------------------------------------------------
 @router.get("/{tournament_id}/")
 async def get_tournament(tournament_id: int):
     async with async_session() as session:
@@ -120,3 +112,61 @@ async def create_round_one_games(tournament_id: int, bracket: list[dict]):
 
         await session.commit()
         return games
+
+
+# ---------------------------------------------------------
+# 6. ADMIN: CREATE TOURNAMENT
+# ---------------------------------------------------------
+@router.post("/create")
+async def create_tournament(payload: dict):
+    """
+    Admin-only endpoint.
+    Creates a tournament, seeds players by ELO,
+    generates bracket, and creates Round 1 games.
+    """
+
+    creator_id = payload.get("creator_id")
+    player_ids = payload.get("player_ids")
+
+    if not creator_id or not player_ids or len(player_ids) < 2:
+        raise HTTPException(status_code=400, detail="Invalid tournament data")
+
+    # 1. Create tournament
+    async with async_session() as session:
+        tournament = Tournament(creator_id=creator_id, status="ongoing")
+        session.add(tournament)
+        await session.commit()
+        await session.refresh(tournament)
+
+    # 2. Seed players using ELO
+    bracket = await elo_based_seeding(player_ids)
+
+    # 3. Insert TournamentParticipants
+    async with async_session() as session:
+        for entry in bracket:
+            tp = TournamentParticipant(
+                tournament_id=tournament.id,
+                player_id=entry["player_id"],
+                bracket_position=entry["bracket_position"]
+            )
+            session.add(tp)
+        await session.commit()
+
+    # 4. Create Round 1 games
+    games = await create_round_one_games(tournament.id, bracket)
+
+    # 5. Return full tournament structure
+    return {
+        "tournament_id": tournament.id,
+        "status": "ongoing",
+        "participants": bracket,
+        "round_1_games": [
+            {
+                "game_id": g.id,
+                "white_player_id": g.white_player_id,
+                "black_player_id": g.black_player_id,
+                "round_number": g.round_number
+            }
+            for g in games
+        ]
+    }
