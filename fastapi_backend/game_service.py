@@ -14,7 +14,7 @@ async def handle_game_over(board: chess.Board, game_id: str, winner_id: int, los
     # Replay the game on a fresh board to generate the history
     replay_board = chess.Board()
     for move_uci in moves_list:
-        replay_board.push_san(move_uci)
+        replay_board.push(chess.Move.from_uci(move_uci))
     game_pgn = chess.pgn.Game.from_board(replay_board)
     pgn_string = str(game_pgn)
 
@@ -66,11 +66,17 @@ async def handle_player_move(data: dict, game_id: str, websocket):
         await websocket.send_json({"type": "error", "message": "Invalid move format!"})
         return
 
+    human_san = board.san(move) 
     if move in board.legal_moves:
         board.push(move)
         await redis.set(redis_key, board.fen())
         await redis.rpush(f"game:{game_id}:moves", move.uci()) 
-        await websocket.send_json({"type": "move", "move": move.uci(), "fen": board.fen()})
+        await websocket.send_json({
+            "type": "move",
+            "move": move.uci(),
+            "san_move": human_san,
+            "fen": board.fen()
+        })
         
         if board.is_game_over():
             actual_winner = data["player_id"] if board.is_checkmate() else None
@@ -86,10 +92,16 @@ async def handle_player_move(data: dict, game_id: str, websocket):
             
             if ai_uci:
                 ai_move = chess.Move.from_uci(ai_uci)
+                bot_san = board.san(ai_move)
                 board.push(ai_move)
                 await redis.set(redis_key, board.fen())
                 await redis.rpush(f"game:{game_id}:moves", ai_uci)
-                await websocket.send_json({"type": "move", "move": ai_uci, "fen": board.fen()})
+                await websocket.send_json({
+                    "type": "move",
+                    "move": ai_uci,
+                    "san_move": bot_san,
+                    "fen": board.fen()
+                })
 
                 if board.is_game_over():
                     actual_winner = data["player_id"] if board.is_checkmate() else None
