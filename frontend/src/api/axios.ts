@@ -42,11 +42,42 @@ api.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
-    if (error.response?.status === 401) {
-      console.warn("Token expired or invalid. Logging out...");
-      localStorage.removeItem("access_token");
-      // window.location.href = "/login";
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const refreshToken = localStorage.getItem("refresh_token");
+        if (!refreshToken) {
+          throw new Error("No refresh token found");
+        }
+        const refreshResponse = await axios.post(
+          `${import.meta.env.VITE_BASE_API_URL}/token/refresh/`,
+          { refresh: refreshToken },
+        );
+
+        const newAccessToken = refreshResponse.data.access;
+        localStorage.setItem("access_token", newAccessToken);
+
+        if (refreshResponse.data.refresh) {
+          localStorage.setItem("refresh_token", refreshResponse.data.refresh);
+        }
+
+        originalRequest.headers.set(
+          "Authorization",
+          `Bearer ${newAccessToken}`,
+        );
+
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.warn("Refresh token expired or invalid. Logging out...");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        window.location.href = "/login";
+
+        return Promise.reject(refreshError);
+      }
     }
     return Promise.reject(error);
   },
