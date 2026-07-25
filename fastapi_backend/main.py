@@ -24,7 +24,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://127.0.0.1.3000",
+        "http://127.0.0.1:3000",
         # "http://192.168.X.X:3000", for campus 1vs1 2 machines testing
     ],
     allow_credentials=True,
@@ -66,9 +66,9 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
                 await redis.lpush("matchmaking_queue", user_id)
                 await websocket.send_json({"type": "info", "message": "Joined matchmaking queue!"})
     except WebSocketDisconnect:
-        await manager.disconnect(user_id)
-    except Exception as e:
         await manager.disconnect(user_id, websocket)
+    except Exception as e:
+        await manager.disconnect(user_id, websocket) 
 
 @app.websocket("/ws/game/{game_id}")
 async def game_socket(websocket: WebSocket, game_id: int):
@@ -82,8 +82,12 @@ async def game_socket(websocket: WebSocket, game_id: int):
         starting_fen = chess.Board().fen()
         await redis.set(redis_key, starting_fen)
         current_fen = starting_fen
-
-    await websocket.send_json({"type": "board_state", "fen": current_fen})
+    try:
+        await websocket.send_json({"type": "board_state", "fen": current_fen})
+    except Exception as e:
+        print(f"[WS] Browser disconnected before receiving board state: {e}")
+        await manager.disconnect(game_id, websocket)
+        return
 
     try:
         while True:
@@ -93,27 +97,19 @@ async def game_socket(websocket: WebSocket, game_id: int):
             if msg_type == "move":
                 await handle_player_move(data, game_id, websocket)
 
-            elif msg_type == "join_queue":
-                user_id = data.get("user_id")
-                await redis.lpush("matchmaking_queue", user_id)
-                await websocket.send_json({
-                    "type": "info",
-                    "message": "Joined matchmaking queue!"
-                })
-
             elif msg_type == "chat_message":
                 # await broadcast_chat(data["text"])
                 pass
 
             elif msg_type == "surrender":
                 current_fen = await redis.get(redis_key)
-                board = chess.Board(
-                    current_fen) if current_fen else chess.Board()
+                board = chess.Board(current_fen) if current_fen else chess.Board()
+                
+                # React MUST send the player_id of the person who clicked Resign
+                player_id = data.get("player_id") 
 
-                opponent_id = data.get("opponent_id")  # React must send this
-                player_id = data.get("player_id")
-
-                await handle_game_over(board, game_id, winner_id=opponent_id, loser_id=player_id, websocket=websocket)
+                # Pass the new override flags
+                await handle_game_over(board, game_id, websocket=websocket, is_surrender=True, surrender_loser_id=player_id)
 
             else:
                 await websocket.send_json({
