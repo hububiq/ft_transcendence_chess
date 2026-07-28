@@ -186,3 +186,13 @@ sudo docker exect -it redis_broker redis-cli
 ```
 Go and type "GET game:x:fen" with X being the number of game you are trying to track.
 "Exit" to leave redis-cli.
+
+## How to test 1vs game
+
+
+### If you wanna create a game server
+First, you need to know IPv4 of the machine running the server (our app). 
+Then, insert this IP  to ALLOWED_HOSTS =  and CORS_ALLOWED_ORIGINS = ,
+all inside django_backend/core/settings.py
+### If you wanna join a game from remote machine on the same network (campus)
+Now, player connecting to the game just needs to open <this_IP>:3000 in his browser.
