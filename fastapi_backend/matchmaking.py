@@ -20,8 +20,9 @@ async def matchmaking_loop():
             continue
 
         _, player_data = result #automatically assigns whatever there is (_) to index 0, and player_data to index 1
-        joined_id = int(player_data) #casting because Redis is pure text database.
-
+        player_data = json.loads(player_data)
+        joined_id = player_data["user_id"]
+        joined_elo = player_data["elo_rating"]
         if waiting_player_id == joined_id:
                 continue
 

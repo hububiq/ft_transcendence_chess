@@ -63,7 +63,12 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
         while True:
             data = await websocket.receive_json()
             if data.get("type") == "join_queue":
-                await redis.lpush("matchmaking_queue", user_id)
+                elo = data.get("elo_rating", 1200)
+                queue_payload = json.dumps({
+                    "user_id": user_id,
+                    "elo_rating": elo
+                })
+                await redis.lpush("matchmaking_queue", queue_payload)
                 await websocket.send_json({"type": "info", "message": "Joined matchmaking queue!"})
     except WebSocketDisconnect:
         await manager.disconnect(user_id, websocket)

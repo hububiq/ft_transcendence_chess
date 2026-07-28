@@ -28,7 +28,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django_backend']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django_backend', '10.11.4.1']
 
 
 # Application definition
@@ -145,6 +145,7 @@ AUTH_USER_MODEL = 'users.User'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+	"http://10.11.4.1:3000",
 ]
 
 CORS_ALLOWED_CREDENTIALS = True
