@@ -1,6 +1,16 @@
 name: transcendence
 
 services:
+  adminer:
+    image: adminer:4.8.1
+    container_name: adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres_db
+    networks:
+      - transcendence_net
   postgres_db:
     build:                                
       context: ./postgres_setup           
