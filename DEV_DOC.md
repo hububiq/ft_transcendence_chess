@@ -186,3 +186,14 @@ sudo docker exect -it redis_broker redis-cli
 ```
 Go and type "GET game:x:fen" with X being the number of game you are trying to track.
 "Exit" to leave redis-cli.
+
+## Adminer setup
+
+At http://localhost:8080 you can log in using:
+1. System: PostgreSQL
+2. Server: postgres_db
+3. Username: --> POSTGRES_USER from yours .env file
+4. Password: --> POSTGRES_PASSWORD from yours .env file
+5. Database: django_db or fastapi_db
+
+Use Adminer 4.8.1 (not 5.5.0).
