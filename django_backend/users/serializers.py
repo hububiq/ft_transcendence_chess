@@ -23,7 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
         # If we did, we would be sending hashed passwords to the React frontend.
         fields = [
             'id', 'username', 'email', 'is_bot', 'bot_difficulty', 
-            'oauth_provider', 'date_joined', 'profile'
+            'oauth_provider', 'oauth_id', 'date_joined', 'profile'
         ]
 
 class RegisterSerializer(serializers.ModelSerializer):
