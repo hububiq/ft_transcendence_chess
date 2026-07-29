@@ -53,7 +53,7 @@ api.interceptors.response.use(
           throw new Error("No refresh token found");
         }
         const refreshResponse = await axios.post(
-          `${import.meta.env.VITE_BASE_API_URL}/token/refresh/`,
+          `${import.meta.env.VITE_BASE_API_URL}/api/token/refresh/`,
           { refresh: refreshToken },
         );
 
