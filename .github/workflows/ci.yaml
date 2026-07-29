@@ -15,6 +15,7 @@ jobs:
       uses: actions/checkout@v5
 
     - name: Create temporary .env file for CI
+      # dummy paswords. in the future, for production, GitHub Secrects should be used
       run: |
         echo "POSTGRES_USER=admin" > .env
         echo "POSTGRES_PASSWORD=supersecret42" >> .env
@@ -23,6 +24,10 @@ jobs:
         echo "SECRET_KEY=github_actions_dummy_secret_key_123" >> .env
         echo "REDIS_HOST=redis_broker" >> .env
         echo "REDIS_PORT=6379" >> .env
+        
+        mkdir -p frontend
+        echo "VITE_BASE_API_URL=http://localhost:8000" > frontend/.env
+        echo "VITE_WS_BASE_URL=ws://localhost:8001" >> frontend/.env
 
     - name: Build and Start Docker Containers
       run: docker compose up -d --build
