@@ -93,6 +93,8 @@ services:
       # target: production    # <--- Docker skips the dev server and builds Nginx
     container_name: react_frontend
     restart: on-failure
+    env_file:
+      - ./frontend/.env
     # ports:   ---- WHEN WE ARE READY FOR PRODUCTION
     #  - "80:80"
     ports:
