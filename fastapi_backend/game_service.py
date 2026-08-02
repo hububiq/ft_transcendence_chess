@@ -6,6 +6,7 @@ from redis_client import get_redis
 from ai_engine import compute_best_move
 from database import async_session
 from models import Game
+from server import manager
 
 async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surrender: bool = False, surrender_loser_id: int = None):
     """Generates the game history, cleans RAM, and updates ELO in Django."""
@@ -53,7 +54,14 @@ async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surre
                 print(f"[DB] Game {game_id} permanently saved. Winner: {winner_id}")
 
 
-    await websocket.send_json({
+    # await websocket.send_json({
+    #     "type": "game_over",
+    #     "winner_id": winner_id,
+    #     "loser_id": loser_id,
+    #     "result": result, 
+    #     "pgn": pgn_string
+    # })
+    await manager.broadcast_to_game(game_id, {
         "type": "game_over",
         "winner_id": winner_id,
         "loser_id": loser_id,
@@ -93,8 +101,16 @@ async def handle_player_move(data: dict, game_id: str, websocket):
     if move in board.legal_moves:
         board.push(move)
         await redis.set(redis_key, board.fen())
-        await redis.rpush(f"game:{game_id}:moves", move.uci()) 
-        await websocket.send_json({
+        await redis.rpush(f"game:{game_id}:moves", move.uci())
+        
+        
+        # await websocket.send_json({
+        #     "type": "move",
+        #     "move": move.uci(),
+        #     "san_move": human_san,
+        #     "fen": board.fen()
+        # })
+        await manager.broadcast_to_game(game_id, {
             "type": "move",
             "move": move.uci(),
             "san_move": human_san,
@@ -117,7 +133,13 @@ async def handle_player_move(data: dict, game_id: str, websocket):
                 board.push(ai_move)
                 await redis.set(redis_key, board.fen())
                 await redis.rpush(f"game:{game_id}:moves", ai_uci)
-                await websocket.send_json({
+                # await websocket.send_json({
+                #     "type": "move",
+                #     "move": ai_uci,
+                #     "san_move": bot_san,
+                #     "fen": board.fen()
+                # })
+                await manager.broadcast_to_game(game_id, {
                     "type": "move",
                     "move": ai_uci,
                     "san_move": bot_san,

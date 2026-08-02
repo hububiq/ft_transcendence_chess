@@ -71,11 +71,12 @@ export function Game() {
 
   const { sendMessage } = useWebSocket({
     // url: gameId ? `ws://localhost:8001/ws/game/${gameId}` : "",
-    // url:
-    //   gameId && user?.id
-    //     ? `ws://localhost:8001/ws/game/${gameId}?user_id=${user.id}`
-    //     : "",
-    url: gameId && user?.id ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}?user_id=${user.id}` : "",
+    url:
+      gameId && user?.id
+        ? `ws://localhost:8001/ws/game/${gameId}?user_id=${user.id}`
+        : "",
+    // url: gameId && user?.id ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}?user_id=${user.id}` : "",
+    
     enabled: !!gameId,
     onMessage: handleServerMessage,
   });

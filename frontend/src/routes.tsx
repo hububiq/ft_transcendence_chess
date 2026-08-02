@@ -39,7 +39,7 @@ export const router = createBrowserRouter([
   // protected full-screen routes
   {
     Component: ProtectedRoute,
-    children: [{ path: "/game", Component: Game }],
+    children: [{ path: "/game/:gameId", Component: Game }],
   },
 
   // Redirects to "/" if already logged in
