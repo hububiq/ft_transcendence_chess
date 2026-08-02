@@ -26,7 +26,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        # "http://192.168.X.X:3000", for campus 1vs1 2 machines testing
+        "http://172.29.45.254:3000", # for campus 1vs1 2 machines testing - add your own IP
     ],
     allow_credentials=True,
     allow_methods=["*"],
