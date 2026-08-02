@@ -5,11 +5,17 @@ import { type GameOutcome } from "../../../utils/constants";
 
 interface ChessBoardProps {
   fen: string;
+  playerColor: "w" | "b";
   onMove: (move: string) => void;
   onGameEnd: (outcome: GameOutcome) => void;
 }
 
-export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
+export function ChessBoard({
+  fen,
+  playerColor,
+  onMove,
+  onGameEnd,
+}: ChessBoardProps) {
   const chessGameRef = useRef(new Chess());
 
   const [chessPosition, setChessPosition] = useState<string>(fen);
@@ -66,7 +72,8 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
 
   function onSquareClick(square: string, piece?: string) {
     const chessGame = chessGameRef.current;
-    if (chessGame.turn() === "b") return;
+
+    if (chessGame.turn() === playerColor) return;
 
     if (!moveFrom && piece) {
       const hasMoveOptions = getMoveOptions(square as Square);
@@ -110,7 +117,7 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
   function onPieceDrop(sourceSquare: string, targetSquare: string) {
     const chessGame = chessGameRef.current;
     if (!targetSquare) return false;
-    if (chessGame.turn() === "b") return false;
+    if (chessGame.turn() === playerColor) return false;
 
     try {
       const move = chessGame.move({
@@ -148,6 +155,7 @@ export function ChessBoard({ fen, onMove, onGameEnd }: ChessBoardProps) {
       onPieceDrop={onPieceDrop}
       onSquareClick={onSquareClick}
       customSquareStyles={optionSquares}
+      boardOrientation={playerColor === "w" ? "white" : "black"}
     />
   );
 }

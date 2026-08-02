@@ -18,6 +18,7 @@ export function Game() {
   const { user } = useUser();
 
   // Game States
+  const [playerColor, setPlayerColor] = useState<"w" | "b">("w");
   const [currentFen, setCurrentFen] = useState("start");
   const [moveHistory, setMoveHistory] = useState<Move[]>([]);
   const [playerTime, setPlayerTime] = useState(600); //
@@ -33,6 +34,15 @@ export function Game() {
   // WebSocket Setup
   const handleServerMessage = useCallback((data: any) => {
     switch (data.type) {
+      case "board_state": // MATCH FASTAPI PAYLOAD
+        setCurrentFen(data.fen);
+
+        console.log(`Board state: ${data}`);
+        // Optional: Assuming sends these fields
+        if (data.color) setPlayerColor(data.color);
+        if (data.opponent) setOpponent(data.opponent);
+        break;
+
       case "move":
         setCurrentFen(data.fen);
 
@@ -47,18 +57,24 @@ export function Game() {
           }
         });
         break;
-
-      case "init": // Receive initial opponent data & game state
-        // setCurrentFen(data.fen);
-        // setOpponent(data.opponent);
+      case "error":
+        console.error("Server Error:", data.message);
         break;
+      // case "init": // Receive initial opponent data & game state
+      //   // setCurrentFen(data.fen);
+      //   // setOpponent(data.opponent);
+      //   break;
       default:
         console.warn("Unhandled WS message:", data);
     }
   }, []);
 
   const { sendMessage } = useWebSocket({
-    url: gameId ? `ws://localhost:8001/ws/game/${gameId}` : "",
+    // url: gameId ? `ws://localhost:8001/ws/game/${gameId}` : "",
+    url:
+      gameId && user?.id
+        ? `ws://localhost:8001/ws/game/${gameId}?user_id=${user.id}`
+        : "",
     enabled: !!gameId,
     onMessage: handleServerMessage,
   });
@@ -68,11 +84,15 @@ export function Game() {
     sendMessage({
       type: "move",
       move: move,
+      player_id: user?.id, // Required for backend validation
     });
   };
 
   const handleResign = () => {
-    sendMessage({ type: "resign" });
+    sendMessage({
+      type: "surrender",
+      player_id: user?.id,
+    });
   };
 
   const handleDrawOffer = () => {
@@ -144,6 +164,7 @@ export function Game() {
                 fen={currentFen}
                 onMove={handlePlayerMove}
                 onGameEnd={handleGameOver}
+                playerColor={playerColor}
               />
             </div>
 
