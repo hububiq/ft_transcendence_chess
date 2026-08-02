@@ -117,7 +117,7 @@ export function ChessBoard({
   function onPieceDrop(sourceSquare: string, targetSquare: string) {
     const chessGame = chessGameRef.current;
     if (!targetSquare) return false;
-    if (chessGame.turn() === playerColor) return false;
+    if (chessGame.turn() !== playerColor) return false;
 
     try {
       const move = chessGame.move({
