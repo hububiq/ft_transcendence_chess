@@ -43,7 +43,7 @@ export function BotGame() {
   const initGame = async () => {
     if (!user) {
       console.warn("Waiting for user profile to load...");
-      return; 
+      return;
     }
     try {
       // setIsCreatingGame(true);
@@ -64,7 +64,7 @@ export function BotGame() {
   };
 
   useEffect(() => {
-   // Only try to start the game if the user has officially loaded AND we don't have a game yet!
+    // Only try to start the game if the user has officially loaded AND we don't have a game yet!
     if (user && user.id && !gameStarted) {
       initGame();
     }
@@ -104,14 +104,15 @@ export function BotGame() {
         } else if (data.loser_id === currentPlayerId) {
           setGameOver("loss"); // The human's ID matches the loser!
         } else if (data.winner_id === currentPlayerId) {
-          setGameOver("win");  // The human's ID matches the winner!
+          setGameOver("win"); // The human's ID matches the winner!
         }
         break;
     }
   };
 
   const { sendMessage } = useWebSocket({
-    url: gameId ? `ws://localhost:8001/ws/game/${gameId}` : "",
+    // url: gameId ? `ws://localhost:8001/ws/game/${gameId}` : "",
+    url: gameId ? `ws://localhost:8001/ws/game/${gameId}?user_id=${currentPlayerId}` : "",
     enabled: gameStarted && !!gameId,
     onMessage: handleServerMessage,
   });
@@ -242,6 +243,7 @@ export function BotGame() {
             <div className="w-[600px] h-[600px] rounded-sm overflow border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
               <ChessBoard
                 fen={currentFen}
+                playerColor="w"
                 onMove={handlePlayerMove}
                 onGameEnd={setGameOver}
               />
