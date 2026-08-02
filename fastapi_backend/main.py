@@ -16,6 +16,7 @@ from api.history import router as history_router
 from api.tournaments import router as tournaments_router
 from api.games import router as games_router
 from garbage_games_collector import clean_dead_games
+from database import async_session
 
 
 app = FastAPI(debug=settings.debug)
@@ -75,20 +76,37 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
     except Exception as e:
         await manager.disconnect(user_id, websocket) 
 
+
 @app.websocket("/ws/game/{game_id}")
-async def game_socket(websocket: WebSocket, game_id: int):
+async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
     await manager.connect(game_id, websocket)
     redis = await get_redis()
 
+    color = "w"
+    opponent_id = None
+    async with async_session() as session:
+        game = await session.get(Game, game_id)
+        if game:
+            if game.white_player_id == user_id:
+                color = "w"
+                opponent_id = game.black_player_id
+            else:
+                color = "b"
+                opponent_id = game.white_player_id
+
     redis_key = f"game:{game_id}:fen"
     current_fen = await redis.get(redis_key)
-
     if not current_fen:
         starting_fen = chess.Board().fen()
         await redis.set(redis_key, starting_fen)
         current_fen = starting_fen
     try:
-        await websocket.send_json({"type": "board_state", "fen": current_fen})
+        await websocket.send_json({
+            "type": "board_state", 
+            "fen": current_fen,
+            "color": color,            # Tells React to flip the board or not
+            "opponent_id": opponent_id # Tells React who they are playing
+        })
     except Exception as e:
         print(f"[WS] Browser disconnected before receiving board state: {e}")
         await manager.disconnect(game_id, websocket)
