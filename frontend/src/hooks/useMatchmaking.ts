@@ -1,7 +1,10 @@
 import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 
-export function useMatchmaking(userId?: number | null, eloRating: number = 1200) {
+export function useMatchmaking(
+  userId?: number | null,
+  eloRating: number = 1200,
+) {
   const [isSearching, setIsSearching] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const navigate = useNavigate();
@@ -9,7 +12,10 @@ export function useMatchmaking(userId?: number | null, eloRating: number = 1200)
   const joinQueue = useCallback(() => {
     if (!userId) return;
 
-    const ws = new WebSocket(`ws://localhost:8001/ws/lobby/${userId}`);
+    // const ws = new WebSocket(`ws://localhost:8001/ws/lobby/${userId}`);
+    const ws = new WebSocket(
+      `${import.meta.env.VITE_WS_BASE_URL}/ws/lobby/${userId}`,
+    );
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -18,21 +24,20 @@ export function useMatchmaking(userId?: number | null, eloRating: number = 1200)
         JSON.stringify({
           type: "join_queue",
           elo_rating: eloRating,
-        })
+        }),
       );
     };
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        
+
         if (data.type === "info") {
           console.log("Matchmaking:", data.message);
-        } 
-        else if (data.type === "match_start") {
+        } else if (data.type === "match_start") {
           setIsSearching(false);
           ws.close();
-          
+
           navigate(`/game/${data.game_id}`);
         }
       } catch (err) {
