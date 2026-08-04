@@ -1,45 +1,16 @@
 import { Link } from "react-router";
-import {
-  Swords,
-  Trophy,
-  Clock,
-  ChevronRight,
-  Bot,
-  Loader,
-  ServerOff,
-} from "lucide-react";
-import clsx from "clsx";
+import { Swords, Bot, Loader, Loader2, ServerOff } from "lucide-react";
+import { useMatchmaking } from "../../hooks/useMatchmaking";
 import { useUser } from "../../hooks/useUser";
-
-const matchHistory = [
-  {
-    id: 1,
-    opponent: "ChessMaster99",
-    result: "Win",
-    eloChange: "+12",
-    date: "2 hrs ago",
-    type: "Blitz 3|0",
-  },
-  {
-    id: 2,
-    opponent: "KnightRider",
-    result: "Loss",
-    eloChange: "-9",
-    date: "5 hrs ago",
-    type: "Rapid 10|0",
-  },
-  {
-    id: 3,
-    opponent: "QueenGambit",
-    result: "Win",
-    eloChange: "+15",
-    date: "1 day ago",
-    type: "Bullet 1|0",
-  },
-];
 
 export function Dashboard() {
   const { user, loading, error } = useUser();
+
+  // init hook
+  const { isSearching, joinQueue, cancelQueue } = useMatchmaking(
+    user?.id,
+    user?.profile?.elo_rating,
+  );
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
@@ -74,12 +45,23 @@ export function Dashboard() {
           similar skill level instantly.
         </p>
         <div className="relative z-10 flex gap-3">
-          <Link
-            to="/game"
-            className="bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 px-8 rounded-lg transition-all hover:shadow-[0_0_20px_rgba(37,99,235,0.2)]"
-          >
-            Play Now
-          </Link>
+          {isSearching ? (
+            <button
+              onClick={cancelQueue}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-medium py-3 px-8 rounded-lg transition-all"
+            >
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Cancel Search...
+            </button>
+          ) : (
+            <button
+              onClick={joinQueue}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 px-8 rounded-lg transition-all hover:shadow-[0_0_20px_rgba(37,99,235,0.2)]"
+            >
+              Play Now
+            </button>
+          )}
+
           <Link
             to="/bot"
             className="flex items-center gap-2 bg-[#0d0d0d] hover:bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800 hover:border-purple-500/40 font-medium py-3 px-8 rounded-lg transition-all hover:shadow-[0_0_20px_rgba(147,51,234,0.1)]"

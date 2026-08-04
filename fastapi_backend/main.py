@@ -26,7 +26,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://172.29.45.254:3000", # for campus 1vs1 2 machines testing - add your own IP
+        "http://192.168.0.178:3000",  # for campus 1vs1 2 machines testing - add your own IP
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -74,7 +74,7 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
     except WebSocketDisconnect:
         await manager.disconnect(user_id, websocket)
     except Exception as e:
-        await manager.disconnect(user_id, websocket) 
+        await manager.disconnect(user_id, websocket)
 
 
 @app.websocket("/ws/game/{game_id}")
@@ -102,10 +102,10 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
         current_fen = starting_fen
     try:
         await websocket.send_json({
-            "type": "board_state", 
+            "type": "board_state",
             "fen": current_fen,
             "color": color,            # Tells React to flip the board or not
-            "opponent_id": opponent_id # Tells React who they are playing
+            "opponent_id": opponent_id  # Tells React who they are playing
         })
     except Exception as e:
         print(f"[WS] Browser disconnected before receiving board state: {e}")
@@ -126,10 +126,11 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
 
             elif msg_type == "surrender":
                 current_fen = await redis.get(redis_key)
-                board = chess.Board(current_fen) if current_fen else chess.Board()
-                
+                board = chess.Board(
+                    current_fen) if current_fen else chess.Board()
+
                 # React MUST send the player_id of the person who clicked Resign
-                player_id = data.get("player_id") 
+                player_id = data.get("player_id")
 
                 # Pass the new override flags
                 await handle_game_over(board, game_id, websocket=websocket, is_surrender=True, surrender_loser_id=player_id)
