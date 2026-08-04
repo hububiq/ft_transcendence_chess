@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Upload, Mail, Lock, User, ArrowRight } from "lucide-react";
 import { useRegister } from "../../features/auth/hooks/useRegister";
 import gitHubLogo from "../../assets/github.svg";
-// import { USER_REGEX, PWD_REGEX } from "../../utils/constants";
+import { USER_REGEX, PWD_REGEX } from "../../utils/constants";
 import { useOAuth } from "../../features/auth/hooks/useOAuth";
 import { Link } from "react-router";
 
@@ -22,6 +22,9 @@ export function Register() {
 
   const { errMsg, executeRegister } = useRegister();
   const { oauthLoading, handleGitHubLogin } = useOAuth();
+
+  const userValid = USER_REGEX.test(user);
+  const pwdValid = PWD_REGEX.test(pwd);
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -99,7 +102,7 @@ export function Register() {
             )}
             {/* Username */}
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute left-3 top-3 flex items-center pointer-events-none">
                 <User className="w-5 h-5 text-neutral-600" />
               </div>
               <input
@@ -111,13 +114,29 @@ export function Register() {
                 onChange={(e) => setUser(e.target.value)}
                 required
                 placeholder="Username"
+                aria-describedby="usernameHelp usernameStatus"
                 className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
               />
+              <p id="usernameHelp" className="text-xs text-neutral-500 mt-1">
+                Username: 4–24 characters, must start with a letter; allowed: letters, numbers, _ and -.
+              </p>
+              {user.length > 0 && (
+                <p
+                  id="usernameStatus"
+                  role="status"
+                  aria-live="polite"
+                  className={`text-xs mt-1 ${userValid ? "text-green-400" : "text-red-400"}`}
+                >
+                  {userValid
+                    ? "Username looks good"
+                    : "Invalid username: must start with a letter and be 4–24 chars, no special characters."}
+                </p>
+              )}
             </div>
 
             {/* Email */}
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute left-3 top-3 flex items-center pointer-events-none">
                 <Mail className="w-5 h-5 text-neutral-600" />
               </div>
               <input
@@ -133,7 +152,7 @@ export function Register() {
 
             {/* Password */}
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute left-3 top-3 flex items-center pointer-events-none">
                 <Lock className="w-5 h-5 text-neutral-600" />
               </div>
               <input
@@ -144,13 +163,29 @@ export function Register() {
                 autoComplete="off"
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
+                aria-describedby="passwordHelp passwordStatus"
                 className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
               />
+              <p id="passwordHelp" className="text-xs text-neutral-500 mt-1">
+                Password: 8–24 characters, must include lowercase, uppercase and a number.
+              </p>
+              {pwd.length > 0 && (
+                <p
+                  id="passwordStatus"
+                  role="status"
+                  aria-live="polite"
+                  className={`text-xs mt-1 ${pwdValid ? "text-green-400" : "text-red-400"}`}
+                >
+                  {pwdValid
+                    ? "Password meets requirements"
+                    : "Password does not meet requirements."}
+                </p>
+              )}
             </div>
 
             {/* Confirm Password */}
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute left-3 top-3 flex items-center pointer-events-none">
                 <Lock className="w-5 h-5 text-neutral-600" />
               </div>
               <input
