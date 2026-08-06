@@ -1,3 +1,5 @@
+#fastapi_backend/game_service.py
+
 import chess
 import chess.pgn
 import httpx
@@ -5,73 +7,88 @@ import json
 from redis_client import get_redis
 from ai_engine import compute_best_move
 from database import async_session
-from models import Game
+from models import Game, TournamentMatch
 from server import manager
 
+from fastapi_backend.tournament_progression_service import advance_tournament
+
+
 async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surrender: bool = False, surrender_loser_id: int = None):
-    """Generates the game history, cleans RAM, and updates ELO in Django."""
+    """Generates the game history, cleans RAM, updates ELO, and advances tournaments."""
     
     redis = await get_redis()
     moves_list = await redis.lrange(f"game:{game_id}:moves", 0, -1)
-    
-    # Replay the game on a fresh board to generate the history
+
+    # Replay the game to generate PGN
     replay_board = chess.Board()
     for move_uci in moves_list:
         replay_board.push(chess.Move.from_uci(move_uci))
-    game_pgn = chess.pgn.Game.from_board(replay_board)
-    pgn_string = str(game_pgn)
+    game_pgn = str(chess.pgn.Game.from_board(replay_board))
 
-    # DETERMINE THE WINNER USING PYTHON-CHESS RULES
-    result = board.result() # Returns '1-0' (White), '0-1' (Black), or '1/2-1/2' (Draw)
-    
+    # Determine winner
+    result = board.result()  # '1-0', '0-1', '1/2-1/2'
     winner_id = None
     loser_id = None
 
-    # SAVE TO POSTGRESQL AND GRAB THE TRUE IDs
     async with async_session() as session:
         game = await session.get(Game, int(game_id))
-        if game:
-            if is_surrender:
-                # If someone surrendered, override the python-chess referee
-                loser_id = surrender_loser_id
-                # The winner is whoever DIDN'T surrender
-                winner_id = game.white_player_id if loser_id == game.black_player_id else game.black_player_id
-                result = "Surrender"
-            else:
-                # Match the python-chess result to the database IDs!
-                if result == '1-0':
-                    winner_id = game.white_player_id
-                    loser_id = game.black_player_id
-                elif result == '0-1':
-                    winner_id = game.black_player_id
-                    loser_id = game.white_player_id
+        if not game:
+            return
 
-                game.moves_pgn = pgn_string
-                game.winner_id = winner_id
-                game.status = "completed"
-                session.add(game)
-                await session.commit()
-                print(f"[DB] Game {game_id} permanently saved. Winner: {winner_id}")
+        # Surrender overrides python-chess
+        if is_surrender:
+            loser_id = surrender_loser_id
+            winner_id = game.white_player_id if loser_id == game.black_player_id else game.black_player_id
+            result = "Surrender"
 
+        else:
+            # Normal chess result
+            if result == "1-0":
+                winner_id = game.white_player_id
+                loser_id = game.black_player_id
+            elif result == "0-1":
+                winner_id = game.black_player_id
+                loser_id = game.white_player_id
+            elif result == "1/2-1/2":
+                winner_id = None
+                loser_id = None
+                game.is_draw = True
 
-    # await websocket.send_json({
-    #     "type": "game_over",
-    #     "winner_id": winner_id,
-    #     "loser_id": loser_id,
-    #     "result": result, 
-    #     "pgn": pgn_string
-    # })
+        # Save game
+        game.moves_pgn = game_pgn
+        game.winner_id = winner_id
+        game.status = "completed"
+        session.add(game)
+        await session.commit()
+
+        print(f"[DB] Game {game_id} saved. Winner: {winner_id}")
+
+        # ------------------------------------------------------------
+        # ⭐ TOURNAMENT PROGRESSION TRIGGER
+        # ------------------------------------------------------------
+        if game.tournament_id is not None:
+            print(f"[TOURNAMENT] Advancing tournament {game.tournament_id}...")
+            await advance_tournament(
+                game_id=game.id,
+                winner_id=winner_id,
+                session=session
+            )
+        # ------------------------------------------------------------
+
+    # Notify players
     await manager.broadcast_to_game(game_id, {
         "type": "game_over",
         "winner_id": winner_id,
         "loser_id": loser_id,
-        "result": result, 
-        "pgn": pgn_string
+        "result": result,
+        "pgn": game_pgn
     })
 
+    # Clean Redis
     await redis.delete(f"game:{game_id}:fen")
     await redis.delete(f"game:{game_id}:moves")
 
+    # Update ELO in Django
     async with httpx.AsyncClient() as client:
         try:
             await client.post(
@@ -90,55 +107,43 @@ async def handle_player_move(data: dict, game_id: str, websocket):
 
     current_fen = await redis.get(redis_key)
     board = chess.Board(current_fen) if current_fen else chess.Board()
-    
+
     try:
         move = chess.Move.from_uci(data["move"])
     except ValueError:
         await websocket.send_json({"type": "error", "message": "Invalid move format!"})
         return
 
-    human_san = board.san(move) 
+    human_san = board.san(move)
+
     if move in board.legal_moves:
         board.push(move)
         await redis.set(redis_key, board.fen())
         await redis.rpush(f"game:{game_id}:moves", move.uci())
-        
-        
-        # await websocket.send_json({
-        #     "type": "move",
-        #     "move": move.uci(),
-        #     "san_move": human_san,
-        #     "fen": board.fen()
-        # })
+
         await manager.broadcast_to_game(game_id, {
             "type": "move",
             "move": move.uci(),
             "san_move": human_san,
             "fen": board.fen()
         })
-        
+
         if board.is_game_over():
             await handle_game_over(board, game_id, websocket=websocket)
             return
 
+        # Bot logic unchanged
         if data.get("is_vs_bot") == True:
-            print(f"Triggering AI for Game {game_id}...") 
             await websocket.send_json({"type": "info", "message": "Bot is thinking..."})
-            safe_depth = 4
-            ai_uci = compute_best_move(board.fen(), depth=safe_depth)
-            
+            ai_uci = compute_best_move(board.fen(), depth=4)
+
             if ai_uci:
                 ai_move = chess.Move.from_uci(ai_uci)
                 bot_san = board.san(ai_move)
                 board.push(ai_move)
                 await redis.set(redis_key, board.fen())
                 await redis.rpush(f"game:{game_id}:moves", ai_uci)
-                # await websocket.send_json({
-                #     "type": "move",
-                #     "move": ai_uci,
-                #     "san_move": bot_san,
-                #     "fen": board.fen()
-                # })
+
                 await manager.broadcast_to_game(game_id, {
                     "type": "move",
                     "move": ai_uci,
@@ -149,5 +154,7 @@ async def handle_player_move(data: dict, game_id: str, websocket):
                 if board.is_game_over():
                     await handle_game_over(board, game_id, websocket=websocket)
                     return
+
     else:
         await websocket.send_json({"type": "error", "message": "Illegal move"})
+
