@@ -2,20 +2,25 @@ import { useState } from "react";
 import type { UserData } from "../utils/interfaces";
 import { api } from "../api/axios";
 import axios from "axios";
+import { fetchCurrentUser } from "../features/auth/api/authService";
 
 export function useUpdateUser() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState("");
 
-  const updateUser = async (currentUser: UserData, newUserData: UserData) => {
+  const updateUser = async (
+    currentUser: UserData,
+    newUserData: UserData,
+    avatarFile?: File | null,
+  ) => {
     setIsUpdating(true);
     setUpdateError("");
 
     try {
-      const profilePayload: { bio?: string; location?: string } = {};
       const patchPayload: {
         username?: string;
-        profile?: typeof profilePayload;
+        bio?: string;
+        location?: string;
       } = {};
 
       if (newUserData.username !== currentUser.username) {
@@ -23,30 +28,38 @@ export function useUpdateUser() {
       }
 
       if (newUserData.profile.bio !== currentUser.profile.bio) {
-        profilePayload.bio = newUserData.profile.bio;
+        patchPayload.bio = newUserData.profile.bio;
       }
 
       if (newUserData.profile.location !== currentUser.profile.location) {
-        profilePayload.location = newUserData.profile.location;
+        patchPayload.location = newUserData.profile.location;
       }
 
-      if (Object.keys(profilePayload).length > 0) {
-        patchPayload.profile = profilePayload;
+      if (Object.keys(patchPayload).length > 0) {
+        await api.patch("/api/me/update/", patchPayload);
       }
-      // extract to authService.ts
-      await api.patch("/api/me/update/", patchPayload);
-      return {
-        ...currentUser,
-        ...patchPayload,
-        profile: {
-          ...currentUser.profile,
-          ...profilePayload,
-        },
-      };
+
+      if (avatarFile) {
+        const formData = new FormData();
+        formData.append("avatar", avatarFile);
+
+        await api.post("/api/me/avatar/", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      }
+
+      const refreshedUser = await fetchCurrentUser();
+      return refreshedUser.data;
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
-        setUpdateError(
-          err.response?.data?.detail || "Failed to update profile",
+    const errorData = err.response?.data;
+    setUpdateError(
+      errorData?.detail ||
+      errorData?.error ||
+      errorData?.message ||
+      "Failed to update profile",
         );
       } else {
         setUpdateError("An unexpected error occurred while updating.");

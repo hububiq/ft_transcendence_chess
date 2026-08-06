@@ -21,6 +21,8 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 from django.http import JsonResponse
+from django.conf import settings
+from django.conf.urls.static import static
 
 def api_root_view(request):
     return JsonResponse({"message": "Django auth & profile microservice is running correctly"})
@@ -37,6 +39,6 @@ urlpatterns = [
     path('api/', include('users.urls')), 
 
     path('accounts/', include('allauth.urls')),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # this is basically for api routes. when user hits some endpoint, in directs particular actions from views.py

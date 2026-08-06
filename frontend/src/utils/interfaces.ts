@@ -5,6 +5,7 @@ export interface UserData {
   date_joined: string;
   profile: {
     avatar: string;
+    oauth_avatar_url?: string | null;
     bio: string;
     current_streak: number;
     elo_rating: number;

@@ -24,6 +24,7 @@ app = FastAPI(debug=settings.debug)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "http://10.18.200.89:3000",  # for campus 1vs1 2 machines testing - add your own IP
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://192.168.0.178:3000",  # for campus 1vs1 2 machines testing - add your own IP

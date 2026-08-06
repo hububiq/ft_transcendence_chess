@@ -6,6 +6,7 @@ import { useUser } from "../../hooks/useUser";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import avatar_1 from "../../assets/avatar_1.png";
 import avatar_2 from "../../assets/avatar_2.png";
+import { resolveMediaUrl } from "../../utils/utils";
 
 import { GameSidebar } from "../../features/gameplay/components/GameSidebar";
 
@@ -289,7 +290,11 @@ export function Game() {
           >
             <div className="flex items-center gap-4">
               <img
-                src={user?.profile?.avatar || avatar_2}
+                src={
+                  resolveMediaUrl(user?.profile?.avatar) ||
+                  user?.profile?.oauth_avatar_url ||
+                  avatar_2
+                }
                 alt="Player"
                 className="w-12 h-12 rounded-lg border border-blue-500 object-cover shadow-[0_0_10px_rgba(37,99,235,0.3)]"
               />

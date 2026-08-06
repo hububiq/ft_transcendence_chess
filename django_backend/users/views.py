@@ -13,6 +13,16 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from redis_client import publish
 
+def _is_allowed_avatar(file_obj):
+    """Validate that the uploaded file is a JPG or PNG image."""
+    file_name = (getattr(file_obj, "name", "") or "").lower()
+    content_type = (getattr(file_obj, "content_type", "") or "").lower()
+
+    allowed_extensions = (".jpg", ".jpeg", ".png")
+    allowed_content_types = ("image/jpeg", "image/png")
+
+    return file_name.endswith(allowed_extensions) and content_type in allowed_content_types
+
 # This ViewSet automatically generates GET, POST, PUT, and DELETE logic
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -127,6 +137,11 @@ def update_my_profile(request):
         profile.location = request.data['location']
 
     if 'avatar' in request.FILES:
+        if not _is_allowed_avatar(request.FILES['avatar']):
+            return Response(
+                {"error": "Avatar must be a JPG or PNG file."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         profile.avatar = request.FILES['avatar']
         
     profile.save()
@@ -141,10 +156,16 @@ def upload_avatar(request):
     if 'avatar' not in request.FILES:
         return Response({"error": "No image file provided."}, status=status.HTTP_400_BAD_REQUEST)
     
+    if not _is_allowed_avatar(request.FILES['avatar']):
+        return Response(
+            {"error": "Avatar must be a JPG or PNG file."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+        
     profile.avatar = request.FILES['avatar']
     profile.save()
     
-    serializer = UserSerializer(user)
+    serializer = UserSerializer(request.user)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
@@ -184,4 +205,4 @@ def remove_friend(request, user_id):
 class GithubLogin(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
     callback_url = "http://localhost:3000/auth/github/callback" 
-    client_class = OAuth2Client
+    client_class = OAuth2Client    
