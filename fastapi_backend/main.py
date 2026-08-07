@@ -17,6 +17,7 @@ from api.tournaments import router as tournaments_router
 from api.games import router as games_router
 from garbage_games_collector import clean_dead_games
 from database import async_session
+from chat.router import router as chat_router 
 
 
 app = FastAPI(debug=settings.debug)
@@ -36,6 +37,7 @@ app.add_middleware(
 app.include_router(history_router)
 app.include_router(tournaments_router)
 app.include_router(games_router)
+app.include_router(chat_router)  # Expose the /ws/chat endpoint
 
 
 @app.get("/")
