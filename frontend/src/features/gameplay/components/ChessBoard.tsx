@@ -25,6 +25,9 @@ export function ChessBoard({
     Record<string, React.CSSProperties>
   >({});
 
+  // 💡 FIXED: Added the missing state for the check square!
+  const [checkSquare, setCheckSquare] = useState<string>("");
+
   if (fen !== prevFen) {
     setPrevFen(fen);
     setChessPosition(fen);
@@ -43,7 +46,38 @@ export function ChessBoard({
         console.error("Backend sent an invalid FEN:", fen);
       }
     }
+    updateCheckState();
   }, [fen]);
+
+  useEffect(() => {
+    updateCheckState();
+  }, [chessPosition]);
+
+  function updateCheckState() {
+    const chessGame = chessGameRef.current;
+
+    // Fallbacks to support different versions of chess.js
+    const isCheck =
+      typeof chessGame.isCheck === "function"
+        ? chessGame.isCheck()
+        : (chessGame as any).in_check?.();
+
+    if (isCheck) {
+      const turn = chessGame.turn();
+      const board = chessGame.board();
+      // Find the king's square of the player currently in turn
+      for (let r = 0; r < board.length; r++) {
+        for (let c = 0; c < board[r].length; c++) {
+          const piece = board[r][c];
+          if (piece && piece.type === "k" && piece.color === turn) {
+            setCheckSquare(piece.square);
+            return;
+          }
+        }
+      }
+    }
+    setCheckSquare("");
+  }
 
   function getMoveOptions(square: Square) {
     const chessGame = chessGameRef.current;
@@ -57,10 +91,11 @@ export function ChessBoard({
     for (const move of moves) {
       newSquares[move.to] = {
         background:
-          chessGame.get(move.to) &&
-          chessGame.get(move.to)?.color !== chessGame.get(square)?.color
-            ? "radial-gradient(circle, rgba(0,0,0,.1) 85%, transparent 85%)"
-            : "radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)",
+          chessGame.get(move.to as Square) &&
+          chessGame.get(move.to as Square)?.color !==
+            chessGame.get(square)?.color
+            ? "radial-gradient(circle, rgba(0,0,0,.15) 85%, transparent 85%)"
+            : "radial-gradient(circle, rgba(0,0,0,.15) 25%, transparent 25%)",
         borderRadius: "50%",
       };
     }
@@ -73,7 +108,7 @@ export function ChessBoard({
   function onSquareClick(square: string, piece?: string) {
     const chessGame = chessGameRef.current;
 
-    if (chessGame.turn() === playerColor) return;
+    if (chessGame.turn() !== playerColor) return;
 
     if (!moveFrom && piece) {
       const hasMoveOptions = getMoveOptions(square as Square);
@@ -140,13 +175,42 @@ export function ChessBoard({
     }
   }
 
+  function onPieceDragBegin(piece: string, sourceSquare: string) {
+    const chessGame = chessGameRef.current;
+    if (chessGame.turn() !== playerColor) return;
+    getMoveOptions(sourceSquare as Square);
+  }
+
   function checkLocalGameOver() {
     const chessGame = chessGameRef.current;
-    if (chessGame.isCheckmate()) {
+    const isMate =
+      typeof chessGame.isCheckmate === "function"
+        ? chessGame.isCheckmate()
+        : (chessGame as any).in_checkmate?.();
+    const isDraw =
+      typeof chessGame.isDraw === "function"
+        ? chessGame.isDraw()
+        : (chessGame as any).in_draw?.();
+    const isStalemate =
+      typeof chessGame.isStalemate === "function"
+        ? chessGame.isStalemate()
+        : (chessGame as any).in_stalemate?.();
+
+    if (isMate) {
       onGameEnd("win");
-    } else if (chessGame.isDraw() || chessGame.isStalemate()) {
+    } else if (isDraw || isStalemate) {
       onGameEnd("draw");
     }
+  }
+
+  const customSquareStyles = { ...optionSquares };
+  if (checkSquare) {
+    customSquareStyles[checkSquare] = {
+      ...customSquareStyles[checkSquare],
+      background: "rgba(255, 0, 0, 0.2)",
+      boxShadow: "inset 0 0 15px rgba(255, 0, 0, 0.3)",
+      borderRadius: "25%",
+    };
   }
 
   return (
@@ -154,7 +218,8 @@ export function ChessBoard({
       position={chessPosition}
       onPieceDrop={onPieceDrop}
       onSquareClick={onSquareClick}
-      customSquareStyles={optionSquares}
+      onPieceDragBegin={onPieceDragBegin}
+      customSquareStyles={customSquareStyles}
       boardOrientation={playerColor === "w" ? "white" : "black"}
     />
   );
