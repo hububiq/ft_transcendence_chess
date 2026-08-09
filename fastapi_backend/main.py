@@ -102,12 +102,26 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
         starting_fen = chess.Board().fen()
         await redis.set(redis_key, starting_fen)
         current_fen = starting_fen
+
+     # GRAB THE HISTORY FROM REDIS 
+    moves_key = f"game:{game_id}:moves"
+    raw_moves_uci = await redis.lrange(moves_key, 0, -1)
+    
+    # Translate the UCI moves (e2e4) back into SAN (e4) for frontend history sidebar
+    san_history = []
+    temp_board = chess.Board()
+    for move_uci in raw_moves_uci:
+        move_obj = chess.Move.from_uci(move_uci)
+        san_history.append(temp_board.san(move_obj))
+        temp_board.push(move_obj)
+
     try:
         await websocket.send_json({
             "type": "board_state",
             "fen": current_fen,
             "color": color,            # Tells React to flip the board or not
-            "opponent_id": opponent_id  # Tells React who they are playing
+            "opponent_id": opponent_id,  # Tells React who they are playing
+            "history": san_history
         })
     except Exception as e:
         print(f"[WS] Browser disconnected before receiving board state: {e}")
