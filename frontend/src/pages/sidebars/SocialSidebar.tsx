@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { MessageSquare, Users, ChevronDown, ChevronUp } from "lucide-react"; //version for the chat
-import { GlobalChatPanel } from "../../features/chat/components/GlobalChatPanel"; // version for the chat Connect the existing sidebar to the live global chat
+import { MessageSquare, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { GlobalChatPanel } from "../../features/chat/components/GlobalChatPanel";
 import clsx from "clsx";
 
 const friends = [
