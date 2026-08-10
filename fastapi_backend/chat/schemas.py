@@ -124,6 +124,13 @@ class AuthenticatedServerEvent(ServerEventModel):
     # The backend creates this identity from verified user data
     user: ChatAuthor
 
+class PresenceServerEvent(ServerEventModel):
+    """Current unique authenticated users connected to this worker"""
+
+    type: Literal["presence"] = "presence"
+
+    # Each authenticated user appears only once in the presence list
+    users: list[ChatAuthor]
 
 class ChatMessageServerEvent(ServerEventModel):
     """Server confirmed message prepared for broadcasting"""
@@ -180,6 +187,7 @@ class ErrorServerEvent(ServerEventModel):
 # This union contains every event currently produced by the chat backend
 ServerEvent = (
     AuthenticatedServerEvent
+    | PresenceServerEvent
     | ChatMessageServerEvent
     | ErrorServerEvent
 )
