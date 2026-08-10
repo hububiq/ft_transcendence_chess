@@ -23,6 +23,7 @@ const CHAT_ERROR_CODES: ReadonlySet<ChatErrorCode> = new Set([
 function isRecord(
   value: unknown,
 ): value is Record<string, unknown> {
+  // Reject null values arrays and primitive values before reading object fields
   return (
     typeof value === "object" &&
     value !== null &&
@@ -38,6 +39,7 @@ function parseAuthor(
     return null;
   }
 
+  // Accept only positive integer user identifiers
   if (
     typeof value.id !== "number" ||
     !Number.isInteger(value.id) ||
@@ -46,6 +48,7 @@ function parseAuthor(
     return null;
   }
 
+  // Validate the public username before exposing it to the UI
   if (
     typeof value.username !== "string" ||
     value.username.trim().length === 0 ||
@@ -64,6 +67,7 @@ function parseAuthor(
 function isValidTimestamp(
   value: unknown,
 ): value is string {
+  // Accept only strings that can be parsed as a valid timestamp
   return (
     typeof value === "string" &&
     !Number.isNaN(Date.parse(value))
@@ -74,6 +78,7 @@ function isValidTimestamp(
 export function parseChatServerEvent(
   value: unknown,
 ): ChatServerEvent | null {
+  // Treat all WebSocket input as untrusted until its shape is validated
   if (
     !isRecord(value) ||
     typeof value.type !== "string"
@@ -95,6 +100,7 @@ export function parseChatServerEvent(
   if (value.type === "chat_message") {
     const author = parseAuthor(value.author);
 
+    // Validate every field before adding the message to frontend state
     if (
       !author ||
       typeof value.message_id !== "string" ||
@@ -127,6 +133,7 @@ export function parseChatServerEvent(
     for (const item of value.users) {
       const user = parseAuthor(item);
 
+      // Reject the entire snapshot if one user entry is malformed
       if (!user) {
         return null;
       }
@@ -141,6 +148,7 @@ export function parseChatServerEvent(
   }
 
   if (value.type === "error") {
+    // Accept only documented error codes and bounded public messages
     if (
       typeof value.code !== "string" ||
       !CHAT_ERROR_CODES.has(
@@ -160,5 +168,6 @@ export function parseChatServerEvent(
     };
   }
 
+  // Ignore unknown server event types instead of trusting unexpected payloads
   return null;
 }

@@ -21,6 +21,7 @@ class GlobalChatConnectionManager:
     """Manage authenticated sockets in the current FastAPI worker"""
 
     def __init__(self) -> None:
+        # Map every active socket to the user verified during authentication
         self._users_by_socket: dict[
             WebSocket,
             ChatAuthor,
@@ -41,6 +42,7 @@ class GlobalChatConnectionManager:
         payload = ready_event.model_dump(mode="json")
 
         async with self._send_lock:
+            # Confirm authentication before exposing the socket as active
             was_sent = await self._send_payload(
                 websocket,
                 payload,
@@ -51,6 +53,7 @@ class GlobalChatConnectionManager:
                     "WebSocket closed during activation"
                 )
 
+            # Register only sockets that successfully received the auth response
             async with self._state_lock:
                 self._users_by_socket[websocket] = user
                 connection_count = len(
@@ -68,6 +71,7 @@ class GlobalChatConnectionManager:
     ) -> None:
         """Remove a socket without failing when cleanup runs twice"""
 
+        # Removing by socket keeps multiple tabs from affecting each other
         async with self._state_lock:
             removed_user = self._users_by_socket.pop(
                 websocket,
@@ -92,8 +96,10 @@ class GlobalChatConnectionManager:
     async def broadcast_presence(self) -> None:
         """Broadcast the current unique authenticated user list"""
 
+        # Repeat when dead sockets change the presence snapshot during delivery
         while True:
             async with self._send_lock:
+                # Read sockets and users from the same protected state snapshot
                 async with self._state_lock:
                     sockets = list(
                         self._users_by_socket.keys()
@@ -117,10 +123,12 @@ class GlobalChatConnectionManager:
                     ),
                 )
 
+                # Presence contains only public identities derived from authenticated sockets
                 payload = PresenceServerEvent(
                     users=users,
                 ).model_dump(mode="json")
 
+                # Send the same presence snapshot to every authenticated socket
                 results = await asyncio.gather(
                     *(
                         self._send_payload(
@@ -163,6 +171,7 @@ class GlobalChatConnectionManager:
                 payload,
             )
 
+        # Failed delivery also removes the socket from active connections
         if not was_sent:
             await self.disconnect(websocket)
 
@@ -177,6 +186,7 @@ class GlobalChatConnectionManager:
         payload = event.model_dump(mode="json")
 
         async with self._send_lock:
+            # Copy the current socket list without holding the state lock during network writes
             async with self._state_lock:
                 sockets = list(
                     self._users_by_socket.keys()
@@ -185,6 +195,7 @@ class GlobalChatConnectionManager:
             if not sockets:
                 return
 
+            # Slow or dead clients are isolated by the per-send timeout
             results = await asyncio.gather(
                 *(
                     self._send_payload(
@@ -220,6 +231,7 @@ class GlobalChatConnectionManager:
         """Isolate a slow or dead client from other clients"""
 
         try:
+            # Limit one network write so a dead client cannot block broadcasts
             await asyncio.wait_for(
                 websocket.send_json(payload),
                 timeout=CHAT_SEND_TIMEOUT_SECONDS,
