@@ -1,7 +1,5 @@
-# fastapi_backend/tournament_progression_service.py
-
 from sqlmodel import select
-from fastapi_backend.models import Tournament, TournamentMatch, Game
+from models import Tournament, TournamentMatch, Game
 from server import manager
 
 
@@ -16,9 +14,7 @@ async def advance_tournament(game_id: int, winner_id: int, session):
     - ends the tournament if final is complete
     """
 
-    # ------------------------------------------------------------
     # 1. Load the game and its tournament match
-    # ------------------------------------------------------------
     game = await session.get(Game, game_id)
     if not game or not game.tournament_id:
         return  # Not a tournament game
@@ -29,29 +25,24 @@ async def advance_tournament(game_id: int, winner_id: int, session):
     if not tm:
         return
 
-    # ------------------------------------------------------------
     # 2. Update match winner
-    # ------------------------------------------------------------
     tm.winner = winner_id
     session.add(tm)
     await session.commit()
 
-    # ------------------------------------------------------------
     # 3. Check if all matches in this round are finished
-    # ------------------------------------------------------------
     query = select(TournamentMatch).where(
         TournamentMatch.tournament_id == tournament_id,
         TournamentMatch.round_number == tm.round_number
     )
-    round_matches = (await session.exec(query)).all()
+    result = await session.execute(query)
+    round_matches = result.scalars().all()
 
     # If ANY match has no winner → round not finished
     if any(m.winner is None for m in round_matches):
         return
 
-    # ------------------------------------------------------------
     # 4. Collect winners from this round
-    # ------------------------------------------------------------
     winners = [m.winner for m in round_matches if m.winner is not None]
 
     # If only 1 winner → tournament is finished
@@ -59,16 +50,15 @@ async def advance_tournament(game_id: int, winner_id: int, session):
         await _finish_tournament(tournament_id, winners[0], session)
         return
 
-    # ------------------------------------------------------------
     # 5. Advance winners to next round
-    # ------------------------------------------------------------
     next_round = tm.round_number + 1
 
     query = select(TournamentMatch).where(
         TournamentMatch.tournament_id == tournament_id,
         TournamentMatch.round_number == next_round
     )
-    next_round_matches = (await session.exec(query)).all()
+    next_result = await session.execute(query)
+    next_round_matches = next_result.scalars().all()
 
     # Fill next round matches
     idx = 0
@@ -80,9 +70,7 @@ async def advance_tournament(game_id: int, winner_id: int, session):
 
     await session.commit()
 
-    # ------------------------------------------------------------
     # 6. Create games for next round matches
-    # ------------------------------------------------------------
     for match in next_round_matches:
         await _create_game_for_match(match, session)
 
@@ -127,9 +115,9 @@ async def _create_game_for_match(match: TournamentMatch, session):
     session.add(match)
     await session.commit()
 
-    # Notify players
+    # FIX 3: Notify players in their Lobby socket!
     for pid, color in [(match.player1, "white"), (match.player2, "black")]:
-        await manager.broadcast_to_game(pid, {
+        await manager.send_to_user(pid, {
             "type": "match_start",
             "game_id": new_game.id,
             "color": color
@@ -151,8 +139,8 @@ async def _finish_tournament(tournament_id: int, winner_id: int, session):
     session.add(tournament)
     await session.commit()
 
-    # Notify winner
-    await manager.broadcast_to_game(winner_id, {
+    # Notify winner in their Lobby socket!
+    await manager.send_to_user(winner_id, {
         "type": "tournament_won",
         "tournament_id": tournament_id
     })

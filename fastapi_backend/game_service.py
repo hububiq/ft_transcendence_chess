@@ -1,5 +1,3 @@
-#fastapi_backend/game_service.py
-
 import chess
 import chess.pgn
 import httpx
@@ -10,7 +8,7 @@ from database import async_session
 from models import Game, TournamentMatch
 from server import manager
 
-from fastapi_backend.tournament_progression_service import advance_tournament
+from tournament_progression_service import advance_tournament
 
 
 async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surrender: bool = False, surrender_loser_id: int = None):
@@ -25,11 +23,12 @@ async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surre
         replay_board.push(chess.Move.from_uci(move_uci))
     game_pgn = str(chess.pgn.Game.from_board(replay_board))
 
-    # Determine winner
-    result = board.result()  # '1-0', '0-1', '1/2-1/2'
+    # DETERMINE THE WINNER USING PYTHON-CHESS RULES
+    result = board.result() # Returns '1-0' (White), '0-1' (Black), or '1/2-1/2' (Draw)
     winner_id = None
     loser_id = None
 
+     # SAVE TO POSTGRESQL AND GRAB THE TRUE IDs
     async with async_session() as session:
         game = await session.get(Game, int(game_id))
         if not game:
@@ -54,26 +53,21 @@ async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surre
                 loser_id = None
                 game.is_draw = True
 
-        # Save game
-        game.moves_pgn = game_pgn
-        game.winner_id = winner_id
-        game.status = "completed"
-        session.add(game)
-        await session.commit()
+            game.moves_pgn = game_pgn
+            game.winner_id = winner_id
+            game.status = "completed"
+            session.add(game)
+            await session.commit()
+            print(f"[DB] Game {game_id} saved. Winner: {winner_id}")
 
-        print(f"[DB] Game {game_id} saved. Winner: {winner_id}")
-
-        # ------------------------------------------------------------
-        # ⭐ TOURNAMENT PROGRESSION TRIGGER
-        # ------------------------------------------------------------
-        if game.tournament_id is not None:
-            print(f"[TOURNAMENT] Advancing tournament {game.tournament_id}...")
-            await advance_tournament(
-                game_id=game.id,
-                winner_id=winner_id,
-                session=session
-            )
-        # ------------------------------------------------------------
+            # TOURNAMENT PROGRESSION TRIGGER
+            if game.tournament_id is not None:
+                print(f"[TOURNAMENT] Advancing tournament {game.tournament_id}...")
+                await advance_tournament(
+                    game_id=game.id,
+                    winner_id=winner_id,
+                    session=session
+                )
 
     # Notify players
     await manager.broadcast_to_game(game_id, {
@@ -99,6 +93,7 @@ async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surre
             print(f"[GAME OVER] ELO updated for Game {game_id}")
         except Exception as e:
             print(f"[ERROR] Failed to reach Django: {e}")
+
 
 
 async def handle_player_move(data: dict, game_id: str, websocket):
@@ -132,10 +127,11 @@ async def handle_player_move(data: dict, game_id: str, websocket):
             await handle_game_over(board, game_id, websocket=websocket)
             return
 
-        # Bot logic unchanged
         if data.get("is_vs_bot") == True:
+            print(f"Triggering AI for Game {game_id}...") 
             await websocket.send_json({"type": "info", "message": "Bot is thinking..."})
-            ai_uci = compute_best_move(board.fen(), depth=4)
+            safe_depth = 4
+            ai_uci = compute_best_move(board.fen(), depth=safe_depth)
 
             if ai_uci:
                 ai_move = chess.Move.from_uci(ai_uci)

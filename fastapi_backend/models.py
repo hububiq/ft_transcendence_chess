@@ -1,5 +1,3 @@
-#fastapi_backend/models.py
-
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
 from datetime import datetime
@@ -47,11 +45,11 @@ class TournamentMatch(SQLModel, table=True):
     round_number: int  # 1 = quarterfinals, 2 = semifinals, 3 = final
 
     # Player slots (None = bye)
-    player1: Optional[int] = Field(default=None, foreign_key="user.id")
-    player2: Optional[int] = Field(default=None, foreign_key="user.id")
+    player1: Optional[int] = Field(default=None) 
+    player2: Optional[int] = Field(default=None) 
 
     # Result
-    winner: Optional[int] = Field(default=None, foreign_key="user.id")
+    winner: Optional[int] = Field(default=None)
     game_id: Optional[int] = Field(default=None, foreign_key="game.id")
 
     tournament: Optional[Tournament] = Relationship(back_populates="matches")

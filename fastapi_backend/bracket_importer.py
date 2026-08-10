@@ -1,7 +1,5 @@
-# fastapi_backend/bracket_importer.py
-
 from sqlmodel import select
-from fastapi_backend.models import TournamentMatch, TournamentParticipant
+from models import TournamentMatch, TournamentParticipant
 from typing import List
 import asyncio
 
@@ -17,9 +15,7 @@ async def import_bracket(tournament_id: int, rounds: List[List[dict]], session):
     ]
     """
 
-    # ------------------------------------------------------------
     # 1. Insert all matches into DB
-    # ------------------------------------------------------------
     for round_number, matches in enumerate(rounds, start=1):
         for match in matches:
             tm = TournamentMatch(
@@ -34,14 +30,14 @@ async def import_bracket(tournament_id: int, rounds: List[List[dict]], session):
 
     await session.commit()
 
-    # ------------------------------------------------------------
     # 2. Auto-advance BYE players (player2=None or player1=None)
-    # ------------------------------------------------------------
     query = select(TournamentMatch).where(
         TournamentMatch.tournament_id == tournament_id,
         TournamentMatch.round_number == 1
     )
-    round1_matches = (await session.exec(query)).all()
+    result = await session.execute(query)
+    round1_matches = result.scalars().all()
+
 
     for match in round1_matches:
         # Case 1: player1 exists, player2 is None → player1 auto-advances
@@ -60,14 +56,10 @@ async def import_bracket(tournament_id: int, rounds: List[List[dict]], session):
 
     await session.commit()
 
-    # ------------------------------------------------------------
     # 3. Fill Round 2 with winners from Round 1
-    # ------------------------------------------------------------
     await _populate_next_round(tournament_id, current_round=1, session=session)
 
-    # ------------------------------------------------------------
     # 4. Fill Final with winners from Round 2
-    # ------------------------------------------------------------
     await _populate_next_round(tournament_id, current_round=2, session=session)
 
     await session.commit()
@@ -83,7 +75,8 @@ async def _populate_next_round(tournament_id: int, current_round: int, session):
         TournamentMatch.tournament_id == tournament_id,
         TournamentMatch.round_number == current_round
     )
-    current_matches = (await session.exec(query)).all()
+    result = await session.execute(query)
+    current_matches = result.scalars().all()
 
     winners = [m.winner for m in current_matches if m.winner is not None]
 
@@ -98,7 +91,8 @@ async def _populate_next_round(tournament_id: int, current_round: int, session):
         TournamentMatch.tournament_id == tournament_id,
         TournamentMatch.round_number == next_round
     )
-    next_matches = (await session.exec(query)).all()
+    next_result = await session.execute(query)
+    next_matches = next_result.scalars().all()
 
     # Fill next round matches
     idx = 0

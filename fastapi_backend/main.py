@@ -17,6 +17,7 @@ from api.tournaments import router as tournaments_router
 from api.games import router as games_router
 from garbage_games_collector import clean_dead_games
 from database import async_session
+from chat.router import router as chat_router 
 
 
 app = FastAPI(debug=settings.debug)
@@ -36,6 +37,7 @@ app.add_middleware(
 app.include_router(history_router)
 app.include_router(tournaments_router)
 app.include_router(games_router)
+app.include_router(chat_router)  # Expose the /ws/chat endpoint
 
 
 @app.get("/")
@@ -53,12 +55,11 @@ async def startup_event():
 
 
 # ------------------------------------------------------------
-# ⭐ UPDATED: Lobby WebSocket (user_id only)
+# Lobby WebSocket
 # ------------------------------------------------------------
 @app.websocket("/ws/lobby/{user_id}")
 async def lobby_socket(websocket: WebSocket, user_id: int):
-    # NEW: pass user_id twice (no game_id in lobby)
-    await manager.connect(user_id, websocket, user_id)
+    await manager.connect_lobby(user_id, websocket)
 
     redis = await get_redis()
     try:
@@ -74,14 +75,14 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
                 await websocket.send_json({"type": "info", "message": "Joined matchmaking queue!"})
 
     except WebSocketDisconnect:
-        await manager.disconnect(user_id, websocket, user_id)
+        await manager.disconnect_lobby(user_id, websocket)
 
     except Exception as e:
-        await manager.disconnect(user_id, websocket, user_id)
+        await manager.disconnect_lobby(user_id, websocket)
 
 
 # ------------------------------------------------------------
-# ⭐ UPDATED: Game WebSocket (game_id + user_id)
+# Game WebSocket (game_id + user_id)
 # ------------------------------------------------------------
 @app.websocket("/ws/game/{game_id}/{user_id}")
 async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
@@ -110,12 +111,25 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
         await redis.set(redis_key, starting_fen)
         current_fen = starting_fen
 
+     # GRAB THE HISTORY FROM REDIS 
+    moves_key = f"game:{game_id}:moves"
+    raw_moves_uci = await redis.lrange(moves_key, 0, -1)
+    
+    # Translate the UCI moves (e2e4) back into SAN (e4) for frontend history sidebar
+    san_history = []
+    temp_board = chess.Board()
+    for move_uci in raw_moves_uci:
+        move_obj = chess.Move.from_uci(move_uci)
+        san_history.append(temp_board.san(move_obj))
+        temp_board.push(move_obj)
+
     try:
         await websocket.send_json({
             "type": "board_state",
             "fen": current_fen,
-            "color": color,
-            "opponent_id": opponent_id
+            "color": color,            # Tells React to flip the board or not
+            "opponent_id": opponent_id,  # Tells React who they are playing
+            "history": san_history
         })
     except Exception as e:
         print(f"[WS] Browser disconnected before receiving board state: {e}")

@@ -1,5 +1,3 @@
-# fastapi_backend/api/tournaments.py
-
 from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 from database import async_session
@@ -11,8 +9,8 @@ from models import (
     Game
 )
 
-from fastapi_backend.bracket_service import generate_bracket
-from fastapi_backend.bracket_importer import import_bracket
+from bracket_service import generate_bracket
+from bracket_importer import import_bracket
 
 router = APIRouter(prefix="/api/tournaments", tags=["tournaments"])
 
@@ -23,8 +21,8 @@ router = APIRouter(prefix="/api/tournaments", tags=["tournaments"])
 @router.get("/")
 async def list_tournaments():
     async with async_session() as session:
-        result = await session.exec(select(Tournament))
-        return result.all()
+        result = await session.execute(select(Tournament))
+        return result.scalars().all()
 
 
 # ------------------------------------------------------------
@@ -38,27 +36,27 @@ async def get_tournament(tournament_id: int):
         if not tournament:
             raise HTTPException(status_code=404, detail="Tournament not found")
 
-        participants = (await session.exec(
+        participants = await session.execute(
             select(TournamentParticipant).where(
                 TournamentParticipant.tournament_id == tournament_id
             )
-        )).all()
+        )
 
-        matches = (await session.exec(
+        matches = await session.execute(
             select(TournamentMatch).where(
                 TournamentMatch.tournament_id == tournament_id
             )
-        )).all()
+        )
 
-        games = (await session.exec(
+        games = await session.execute(
             select(Game).where(Game.tournament_id == tournament_id)
-        )).all()
+        )
 
         return {
             "tournament": tournament,
-            "participants": participants,
-            "matches": matches,
-            "games": games,
+            "participants": participants.scalars().all(),
+            "matches": matches.scalars().all(),
+            "games": games.scalars().all(),
         }
 
 
@@ -97,16 +95,16 @@ async def join_tournament(tournament_id: int, player_id: int):
             raise HTTPException(status_code=400, detail="Tournament already started")
 
         # Count current participants
-        participants = (await session.exec(
+        participants = await session.execute(
             select(TournamentParticipant).where(
                 TournamentParticipant.tournament_id == tournament_id
             )
-        )).all()
+        )
 
-        if len(participants) >= tournament.size:
+        if len(participants.scalars().all()) >= tournament.size:
             raise HTTPException(status_code=400, detail="Tournament is full")
 
-        bracket_position = len(participants) + 1
+        bracket_position = len(participants.scalars().all()) + 1
 
         tp = TournamentParticipant(
             tournament_id=tournament_id,
@@ -117,7 +115,7 @@ async def join_tournament(tournament_id: int, player_id: int):
         await session.commit()
 
         # Auto-start when minimum 4 players joined
-        if len(participants) + 1 >= 4:
+        if len(participants.scalars().all()) + 1 >= 4:
             await _start_tournament(tournament, session)
 
         return {"joined": True, "position": bracket_position}
@@ -132,12 +130,13 @@ async def _start_tournament(tournament: Tournament, session):
     await session.commit()
 
     # Load participants
-    participants = (await session.exec(
+    participants_result = await session.exec(
         select(TournamentParticipant).where(
             TournamentParticipant.tournament_id == tournament.id
         )
-    )).all()
-
+    )
+    participants = participants_result.scalars().all()
+    
     players = [p.player_id for p in participants]
 
     # Generate bracket (with byes)

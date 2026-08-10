@@ -1,5 +1,3 @@
-# fastapi_backend/bracket_service.py
-
 from typing import List, Optional
 
 

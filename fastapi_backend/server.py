@@ -1,5 +1,3 @@
-#fastapi_backend/server.py
-
 from typing import Dict, List
 from fastapi import WebSocket
 
@@ -57,7 +55,7 @@ class ConnectionManager:
             for connection in self.rooms[game_id]:
                 await connection.send_json(message)
 
-    # ⭐ NEW: Send message to a specific user (for tournament progression)
+    # Send message to a specific user (for tournament progression)
     async def send_to_user(self, user_id: int, message: dict):
         """
         Sends a JSON message to a specific user.
@@ -68,6 +66,23 @@ class ConnectionManager:
         else:
             print(f"[WS] User {user_id} not connected (cannot send message).")
 
+    async def connect_lobby(self, user_id: int, websocket: WebSocket):
+        """
+        Accepts a WebSocket connection for the Lobby and ONLY adds them to the global phonebook.
+        Does NOT put them in a game room!
+        """
+        await websocket.accept()
+        self.user_sockets[user_id] = websocket
+        print(f"[WS] User {user_id} connected to Lobby")
+
+    async def disconnect_lobby(self, user_id: int, websocket: WebSocket):
+        """
+        Removes a Lobby WebSocket connection from the global phonebook.
+        """
+        if user_id in self.user_sockets:
+            if self.user_sockets[user_id] == websocket:
+                del self.user_sockets[user_id]
+        print(f"[WS] User {user_id} disconnected from Lobby")
 
 # global instance used by main.py
 manager = ConnectionManager()
