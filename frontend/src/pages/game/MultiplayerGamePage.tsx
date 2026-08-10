@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import { Link, useParams } from "react-router";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
 import { useUser } from "../../hooks/useUser";
@@ -10,7 +10,11 @@ import { GameSidebar } from "../../features/gameplay/components/GameSidebar";
 import { GameOverModal } from "../../features/gameplay/components/GameOverModal";
 import { type GameOutcome } from "../../utils/constants";
 import { api } from "../../api/axios";
-import { type MoveRecord, parseHistory, formatNotation } from "../../utils/chessHelpers";
+import {
+  type MoveRecord,
+  parseHistory,
+  formatNotation,
+} from "../../utils/chessHelpers";
 
 export function Game() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -34,6 +38,23 @@ export function Game() {
   // Derive active turn safely
   const activeColor = currentFen === "start" ? "w" : currentFen.split(" ")[1];
   const isPlayerTurn = activeColor === playerColor;
+  const navigate = useNavigate();
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+
+  const handleHomeClick = () => {
+    if (gameOver) {
+      navigate("/");
+    } else {
+      setShowLeaveConfirm(true);
+    }
+  };
+  const confirmLeave = () => {
+    sendMessage({
+      type: "surrender",
+      player_id: user?.id,
+    });
+    navigate("/");
+  };
 
   const [opponent, setOpponent] = useState({
     username: "Waiting...",
@@ -41,81 +62,78 @@ export function Game() {
     avatar: avatar_1,
   });
 
-  const handleServerMessage = useCallback(
-    (data: any) => {
-      console.log("WebSocket Data Received:", data);
-      if (data.opponent) {
-        setOpponent(data.opponent);
-      }
+  const handleServerMessage = (data: any) => {
+    console.log("WebSocket Data Received:", data);
+    if (data.opponent) {
+      setOpponent(data.opponent);
+    }
 
-      switch (data.type) {
-        case "board_state":
-          setCurrentFen(data.fen);
-          if (data.color) setPlayerColor(data.color);
-          if (data.opponent_id) {
-            setOpponentId(data.opponent_id);
-            setOpponent((prev) => ({
-              ...prev,
-              username: `Loading Opponent...`,
-            }));
-          }
-          if (data.history) {
-            setMoveHistory(parseHistory(data.history))
-          }
-          break;
+    switch (data.type) {
+      case "board_state":
+        setCurrentFen(data.fen);
+        if (data.color) setPlayerColor(data.color);
+        if (data.opponent_id) {
+          setOpponentId(data.opponent_id);
+          setOpponent((prev) => ({
+            ...prev,
+            username: `Loading Opponent...`,
+          }));
+        }
+        if (data.history) {
+          setMoveHistory(parseHistory(data.history));
+        }
+        break;
 
-        case "move":
-          setCurrentFen(data.fen);
-          setMoveHistory((prev) => {
-            const lastMove = prev[prev.length - 1];
-            const prettyMove = formatNotation(data.san_move);
+      case "move":
+        setCurrentFen(data.fen);
+        setMoveHistory((prev) => {
+          const lastMove = prev[prev.length - 1];
+          const prettyMove = formatNotation(data.san_move);
 
-            if (!lastMove || lastMove.black) {
-              return [...prev, { n: prev.length + 1, white: prettyMove }];
-            } else {
-              const newHistory = [...prev];
-              newHistory[newHistory.length - 1] = {
-                ...lastMove,
-                black: prettyMove,
-              };
-              return newHistory;
-            }
-          });
-          break;
-
-        case "game_over":
-          if (data.result === "1/2-1/2") {
-            setGameOver("draw");
-          } else if (data.loser_id === user?.id) {
-            setGameOver("loss");
-          } else if (data.winner_id === user?.id) {
-            setGameOver("win");
+          if (!lastMove || lastMove.black) {
+            return [...prev, { n: prev.length + 1, white: prettyMove }];
           } else {
-            setGameOver("draw");
+            const newHistory = [...prev];
+            newHistory[newHistory.length - 1] = {
+              ...lastMove,
+              black: prettyMove,
+            };
+            return newHistory;
           }
-          setIsResignModalOpen(false);
-          break;
+        });
+        break;
 
-        case "rematch_request":
-          setReceivedRematchOffer(true);
-          break;
+      case "game_over":
+        if (data.result === "1/2-1/2") {
+          setGameOver("draw");
+        } else if (data.loser_id === user?.id) {
+          setGameOver("loss");
+        } else if (data.winner_id === user?.id) {
+          setGameOver("win");
+        } else {
+          setGameOver("draw");
+        }
+        setIsResignModalOpen(false);
+        break;
 
-        case "rematch_accepted":
-          window.location.href = `/game/${data.new_game_id}`;
-          break;
+      case "rematch_request":
+        setReceivedRematchOffer(true);
+        break;
 
-        case "rematch_declined":
-          setIsWaitingForRematch(false);
-          alert("Opponent declined the rematch.");
-          break;
+      case "rematch_accepted":
+        window.location.href = `/game/${data.new_game_id}`;
+        break;
 
-        case "error":
-          console.error("Server Error:", data.message);
-          break;
-      }
-    },
-    [user?.id],
-  );
+      case "rematch_declined":
+        setIsWaitingForRematch(false);
+        alert("Opponent declined the rematch.");
+        break;
+
+      case "error":
+        console.error("Server Error:", data.message);
+        break;
+    }
+  };
 
   const { sendMessage } = useWebSocket({
     url:
@@ -279,14 +297,43 @@ export function Game() {
         </div>
       )}
 
+      {/*Leave Warning Modal */}
+      {showLeaveConfirm && !gameOver && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-70">
+          <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">Leave Game?</h2>
+              <p className="text-neutral-500 text-sm">
+                If you leave now, you will automatically resign and lose ELO.
+                Are you sure?
+              </p>
+            </div>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="flex-1 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg text-sm font-medium transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                onClick={confirmLeave}
+                className="flex-1 py-2.5 bg-red-950/30 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded-lg text-sm font-medium transition-colors"
+              >
+                Yes, Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="p-4 border-b border-neutral-900 flex items-center justify-between">
-        <Link
-          to="/"
-          className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors text-sm font-medium"
+        <button
+          onClick={handleHomeClick}
+          className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors text-sm font-medium bg-transparent border-none cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Home
-        </Link>
+        </button>
         <div className="text-xs font-bold tracking-widest text-neutral-600 uppercase">
           Rapid 10|0 • Ranked
         </div>

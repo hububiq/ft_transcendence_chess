@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Swords, Bot, Loader, Loader2, ServerOff } from "lucide-react";
+import { Swords, Bot, Loader2, ServerOff } from "lucide-react";
 import { useMatchmaking } from "../../hooks/useMatchmaking";
 import { useUser } from "../../hooks/useUser";
 
@@ -17,7 +17,7 @@ export function Dashboard() {
       {/* Header Area */}
       <div className="flex items-center justify-between pt-4">
         <div>
-          {loading && <Loader />}
+          {loading && <Loader2 />}
           {!loading && !error && (
             <h2 className="text-3xl font-bold text-white tracking-tight">
               Welcome back, {user?.username}

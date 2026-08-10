@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "react-router";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router";
 import { ArrowLeft, Bot } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
 import { type GameOutcome } from "../../utils/constants";
@@ -33,6 +33,27 @@ export function BotGame() {
   const hasFetchedRef = useRef(false);
   const currentPlayerId = user?.id || 0;
 
+  const navigate = useNavigate();
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+
+  const handleHomeClick = () => {
+    if (gameOver || !gameStarted) {
+      navigate("/");
+    } else {
+      setShowLeaveConfirm(true);
+    }
+  };
+
+  const confirmLeave = () => {
+    sendMessage({
+      type: "surrender",
+      player_id: currentPlayerId,
+      opponent_id: SYSTEM_BOT_ID,
+    });
+    sessionStorage.removeItem("activeBotGameId"); // Clear it so they don't resume a forfeited game
+    navigate("/");
+  };
+
   // Axios API
   const initGame = async () => {
     if (!user || !user.id) {
@@ -46,7 +67,7 @@ export function BotGame() {
       console.log("Resuming existing bot game:", savedGameId);
       setGameId(savedGameId);
       setGameStarted(true);
-      return; // Stop here! Don't create a new game.
+      return;
     }
 
     try {
@@ -71,53 +92,50 @@ export function BotGame() {
     }
   }, [user]);
 
-  const handleServerMessage = useCallback(
-    (data: any) => {
-      switch (data.type) {
-        case "board_state":
-          setCurrentFen(data.fen);
-          if (data.history) {
-            setMoveHistory(parseHistory(data.history));
+  const handleServerMessage = (data: any) => {
+    switch (data.type) {
+      case "board_state":
+        setCurrentFen(data.fen);
+        if (data.history) {
+          setMoveHistory(parseHistory(data.history));
+        }
+        break;
+      case "move":
+        setCurrentFen(data.fen);
+
+        setMoveHistory((prev) => {
+          const newHistory: MoveRecord[] = [...prev];
+          const lastIndex: number = newHistory.length - 1;
+          const prettyMoveBot = formatNotation(data.san_move);
+
+          if (lastIndex < 0 || newHistory[lastIndex].black) {
+            newHistory.push({
+              n: newHistory.length + 1,
+              white: prettyMoveBot,
+            });
+            setBotThinking(true);
+          } else {
+            newHistory[lastIndex] = {
+              ...newHistory[lastIndex],
+              black: prettyMoveBot,
+            };
+            setBotThinking(false);
           }
-          break;
-        case "move":
-          setCurrentFen(data.fen);
+          return newHistory;
+        });
+        break;
 
-          setMoveHistory((prev) => {
-            const newHistory: MoveRecord[] = [...prev];
-            const lastIndex: number = newHistory.length - 1;
-            const prettyMoveBot = formatNotation(data.san_move);
-
-            if (lastIndex < 0 || newHistory[lastIndex].black) {
-              newHistory.push({
-                n: newHistory.length + 1,
-                white: prettyMoveBot,
-              });
-              setBotThinking(true);
-            } else {
-              newHistory[lastIndex] = {
-                ...newHistory[lastIndex],
-                black: prettyMoveBot,
-              };
-              setBotThinking(false);
-            }
-            return newHistory;
-          });
-          break;
-
-        case "game_over":
-          if (data.result === "1/2-1/2") {
-            setGameOver("draw");
-          } else if (data.loser_id === currentPlayerId) {
-            setGameOver("loss");
-          } else if (data.winner_id === currentPlayerId) {
-            setGameOver("win");
-          }
-          break;
-      }
-    },
-    [currentPlayerId],
-  );
+      case "game_over":
+        if (data.result === "1/2-1/2") {
+          setGameOver("draw");
+        } else if (data.loser_id === currentPlayerId) {
+          setGameOver("loss");
+        } else if (data.winner_id === currentPlayerId) {
+          setGameOver("win");
+        }
+        break;
+    }
+  };
 
   const { sendMessage } = useWebSocket({
     url: gameId
@@ -168,12 +186,12 @@ export function BotGame() {
   return (
     <div className="min-h-screen bg-black flex flex-col text-neutral-200">
       <header className="p-4 border-b border-neutral-900 flex items-center justify-between">
-        <Link
-          to="/"
-          className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors text-sm font-medium"
+        <button
+          onClick={handleHomeClick}
+          className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors text-sm font-medium bg-transparent border-none cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Home
-        </Link>
+        </button>
         <div className="text-xs font-bold tracking-widest text-neutral-600 uppercase flex items-center gap-2">
           <Bot className="w-3.5 h-3.5" />
           {`${user?.username || "Player"} vs Bot • Untimed`}
@@ -218,6 +236,34 @@ export function BotGame() {
         </div>
       )}
 
+      {/* Leave Warning Modal */}
+      {showLeaveConfirm && !gameOver && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-70">
+          <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">Leave Game?</h2>
+              <p className="text-neutral-500 text-sm">
+                If you leave now, you will abandon this match against the bot.
+              </p>
+            </div>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="flex-1 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg text-sm font-medium transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                onClick={confirmLeave}
+                className="flex-1 py-2.5 bg-red-950/30 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded-lg text-sm font-medium transition-colors"
+              >
+                Yes, Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {gameStarted && (
         <main className="flex-1 flex items-center justify-center p-8 gap-12">
           <div className="flex flex-col gap-6 max-w-[600px] w-full">
@@ -246,7 +292,7 @@ export function BotGame() {
               }
               name={user?.username || "Player"}
               nameColor="text-blue-500"
-              eloRating={user?.profile?.elo_rating || 1200}
+              eloRating={user?.profile?.elo_rating || "?"}
             />
           </div>
 

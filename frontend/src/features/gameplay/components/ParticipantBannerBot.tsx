@@ -4,7 +4,8 @@ import clsx from "clsx";
 interface ParticipantBannerProps {
   avatar: ReactNode;
   name?: string;
-  nameColor?: string; //eg "text-blue-500"
+  nameColor?: string;
+  eloRating?: string | number;
   isThinking?: boolean;
   graveyard?: ReactNode;
 }
@@ -13,6 +14,7 @@ export function ParticipantBannerBot({
   avatar,
   name,
   nameColor = "text-white",
+  eloRating,
   isThinking = false,
 }: ParticipantBannerProps) {
   return (
@@ -33,7 +35,14 @@ export function ParticipantBannerBot({
           </div>
         </div>
         <div>
-          <h3 className={clsx("font-semibold text-lg", nameColor)}>{name}</h3>
+          <h3 className={clsx("font-semibold text-lg", nameColor)}>
+            {name}{" "}
+            {eloRating && (
+              <span className="text-sm font-normal text-neutral-500">
+                ({eloRating})
+              </span>
+            )}
+          </h3>
         </div>
       </div>
     </div>
