@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { MessageSquare, Users, ChevronDown, ChevronUp, Send } from "lucide-react";
+import { MessageSquare, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { GlobalChatPanel } from "../../features/chat/components/GlobalChatPanel";
 import clsx from "clsx";
 
 const friends = [
@@ -7,11 +8,6 @@ const friends = [
   { id: 2, name: "JPolgar", status: "online", elo: 2850 },
   { id: 3, name: "StockFish", status: "offline", elo: 2350 },
   { id: 4, name: "BotezLive", status: "online", elo: 2000 },
-];
-
-const messages = [
-  { id: 1, sender: "HikaruN", text: "GG well played!" },
-  { id: 2, sender: "You", text: "Thanks, that knight fork was brutal." },
 ];
 
 export function SocialSidebar() {
@@ -65,29 +61,15 @@ export function SocialSidebar() {
           </div>
           {isChatOpen ? <ChevronDown className="w-4 h-4 text-neutral-600" /> : <ChevronUp className="w-4 h-4 text-neutral-600" />}
         </button>
-
-        {isChatOpen && (
-          <div className="h-72 flex flex-col">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((msg) => (
-                <div key={msg.id} className="text-sm">
-                  <span className="font-medium text-purple-400">{msg.sender} </span>
-                  <span className="text-neutral-400">{msg.text}</span>
-                </div>
-              ))}
-            </div>
-            <div className="p-3 border-t border-neutral-900 flex gap-2 bg-[#050505]">
-              <input
-                type="text"
-                placeholder="Type a message..."
-                className="flex-1 bg-neutral-900/50 border border-neutral-800 rounded-md px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all"
-              />
-              <button className="p-2 bg-blue-600 hover:bg-blue-500 rounded-md text-white transition-colors">
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
+        <div
+          className={clsx(
+            "h-72 flex-col",
+            isChatOpen ? "flex" : "hidden",
+          )}
+        >
+          {/*Keep the panel mounted so collapsing the sidebar does not close the socket */}
+          <GlobalChatPanel />
+        </div>
       </div>
     </aside>
   );
