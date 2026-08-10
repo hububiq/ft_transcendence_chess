@@ -12,7 +12,6 @@ export function useMatchmaking(
   const joinQueue = useCallback(() => {
     if (!userId) return;
 
-    // const ws = new WebSocket(`ws://localhost:8001/ws/lobby/${userId}`);
     const ws = new WebSocket(
       `${import.meta.env.VITE_WS_BASE_URL}/ws/lobby/${userId}`,
     );

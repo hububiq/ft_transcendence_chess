@@ -7,6 +7,7 @@ import { StatsGrid } from "./ProfileStatsGrid";
 import { useUpdateUser } from "../../hooks/useUpdateUser";
 import type { UserData } from "../../utils/interfaces";
 import { Achievements } from "./ProfileAchievements";
+import playerAvatar from "../../assets/avatar_1.png";
 
 export function Profile() {
   const { user, setUser, loading, error } = useUser();
@@ -37,7 +38,7 @@ export function Profile() {
       <div className="bg-[#0a0a0a] border border-neutral-900 rounded-xl p-8">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
           <img
-            src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200&h=200"
+            src={user?.profile.avatar || playerAvatar}
             alt="Profile Avatar"
             className="w-24 h-24 rounded-full border-4 border-blue-600/20 object-cover"
           />

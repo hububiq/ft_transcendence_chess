@@ -1,24 +1,14 @@
 import { Link } from "react-router";
 import { RotateCcw } from "lucide-react";
 import clsx from "clsx";
-import {
-  type Difficulty,
-  type GameOutcome,
-  DIFFICULTY_CONFIG,
-} from "../../../utils/constants";
+import { type GameOutcome } from "../../../utils/constants";
 
 interface GameOverModalProps {
   outcome: GameOutcome;
-  difficulty: Difficulty;
   onRestart: () => void;
 }
 
-export function GameOverModal({
-  outcome,
-  difficulty,
-  onRestart,
-}: GameOverModalProps) {
-  const cfg = DIFFICULTY_CONFIG[difficulty];
+export function GameOverModal({ outcome, onRestart }: GameOverModalProps) {
   const OUTCOMES: Record<
     GameOutcome,
     { icon: string; title: string; desc: string }
@@ -26,17 +16,17 @@ export function GameOverModal({
     win: {
       icon: "♔",
       title: "You Won!",
-      desc: "Excellent play against the bot.",
+      desc: "A good player is always lucky.",
     },
     loss: {
       icon: "♚",
       title: "You Lost",
-      desc: `Better luck next time against ${cfg.label} bot.`,
+      desc: `Better luck next time.`,
     },
     draw: {
       icon: "½",
       title: "Draw",
-      desc: "The game ended in a draw.", // idea for future updates, to recognize which type of draw
+      desc: "The game ended in a draw.",
     },
   };
 
