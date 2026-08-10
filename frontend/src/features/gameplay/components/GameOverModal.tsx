@@ -1,24 +1,14 @@
 import { Link } from "react-router";
 import { RotateCcw } from "lucide-react";
 import clsx from "clsx";
-import {
-  // type Difficulty,
-  type GameOutcome,
-  // DIFFICULTY_CONFIG,
-} from "../../../utils/constants";
+import { type GameOutcome } from "../../../utils/constants";
 
 interface GameOverModalProps {
   outcome: GameOutcome;
-  // difficulty: Difficulty;
   onRestart: () => void;
 }
 
-export function GameOverModal({
-  outcome,
-  // difficulty,
-  onRestart,
-}: GameOverModalProps) {
-  // const cfg = DIFFICULTY_CONFIG[difficulty];
+export function GameOverModal({ outcome, onRestart }: GameOverModalProps) {
   const OUTCOMES: Record<
     GameOutcome,
     { icon: string; title: string; desc: string }

@@ -1,16 +1,9 @@
 import clsx from "clsx";
 import { RotateCcw, Flag, Handshake } from "lucide-react";
-import { type Difficulty, DIFFICULTY_CONFIG } from "../../../utils/constants";
-
-export type MoveRecord = {
-  n: number;
-  white: string;
-  black?: string;
-};
+import type { MoveRecord } from "../../../utils/chessHelpers";
 
 interface GameSidebarProps {
   mode?: "bot" | "multiplayer";
-  difficulty?: Difficulty;
   isGameOver?: boolean;
   isWaitingForRematch?: boolean;
   onLeftAction: () => void;
@@ -20,14 +13,12 @@ interface GameSidebarProps {
 
 export function GameSidebar({
   mode = "bot",
-  difficulty,
   isGameOver = false,
   isWaitingForRematch = false,
   onLeftAction,
   onResign,
   moveHistory,
 }: GameSidebarProps) {
-  const cfg = difficulty ? DIFFICULTY_CONFIG[difficulty] : null;
 
   return (
     <div className="w-72 bg-[#050505] border border-neutral-900 rounded-xl h-[600px] flex flex-col p-4">

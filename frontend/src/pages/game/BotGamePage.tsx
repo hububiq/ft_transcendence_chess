@@ -1,38 +1,25 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router";
 import { ArrowLeft, Bot } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
-import {
-  type Difficulty,
-  type GameOutcome,
-  DIFFICULTY_CONFIG,
-} from "../../utils/constants";
+import { type GameOutcome } from "../../utils/constants";
 import { GameOverModal } from "../../features/gameplay/components/GameOverModal";
 import { ParticipantBannerBot } from "../../features/gameplay/components/ParticipantBannerBot";
-import {
-  GameSidebar,
-  type MoveRecord,
-} from "../../features/gameplay/components/GameSidebar";
+import { GameSidebar } from "../../features/gameplay/components/GameSidebar";
 import clsx from "clsx";
 import playerAvatar from "../../assets/avatar_1.png";
 import { useUser } from "../../hooks/useUser";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { createBotGame } from "../../api/gameApi";
+import {
+  type MoveRecord,
+  parseHistory,
+  formatNotation,
+} from "../../utils/chessHelpers";
 
 const SYSTEM_BOT_ID = null;
 
-const formatNotation = (move?: string) => {
-  if (!move) return "";
-  return move
-    .replace(/N/g, "♞")
-    .replace(/B/g, "♝")
-    .replace(/R/g, "♜")
-    .replace(/Q/g, "♛")
-    .replace(/K/g, "♚");
-};
-
 export function BotGame() {
-  const [difficulty] = useState<Difficulty>("easy");
   const [gameStarted, setGameStarted] = useState<boolean>(false);
   const { user } = useUser();
 
@@ -42,11 +29,8 @@ export function BotGame() {
   const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
   const [gameOver, setGameOver] = useState<GameOutcome | null>(null);
   const [showRestartConfirm, setShowRestartConfirm] = useState<boolean>(false);
-
   const [gameId, setGameId] = useState<string | number | null>(null);
-
   const hasFetchedRef = useRef(false);
-
   const currentPlayerId = user?.id || 0;
 
   // Axios API
@@ -55,6 +39,16 @@ export function BotGame() {
       console.warn("Waiting for user profile to load...");
       return;
     }
+
+    const savedGameId = sessionStorage.getItem("activeBotGameId");
+
+    if (savedGameId) {
+      console.log("Resuming existing bot game:", savedGameId);
+      setGameId(savedGameId);
+      setGameStarted(true);
+      return; // Stop here! Don't create a new game.
+    }
+
     try {
       const data = await createBotGame({
         user_id: user.id,
@@ -62,6 +56,7 @@ export function BotGame() {
 
       console.log("SERVER RESPONSE:", data);
 
+      sessionStorage.setItem("activeBotGameId", data.game_id.toString());
       setGameId(data.game_id);
       setGameStarted(true);
     } catch (error) {
@@ -76,46 +71,53 @@ export function BotGame() {
     }
   }, [user]);
 
-  const handleServerMessage = (data: any) => {
-    console.log("Received from server: ", data);
-
-    switch (data.type) {
-      case "board_state":
-        setCurrentFen(data.fen);
-        break;
-      case "move":
-        setCurrentFen(data.fen);
-
-        setMoveHistory((prev) => {
-          const newHistory: MoveRecord[] = [...prev];
-          const lastIndex: number = newHistory.length - 1;
-          const prettyMoveBot = formatNotation(data.san_move);
-
-          if (lastIndex < 0 || newHistory[lastIndex].black) {
-            newHistory.push({ n: newHistory.length + 1, white: prettyMoveBot });
-            setBotThinking(true);
-          } else {
-            newHistory[lastIndex] = {
-              ...newHistory[lastIndex],
-              black: prettyMoveBot,
-            };
-            setBotThinking(false);
+  const handleServerMessage = useCallback(
+    (data: any) => {
+      switch (data.type) {
+        case "board_state":
+          setCurrentFen(data.fen);
+          if (data.history) {
+            setMoveHistory(parseHistory(data.history));
           }
-          return newHistory;
-        });
-        break;
+          break;
+        case "move":
+          setCurrentFen(data.fen);
 
-      case "game_over":
-        if (data.result === "1/2-1/2") {
-          setGameOver("draw");
-        } else if (data.loser_id === currentPlayerId) {
-          setGameOver("loss");
-        } else if (data.winner_id === currentPlayerId) {
-          setGameOver("win");
-        }
-        break;
-    }
-  };
+          setMoveHistory((prev) => {
+            const newHistory: MoveRecord[] = [...prev];
+            const lastIndex: number = newHistory.length - 1;
+            const prettyMoveBot = formatNotation(data.san_move);
+
+            if (lastIndex < 0 || newHistory[lastIndex].black) {
+              newHistory.push({
+                n: newHistory.length + 1,
+                white: prettyMoveBot,
+              });
+              setBotThinking(true);
+            } else {
+              newHistory[lastIndex] = {
+                ...newHistory[lastIndex],
+                black: prettyMoveBot,
+              };
+              setBotThinking(false);
+            }
+            return newHistory;
+          });
+          break;
+
+        case "game_over":
+          if (data.result === "1/2-1/2") {
+            setGameOver("draw");
+          } else if (data.loser_id === currentPlayerId) {
+            setGameOver("loss");
+          } else if (data.winner_id === currentPlayerId) {
+            setGameOver("win");
+          }
+          break;
+      }
+    },
+    [currentPlayerId],
+  );
 
   const { sendMessage } = useWebSocket({
     url: gameId
@@ -157,11 +159,11 @@ export function BotGame() {
     setGameStarted(false);
     setGameId(null);
 
+    sessionStorage.removeItem("activeBotGameId");
+
     hasFetchedRef.current = false;
     initGame();
   };
-
-  const cfg = DIFFICULTY_CONFIG[difficulty];
 
   return (
     <div className="min-h-screen bg-black flex flex-col text-neutral-200">
@@ -212,11 +214,7 @@ export function BotGame() {
       {/* Game Over Modal */}
       {gameOver && (
         <div className="relative z-70">
-          <GameOverModal
-            outcome={gameOver}
-            difficulty={difficulty}
-            onRestart={handleRestart}
-          />
+          <GameOverModal outcome={gameOver} onRestart={handleRestart} />
         </div>
       )}
 
@@ -226,10 +224,7 @@ export function BotGame() {
             <ParticipantBannerBot
               avatar={<Bot className={clsx("w-6 h-6")} />}
               name="chess42 Bot"
-              eloRating={`${cfg.label} (${cfg.elo})`}
-              eloRatingColor={cfg.color}
               isThinking={botThinking}
-              // graveyard={<span>♟</span>}
             />
 
             <div className="w-[600px] h-[600px] rounded-sm relative z-50 border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
@@ -256,7 +251,6 @@ export function BotGame() {
           </div>
 
           <GameSidebar
-            // difficulty={difficulty}
             onLeftAction={() => setShowRestartConfirm(true)}
             onResign={handleResign}
             moveHistory={moveHistory}

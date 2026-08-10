@@ -9,31 +9,19 @@ import avatar_2 from "../../assets/avatar_2.png";
 import { GameSidebar } from "../../features/gameplay/components/GameSidebar";
 import { GameOverModal } from "../../features/gameplay/components/GameOverModal";
 import { type GameOutcome } from "../../utils/constants";
-
-interface Move {
-  n: number;
-  white: string;
-  black?: string;
-}
-
-const formatNotation = (move?: string) => {
-  if (!move) return "";
-  return move
-    .replace(/N/g, "♞")
-    .replace(/B/g, "♝")
-    .replace(/R/g, "♜")
-    .replace(/Q/g, "♛")
-    .replace(/K/g, "♚");
-};
+import { api } from "../../api/axios";
+import { type MoveRecord, parseHistory, formatNotation } from "../../utils/chessHelpers";
 
 export function Game() {
   const { gameId } = useParams<{ gameId: string }>();
   const { user } = useUser();
 
+  const [opponentId, setOpponentId] = useState<number | null>(null);
+
   // Game States
   const [playerColor, setPlayerColor] = useState<"w" | "b">("w");
   const [currentFen, setCurrentFen] = useState("start");
-  const [moveHistory, setMoveHistory] = useState<Move[]>([]);
+  const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
   const [gameOver, setGameOver] = useState<GameOutcome | null>(null);
   const [isResignModalOpen, setIsResignModalOpen] = useState(false);
   const [isWaitingForRematch, setIsWaitingForRematch] = useState(false);
@@ -53,68 +41,81 @@ export function Game() {
     avatar: avatar_1,
   });
 
-  const handleServerMessage = useCallback((data: any) => {
-    if (data.opponent) {
-      setOpponent(data.opponent);
-    }
+  const handleServerMessage = useCallback(
+    (data: any) => {
+      console.log("WebSocket Data Received:", data);
+      if (data.opponent) {
+        setOpponent(data.opponent);
+      }
 
-    switch (data.type) {
-      case "board_state":
-        setCurrentFen(data.fen);
-        if (data.color) setPlayerColor(data.color);
-        if (data.opponent) setOpponent(data.opponent);
-        break;
-
-      case "move":
-        setCurrentFen(data.fen);
-        setMoveHistory((prev) => {
-          const lastMove = prev[prev.length - 1];
-          const prettyMove = formatNotation(data.san_move);
-
-          if (!lastMove || lastMove.black) {
-            return [...prev, { n: prev.length + 1, white: prettyMove }];
-          } else {
-            const newHistory = [...prev];
-            newHistory[newHistory.length - 1] = {
-              ...lastMove,
-              black: prettyMove,
-            };
-            return newHistory;
+      switch (data.type) {
+        case "board_state":
+          setCurrentFen(data.fen);
+          if (data.color) setPlayerColor(data.color);
+          if (data.opponent_id) {
+            setOpponentId(data.opponent_id);
+            setOpponent((prev) => ({
+              ...prev,
+              username: `Loading Opponent...`,
+            }));
           }
-        });
-        break;
+          if (data.history) {
+            setMoveHistory(parseHistory(data.history))
+          }
+          break;
 
-      case "game_over":
-        if (data.result === "1/2-1/2") {
-          setGameOver("draw");
-        } else if (data.loser_id === user?.id) {
-          setGameOver("loss");
-        } else if (data.winner_id === user?.id) {
-          setGameOver("win");
-        } else {
-          setGameOver("draw");
-        }
-        setIsResignModalOpen(false);
-        break;
+        case "move":
+          setCurrentFen(data.fen);
+          setMoveHistory((prev) => {
+            const lastMove = prev[prev.length - 1];
+            const prettyMove = formatNotation(data.san_move);
 
-      case "rematch_request":
-        setReceivedRematchOffer(true);
-        break;
+            if (!lastMove || lastMove.black) {
+              return [...prev, { n: prev.length + 1, white: prettyMove }];
+            } else {
+              const newHistory = [...prev];
+              newHistory[newHistory.length - 1] = {
+                ...lastMove,
+                black: prettyMove,
+              };
+              return newHistory;
+            }
+          });
+          break;
 
-      case "rematch_accepted":
-        window.location.href = `/game/${data.new_game_id}`;
-        break;
+        case "game_over":
+          if (data.result === "1/2-1/2") {
+            setGameOver("draw");
+          } else if (data.loser_id === user?.id) {
+            setGameOver("loss");
+          } else if (data.winner_id === user?.id) {
+            setGameOver("win");
+          } else {
+            setGameOver("draw");
+          }
+          setIsResignModalOpen(false);
+          break;
 
-      case "rematch_declined":
-        setIsWaitingForRematch(false);
-        alert("Opponent declined the rematch.");
-        break;
+        case "rematch_request":
+          setReceivedRematchOffer(true);
+          break;
 
-      case "error":
-        console.error("Server Error:", data.message);
-        break;
-    }
-  }, [user?.id]);
+        case "rematch_accepted":
+          window.location.href = `/game/${data.new_game_id}`;
+          break;
+
+        case "rematch_declined":
+          setIsWaitingForRematch(false);
+          alert("Opponent declined the rematch.");
+          break;
+
+        case "error":
+          console.error("Server Error:", data.message);
+          break;
+      }
+    },
+    [user?.id],
+  );
 
   const { sendMessage } = useWebSocket({
     url:
@@ -124,6 +125,33 @@ export function Game() {
     enabled: !!gameId && !!user?.id,
     onMessage: handleServerMessage,
   });
+
+  // fetch opponents ID
+  useEffect(() => {
+    if (!opponentId) return;
+
+    const fetchOpponentProfile = async () => {
+      try {
+        const response = await api.get(
+          `http://localhost:8000/api/users/${opponentId}/`,
+        );
+        const data = response.data;
+
+        console.log("Opponent Profile Data:", data);
+
+        setOpponent({
+          username: data.username || "Unknown",
+          elo_rating: data.profile.elo_rating || "?",
+          avatar: data.avatar || avatar_2,
+        });
+      } catch (error) {
+        console.error("Error fetching opponent:", error);
+        setOpponent((prev) => ({ ...prev, username: "Player--" }));
+      }
+    };
+
+    fetchOpponentProfile();
+  }, [opponentId]);
 
   // Clock countdown logic
   useEffect(() => {
@@ -218,9 +246,12 @@ export function Game() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-70">
           <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
             <div>
-              <h2 className="text-xl font-bold text-white mb-2">Resign Game?</h2>
+              <h2 className="text-xl font-bold text-white mb-2">
+                Resign Game?
+              </h2>
               <p className="text-neutral-500 text-sm">
-                Are you sure you want to resign? This will count as a loss and your ELO will be updated.
+                Are you sure you want to resign? This will count as a loss and
+                your ELO will be updated.
               </p>
             </div>
             <div className="flex gap-3 w-full">
@@ -241,12 +272,10 @@ export function Game() {
         </div>
       )}
 
+      {/*Game Over Modal*/}
       {gameOver && (
         <div className="relative z-70">
-          <GameOverModal
-            outcome={gameOver}
-            onRestart={handleRematchRequest}
-          />
+          <GameOverModal outcome={gameOver} onRestart={handleRematchRequest} />
         </div>
       )}
 
@@ -297,7 +326,7 @@ export function Game() {
             <ChessBoard
               fen={currentFen}
               onMove={handlePlayerMove}
-              onGameEnd={() => setGameOver(setGameOver as any)}
+              onGameEnd={setGameOver as any}
               playerColor={playerColor}
             />
           </div>
@@ -316,7 +345,7 @@ export function Game() {
                 <h3 className="font-semibold text-lg text-white">
                   {user?.username || "Loading..."}{" "}
                   <span className="text-sm font-normal text-neutral-500">
-                    ({user?.profile?.elo_rating || "1200"})
+                    ({user?.profile?.elo_rating || ""})
                   </span>
                 </h3>
               </div>

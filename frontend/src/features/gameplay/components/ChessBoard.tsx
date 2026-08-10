@@ -25,7 +25,6 @@ export function ChessBoard({
     Record<string, React.CSSProperties>
   >({});
 
-  // 💡 FIXED: Added the missing state for the check square!
   const [checkSquare, setCheckSquare] = useState<string>("");
 
   if (fen !== prevFen) {
@@ -35,27 +34,8 @@ export function ChessBoard({
     setOptionSquares({});
   }
 
-  useEffect(() => {
-    const chessGame = chessGameRef.current;
-    if (fen === "start") {
-      chessGame.reset();
-    } else if (fen !== chessGame.fen()) {
-      try {
-        chessGame.load(fen);
-      } catch {
-        console.error("Backend sent an invalid FEN:", fen);
-      }
-    }
-    updateCheckState();
-  }, [fen]);
-
-  useEffect(() => {
-    updateCheckState();
-  }, [chessPosition]);
-
   function updateCheckState() {
     const chessGame = chessGameRef.current;
-
     // Fallbacks to support different versions of chess.js
     const isCheck =
       typeof chessGame.isCheck === "function"
@@ -78,6 +58,24 @@ export function ChessBoard({
     }
     setCheckSquare("");
   }
+
+  useEffect(() => {
+    const chessGame = chessGameRef.current;
+    if (fen === "start") {
+      chessGame.reset();
+    } else if (fen !== chessGame.fen()) {
+      try {
+        chessGame.load(fen);
+      } catch {
+        console.error("Backend sent an invalid FEN:", fen);
+      }
+    }
+    updateCheckState();
+  }, [fen]);
+
+  useEffect(() => {
+    updateCheckState();
+  }, [chessPosition]);
 
   function getMoveOptions(square: Square) {
     const chessGame = chessGameRef.current;
@@ -175,7 +173,7 @@ export function ChessBoard({
     }
   }
 
-  function onPieceDragBegin(piece: string, sourceSquare: string) {
+  function onPieceDragBegin(_piece: string, sourceSquare: string) {
     const chessGame = chessGameRef.current;
     if (chessGame.turn() !== playerColor) return;
     getMoveOptions(sourceSquare as Square);
