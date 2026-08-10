@@ -1,13 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, Bot, Loader2 } from "lucide-react";
+import { ArrowLeft, Bot } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
 import {
   type Difficulty,
   type GameOutcome,
   DIFFICULTY_CONFIG,
 } from "../../utils/constants";
-// import { PreGameMenu } from "../../features/gameplay/components/PreGameMenu";
 import { GameOverModal } from "../../features/gameplay/components/GameOverModal";
 import { ParticipantBannerBot } from "../../features/gameplay/components/ParticipantBannerBot";
 import {
@@ -22,6 +21,16 @@ import { createBotGame } from "../../api/gameApi";
 
 const SYSTEM_BOT_ID = null;
 
+const formatNotation = (move?: string) => {
+  if (!move) return "";
+  return move
+    .replace(/N/g, "♞")
+    .replace(/B/g, "♝")
+    .replace(/R/g, "♜")
+    .replace(/Q/g, "♛")
+    .replace(/K/g, "♚");
+};
+
 export function BotGame() {
   const [difficulty] = useState<Difficulty>("easy");
   const [gameStarted, setGameStarted] = useState<boolean>(false);
@@ -35,19 +44,18 @@ export function BotGame() {
   const [showRestartConfirm, setShowRestartConfirm] = useState<boolean>(false);
 
   const [gameId, setGameId] = useState<string | number | null>(null);
-  const [isCreatingGame, setIsCreatingGame] = useState<boolean>(true);
+
+  const hasFetchedRef = useRef(false);
 
   const currentPlayerId = user?.id || 0;
 
   // Axios API
   const initGame = async () => {
-    if (!user) {
+    if (!user || !user.id) {
       console.warn("Waiting for user profile to load...");
       return;
     }
     try {
-      // setIsCreatingGame(true);
-
       const data = await createBotGame({
         user_id: user.id,
       });
@@ -58,17 +66,15 @@ export function BotGame() {
       setGameStarted(true);
     } catch (error) {
       console.error("Failed to initialize game:", error);
-    } finally {
-      setIsCreatingGame(false);
     }
   };
 
   useEffect(() => {
-    // Only try to start the game if the user has officially loaded AND we don't have a game yet!
-    if (user && user.id && !gameStarted) {
+    if (user && user.id && !gameStarted && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
       initGame();
     }
-  }, [user, gameStarted]); // <--- React will now re-run this when the user loads!
+  }, [user]);
 
   const handleServerMessage = (data: any) => {
     console.log("Received from server: ", data);
@@ -83,14 +89,15 @@ export function BotGame() {
         setMoveHistory((prev) => {
           const newHistory: MoveRecord[] = [...prev];
           const lastIndex: number = newHistory.length - 1;
+          const prettyMoveBot = formatNotation(data.san_move);
 
           if (lastIndex < 0 || newHistory[lastIndex].black) {
-            newHistory.push({ n: newHistory.length + 1, white: data.san_move });
+            newHistory.push({ n: newHistory.length + 1, white: prettyMoveBot });
             setBotThinking(true);
           } else {
             newHistory[lastIndex] = {
               ...newHistory[lastIndex],
-              black: data.san_move,
+              black: prettyMoveBot,
             };
             setBotThinking(false);
           }
@@ -100,19 +107,20 @@ export function BotGame() {
 
       case "game_over":
         if (data.result === "1/2-1/2") {
-          setGameOver("draw"); // It's a tie!
+          setGameOver("draw");
         } else if (data.loser_id === currentPlayerId) {
-          setGameOver("loss"); // The human's ID matches the loser!
+          setGameOver("loss");
         } else if (data.winner_id === currentPlayerId) {
-          setGameOver("win"); // The human's ID matches the winner!
+          setGameOver("win");
         }
         break;
     }
   };
 
   const { sendMessage } = useWebSocket({
-    // url: gameId ? `ws://localhost:8001/ws/game/${gameId}` : "",
-    url: gameId ? `ws://localhost:8001/ws/game/${gameId}?user_id=${currentPlayerId}` : "",
+    url: gameId
+      ? `ws://localhost:8001/ws/game/${gameId}?user_id=${currentPlayerId}`
+      : "",
     enabled: gameStarted && !!gameId,
     onMessage: handleServerMessage,
   });
@@ -145,10 +153,11 @@ export function BotGame() {
     setCurrentFen("start");
     setGameOver(null);
     setShowRestartConfirm(false);
+
     setGameStarted(false);
     setGameId(null);
-    setIsCreatingGame(true);
 
+    hasFetchedRef.current = false;
     initGame();
   };
 
@@ -170,28 +179,9 @@ export function BotGame() {
         <div className="w-24" />
       </header>
 
-      {/* Pre Game with Loading State */}
-      {/* {!gameStarted && (
-        <div className="flex-1 flex flex-col items-center justify-center">
-          {isCreatingGame ? (
-            <div className="flex flex-col items-center gap-4 text-neutral-400">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-              <p className="text-sm font-medium">Initializing game engine...</p>
-            </div>
-          ) : (
-            // <PreGameMenu
-            //   difficulty={difficulty}
-            //   onDifficultyChange={setDifficulty}
-            //   onStartGame={initGame}
-            // />
-            <div>Starting game...</div>
-          )}
-        </div>
-      )} */}
-
       {/* Restart Confirmation Modal Overlay */}
       {showRestartConfirm && !gameOver && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-70">
           <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
             <div>
               <h2 className="text-xl font-bold text-white mb-2">
@@ -221,11 +211,13 @@ export function BotGame() {
 
       {/* Game Over Modal */}
       {gameOver && (
-        <GameOverModal
-          outcome={gameOver}
-          difficulty={difficulty}
-          onRestart={handleRestart}
-        />
+        <div className="relative z-70">
+          <GameOverModal
+            outcome={gameOver}
+            difficulty={difficulty}
+            onRestart={handleRestart}
+          />
+        </div>
       )}
 
       {gameStarted && (
@@ -240,7 +232,7 @@ export function BotGame() {
               // graveyard={<span>♟</span>}
             />
 
-            <div className="w-[600px] h-[600px] rounded-sm overflow border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
+            <div className="w-[600px] h-[600px] rounded-sm relative z-50 border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
               <ChessBoard
                 fen={currentFen}
                 playerColor="w"
@@ -260,13 +252,12 @@ export function BotGame() {
               name={user?.username || "Player"}
               nameColor="text-blue-500"
               eloRating={user?.profile?.elo_rating || 1200}
-              // graveyard={<span>♙</span>}
             />
           </div>
 
           <GameSidebar
-            difficulty={difficulty}
-            onRestart={() => setShowRestartConfirm(true)}
+            // difficulty={difficulty}
+            onLeftAction={() => setShowRestartConfirm(true)}
             onResign={handleResign}
             moveHistory={moveHistory}
           />

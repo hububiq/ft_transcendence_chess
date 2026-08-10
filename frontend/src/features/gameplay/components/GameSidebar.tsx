@@ -31,32 +31,6 @@ export function GameSidebar({
 
   return (
     <div className="w-72 bg-[#050505] border border-neutral-900 rounded-xl h-[600px] flex flex-col p-4">
-      {/* Header logic: Bot Badge vs Multiplayer Badge */}
-      {mode === "bot" && cfg ? (
-        <div className="mb-4 pb-2 border-b border-neutral-900 flex items-center justify-between">
-          <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">
-            Bot Difficulty
-          </span>
-          <span
-            className={clsx(
-              "text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-900",
-              cfg.color,
-            )}
-          >
-            {cfg.label}
-          </span>
-        </div>
-      ) : (
-        <div className="mb-4 pb-2 border-b border-neutral-900 flex items-center justify-between">
-          <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">
-            Match Info
-          </span>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-900 text-blue-500">
-            Ranked 1v1
-          </span>
-        </div>
-      )}
-
       {/* Move History */}
       <div className="flex-1 overflow-y-auto">
         <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-4">

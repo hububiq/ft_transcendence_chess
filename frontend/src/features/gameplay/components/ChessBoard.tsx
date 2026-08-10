@@ -209,7 +209,7 @@ export function ChessBoard({
       ...customSquareStyles[checkSquare],
       background: "rgba(255, 0, 0, 0.2)",
       boxShadow: "inset 0 0 15px rgba(255, 0, 0, 0.3)",
-      borderRadius: "25%",
+      borderRadius: "50%",
     };
   }
 
