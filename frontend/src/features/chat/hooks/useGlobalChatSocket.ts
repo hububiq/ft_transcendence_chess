@@ -23,7 +23,6 @@ import {
 } from "../types";
 
 
-// Increase reconnect delays gradually instead of reconnecting in a tight loop
 const RECONNECT_DELAYS_MS = [
   1_000,
   2_000,
@@ -33,9 +32,9 @@ const RECONNECT_DELAYS_MS = [
 ] as const;
 
 
-// Define the public API returned to components using this hook
 interface UseGlobalChatSocketResult {
   messages: ChatMessageServerEvent[];
+  onlineUsers: ChatAuthor[];
   connectionState: ChatConnectionState;
   authenticatedUser: ChatAuthor | null;
   errorMessage: string | null;
@@ -47,13 +46,15 @@ interface UseGlobalChatSocketResult {
 
 
 export function useGlobalChatSocket(): UseGlobalChatSocketResult {
-  // Use the existing application authentication state
   const { user, setUser } = useAuth();
   const userId = user?.id ?? null;
 
-  // Store values that should cause the UI to re-render
+  // Keep chat messages and presence as separate pieces of client state
   const [messages, setMessages] = useState<
     ChatMessageServerEvent[]
+  >([]);
+  const [onlineUsers, setOnlineUsers] = useState<
+    ChatAuthor[]
   >([]);
   const [connectionState, setConnectionState] =
     useState<ChatConnectionState>("disconnected");
@@ -62,7 +63,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
   const [errorMessage, setErrorMessage] =
     useState<string | null>(null);
 
-  // Keep socket lifecycle values between renders without causing re-renders
+  // Refs keep connection lifecycle data without triggering React renders
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const reconnectAttemptRef = useRef(0);
@@ -71,7 +72,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
   const authFailureRef = useRef<ChatErrorCode | null>(null);
   const authRefreshAttemptedRef = useRef(false);
 
-  // Resolve the WebSocket URL once and keep configuration errors safe
+  // Resolve the WebSocket URL once and expose configuration errors to the UI
   const socketUrlResult = useMemo(() => {
     try {
       return {
@@ -90,16 +91,16 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
   }, []);
 
   useEffect(() => {
-    // Do not keep a chat connection when no user is logged in
+    // No authenticated application user means no chat connection
     if (!userId) {
       setMessages([]);
+      setOnlineUsers([]);
       setAuthenticatedUser(null);
       setConnectionState("disconnected");
       setErrorMessage(null);
       return;
     }
 
-    // Stop before connecting when the WebSocket URL is invalid
     if (!socketUrlResult.url) {
       setConnectionState("error");
       setErrorMessage(socketUrlResult.error);
@@ -108,15 +109,15 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
 
     const socketUrl = socketUrlResult.url;
 
-    // Prevent old async callbacks from acting after cleanup
+    // Prevent old async callbacks from modifying state after cleanup
     let isDisposed = false;
 
-    // Start every authenticated user session with an empty message list
+    // Start every authenticated user session with fresh local chat state
     setMessages([]);
+    setOnlineUsers([]);
     authRefreshAttemptedRef.current = false;
 
     const clearReconnectTimer = () => {
-      // Remove any reconnect that is still waiting to run
       if (reconnectTimerRef.current !== null) {
         window.clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
@@ -127,7 +128,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
       connect: () => void,
       delayOverride?: number,
     ) => {
-      // Never reconnect after logout, unmount, or another intentional close
+      // Never reconnect after logout or intentional component cleanup
       if (
         isDisposed ||
         isIntentionalCloseRef.current
@@ -138,9 +139,8 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
       clearReconnectTimer();
       setConnectionState("reconnecting");
 
+      // Increase reconnect delay gradually and cap it at the final configured value
       const attempt = reconnectAttemptRef.current;
-
-      // Increase the delay with each failed reconnect up to the maximum value
       const delay =
         delayOverride ??
         RECONNECT_DELAYS_MS[
@@ -151,8 +151,6 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         ];
 
       reconnectAttemptRef.current += 1;
-
-      // Schedule only one reconnect attempt at a time
       reconnectTimerRef.current = window.setTimeout(
         connect,
         delay,
@@ -166,24 +164,20 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         // The existing Axios interceptor refreshes the access token after HTTP 401
         const response = await fetchCurrentUser();
 
-        // Ignore the result if the hook was cleaned up while waiting
         if (isDisposed) {
           return;
         }
 
-        // Keep the existing auth context synchronized after the refresh
+        // Update the shared auth state before opening a new WebSocket
         setUser(response.data);
         authFailureRef.current = null;
         reconnectAttemptRef.current = 0;
-
-        // Retry immediately after a successful token refresh
         scheduleReconnect(connect, 0);
       } catch {
         if (isDisposed) {
           return;
         }
 
-        // Stop reconnecting when authentication cannot be refreshed
         setConnectionState("error");
         setErrorMessage(
           "Authentication expired. Please log in again.",
@@ -192,7 +186,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     };
 
     const connect = () => {
-      // Do not create a socket after this hook has been cleaned up
+      // Ignore delayed reconnect callbacks after intentional cleanup
       if (
         isDisposed ||
         isIntentionalCloseRef.current
@@ -200,7 +194,6 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         return;
       }
 
-      // Read the current access token again for every connection attempt
       const accessToken = localStorage.getItem(
         "access_token",
       );
@@ -211,12 +204,11 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         return;
       }
 
+      // Reset per-connection authentication state before opening a new socket
       clearReconnectTimer();
       authFailureRef.current = null;
       isAuthenticatedRef.current = false;
       setAuthenticatedUser(null);
-
-      // Show whether this is the first connection or a reconnect attempt
       setConnectionState(
         reconnectAttemptRef.current === 0
           ? "connecting"
@@ -226,7 +218,6 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
       let socket: WebSocket;
 
       try {
-        // Open a new browser WebSocket connection to the chat endpoint
         socket = new WebSocket(socketUrl);
       } catch {
         setConnectionState("error");
@@ -236,11 +227,11 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         return;
       }
 
-      // Remember which socket is currently owned by this hook
+      // Keep a reference to the socket that currently owns event callbacks
       socketRef.current = socket;
 
       socket.onopen = () => {
-        // Ignore an old socket that is no longer the active connection
+        // Ignore stale sockets created by an older connection attempt
         if (
           isDisposed ||
           socketRef.current !== socket
@@ -249,10 +240,9 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
           return;
         }
 
-        // Opening the socket is not enough to consider the chat authenticated
         setConnectionState("authenticating");
 
-        // Authentication is always the first client event
+        // Authentication is always the first event sent after opening the socket
         const event: AuthenticateClientEvent = {
           type: "authenticate",
           access_token: accessToken,
@@ -262,7 +252,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
       };
 
       socket.onmessage = (messageEvent) => {
-        // Ignore messages from sockets that are no longer active
+        // Ignore messages from sockets that are no longer the active connection
         if (
           isDisposed ||
           socketRef.current !== socket
@@ -273,7 +263,6 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         let decodedPayload: unknown;
 
         try {
-          // Decode incoming WebSocket data without trusting its structure
           decodedPayload = JSON.parse(
             String(messageEvent.data),
           );
@@ -284,7 +273,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
           return;
         }
 
-        // Validate the decoded data against the frontend chat protocol
+        // Validate every server payload before using it in React state
         const event = parseChatServerEvent(decodedPayload);
 
         if (!event) {
@@ -295,7 +284,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         }
 
         if (event.type === "authenticated") {
-          // Reject a server identity that does not match the logged in user
+          // Reject a socket if backend authentication resolves to another user
           if (event.user.id !== userId) {
             authFailureRef.current = "AUTH_INVALID";
             authRefreshAttemptedRef.current = true;
@@ -307,7 +296,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
             return;
           }
 
-          // Mark the chat connected only after server authentication succeeds
+          // Mark the socket ready only after backend authentication succeeds
           isAuthenticatedRef.current = true;
           reconnectAttemptRef.current = 0;
           authRefreshAttemptedRef.current = false;
@@ -319,7 +308,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
 
         if (event.type === "chat_message") {
           setMessages((currentMessages) => {
-            // Ignore a message that was already received before
+            // Ignore duplicate messages that may arrive during connection recovery
             const alreadyExists = currentMessages.some(
               (message) =>
                 message.message_id === event.message_id,
@@ -329,7 +318,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
               return currentMessages;
             }
 
-            // Keep only the newest messages from the current browser session
+            // Keep only a bounded number of messages in browser memory
             return [
               ...currentMessages,
               event,
@@ -338,14 +327,18 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
           return;
         }
 
-        // Remember authentication errors so close handling can react correctly
+        if (event.type === "presence") {
+          // Replace the previous presence snapshot with the newest server state
+          setOnlineUsers(event.users);
+          return;
+        }
+
+        // Remember auth-related errors because they control close and reconnect behavior
         authFailureRef.current = event.code.startsWith(
           "AUTH_",
         )
           ? event.code
           : null;
-
-        // Show the safe error message returned by the backend
         setErrorMessage(event.message);
       };
 
@@ -354,7 +347,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
       };
 
       socket.onclose = () => {
-        // Ignore close events from sockets that have already been replaced
+        // Ignore close callbacks from sockets that have already been replaced
         if (socketRef.current !== socket) {
           return;
         }
@@ -363,7 +356,10 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         isAuthenticatedRef.current = false;
         setAuthenticatedUser(null);
 
-        // Do not reconnect after intentional cleanup
+        // Do not keep stale presence while the socket is disconnected
+        setOnlineUsers([]);
+
+        // Intentional cleanup must never start the reconnect loop
         if (
           isDisposed ||
           isIntentionalCloseRef.current
@@ -374,7 +370,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
 
         const authFailure = authFailureRef.current;
 
-        // Try the existing token refresh flow once after an auth failure
+        // Try the existing HTTP refresh flow once before reconnecting after auth failure
         if (
           (authFailure === "AUTH_EXPIRED" ||
             authFailure === "AUTH_INVALID") &&
@@ -385,42 +381,38 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
           return;
         }
 
-        // Stop reconnecting when authentication failed and refresh did not recover it
+        // Other authentication failures require explicit user action
         if (authFailure !== null) {
           setConnectionState("error");
           return;
         }
 
-        // Reconnect with backoff after a normal unexpected connection loss
+        // Unexpected connection loss uses the reconnect backoff
         scheduleReconnect(connect);
       };
     };
 
-    // Start a fresh socket lifecycle for the current authenticated user
+    // Start one connection lifecycle for the current authenticated user
     isIntentionalCloseRef.current = false;
     reconnectAttemptRef.current = 0;
     connect();
 
     return () => {
-      // Mark cleanup before closing anything to prevent reconnect races
+      // Stop timers and callbacks before closing the current socket
       isDisposed = true;
       isIntentionalCloseRef.current = true;
       isAuthenticatedRef.current = false;
-
-      // Cancel a reconnect that may still be waiting
       clearReconnectTimer();
 
       const socket = socketRef.current;
       socketRef.current = null;
 
       if (socket) {
-        // Remove callbacks so an old socket cannot update React state
+        // Detach handlers so cleanup cannot trigger another reconnect attempt
         socket.onopen = null;
         socket.onmessage = null;
         socket.onerror = null;
         socket.onclose = null;
-
-        // Close cleanly on logout, user change, unmount, or StrictMode cleanup
         socket.close(
           1000,
           "Component unmounted or user logged out",
@@ -436,10 +428,9 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
 
   const sendMessage = useCallback(
     (rawText: string): SendChatMessageResult => {
-      // Normalize user input before validating and sending it
+      // Normalize user input before applying the client-side validation rules
       const text = rawText.trim();
 
-      // Reject an empty message before it reaches the backend
       if (!text) {
         const reason = "Message cannot be empty";
         setErrorMessage(reason);
@@ -449,7 +440,6 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         };
       }
 
-      // Apply the same message length limit on the frontend
       if (text.length > CHAT_MESSAGE_MAX_LENGTH) {
         const reason =
           `Message cannot exceed ` +
@@ -464,7 +454,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
 
       const socket = socketRef.current;
 
-      // Allow sending only through an open and authenticated socket
+      // Sending is allowed only through an open and authenticated socket
       if (
         !socket ||
         socket.readyState !== WebSocket.OPEN ||
@@ -478,7 +468,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         };
       }
 
-      // Send only the message text and never client-controlled author data
+      // The client sends only text while author and metadata are assigned by the backend
       const event: SendMessageClientEvent = {
         type: "chat_message",
         text,
@@ -487,15 +477,12 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
       try {
         socket.send(JSON.stringify(event));
         setErrorMessage(null);
-
         return {
           ok: true,
         };
       } catch {
-        // Keep the input usable when the browser fails to send the message
         const reason = "Message could not be sent";
         setErrorMessage(reason);
-
         return {
           ok: false,
           reason,
@@ -506,13 +493,12 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
   );
 
   const clearError = useCallback(() => {
-    // Allow the UI to dismiss the current chat error
     setErrorMessage(null);
   }, []);
 
-  // Expose only the state and actions needed by the chat UI
   return {
     messages,
+    onlineUsers,
     connectionState,
     authenticatedUser,
     errorMessage,

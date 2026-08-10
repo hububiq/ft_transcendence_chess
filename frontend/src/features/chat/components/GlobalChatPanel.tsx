@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 
-import { useGlobalChatSocket } from "../hooks/useGlobalChatSocket";
+import { useGlobalChat } from "../context/GlobalChatProvider";
 import {
   CHAT_MESSAGE_MAX_LENGTH,
   type ChatConnectionState,
@@ -113,7 +113,7 @@ export function GlobalChatPanel() {
     errorMessage,
     sendMessage,
     clearError,
-  } = useGlobalChatSocket();
+  } = useGlobalChat();
 
   // Prepare the connection status shown above the messages
   const connection = getConnectionPresentation(

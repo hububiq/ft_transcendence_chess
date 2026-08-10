@@ -5,7 +5,11 @@ import logging
 
 from fastapi import WebSocket
 
-from chat.schemas import ChatAuthor, ServerEvent
+from chat.schemas import (
+    ChatAuthor,
+    PresenceServerEvent,
+    ServerEvent,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -17,13 +21,11 @@ class GlobalChatConnectionManager:
     """Manage authenticated sockets in the current FastAPI worker"""
 
     def __init__(self) -> None:
-        # Map every active socket to its authenticated chat user
+        # Map every active socket to the user verified during authentication
         self._users_by_socket: dict[
             WebSocket,
             ChatAuthor,
         ] = {}
-
-        # Protect the connection list from concurrent changes
         self._state_lock = asyncio.Lock()
 
         # One send lock prevents concurrent writes to the same socket
@@ -37,22 +39,21 @@ class GlobalChatConnectionManager:
     ) -> None:
         """Confirm authentication and register the socket atomically"""
 
-        # Convert the validated server event into JSON ready data
         payload = ready_event.model_dump(mode="json")
 
         async with self._send_lock:
-            # Send confirmation before adding the socket to active connections
+            # Confirm authentication before exposing the socket as active
             was_sent = await self._send_payload(
                 websocket,
                 payload,
             )
 
-            # Do not register a socket that already failed
             if not was_sent:
                 raise ConnectionError(
                     "WebSocket closed during activation"
                 )
 
+            # Register only sockets that successfully received the auth response
             async with self._state_lock:
                 self._users_by_socket[websocket] = user
                 connection_count = len(
@@ -70,8 +71,8 @@ class GlobalChatConnectionManager:
     ) -> None:
         """Remove a socket without failing when cleanup runs twice"""
 
+        # Removing by socket keeps multiple tabs from affecting each other
         async with self._state_lock:
-            # Remove the socket safely even if it was already removed
             removed_user = self._users_by_socket.pop(
                 websocket,
                 None,
@@ -80,7 +81,6 @@ class GlobalChatConnectionManager:
                 self._users_by_socket
             )
 
-        # Log only when an active connection was actually removed
         if removed_user is not None:
             logger.info(
                 "Global chat connection removed, active connections=%s",
@@ -93,6 +93,69 @@ class GlobalChatConnectionManager:
         async with self._state_lock:
             return len(self._users_by_socket)
 
+    async def broadcast_presence(self) -> None:
+        """Broadcast the current unique authenticated user list"""
+
+        # Repeat when dead sockets change the presence snapshot during delivery
+        while True:
+            async with self._send_lock:
+                # Read sockets and users from the same protected state snapshot
+                async with self._state_lock:
+                    sockets = list(
+                        self._users_by_socket.keys()
+                    )
+
+                    # Deduplicate users who have more than one active socket
+                    users_by_id = {
+                        user.id: user
+                        for user in self._users_by_socket.values()
+                    }
+
+                if not sockets:
+                    return
+
+                # Keep the list stable between presence updates
+                users = sorted(
+                    users_by_id.values(),
+                    key=lambda user: (
+                        user.username.lower(),
+                        user.id,
+                    ),
+                )
+
+                # Presence contains only public identities derived from authenticated sockets
+                payload = PresenceServerEvent(
+                    users=users,
+                ).model_dump(mode="json")
+
+                # Send the same presence snapshot to every authenticated socket
+                results = await asyncio.gather(
+                    *(
+                        self._send_payload(
+                            websocket,
+                            payload,
+                        )
+                        for websocket in sockets
+                    ),
+                    return_exceptions=False,
+                )
+
+            dead_sockets = [
+                websocket
+                for websocket, was_sent in zip(
+                    sockets,
+                    results,
+                )
+                if not was_sent
+            ]
+
+            if not dead_sockets:
+                return
+
+            # Remove failed sockets before sending the corrected list
+            for websocket in dead_sockets:
+                await self.disconnect(websocket)
+
     async def send_to(
         self,
         websocket: WebSocket,
@@ -102,14 +165,13 @@ class GlobalChatConnectionManager:
 
         payload = event.model_dump(mode="json")
 
-        # Use the same send lock as broadcasts to avoid overlapping writes
         async with self._send_lock:
             was_sent = await self._send_payload(
                 websocket,
                 payload,
             )
 
-        # Clean up the socket when sending fails
+        # Failed delivery also removes the socket from active connections
         if not was_sent:
             await self.disconnect(websocket)
 
@@ -124,17 +186,16 @@ class GlobalChatConnectionManager:
         payload = event.model_dump(mode="json")
 
         async with self._send_lock:
+            # Copy the current socket list without holding the state lock during network writes
             async with self._state_lock:
-                # Copy the socket list so connection changes do not affect this broadcast
                 sockets = list(
                     self._users_by_socket.keys()
                 )
 
-            # Skip the broadcast when nobody is connected
             if not sockets:
                 return
 
-            # Send the same event to all active sockets concurrently
+            # Slow or dead clients are isolated by the per-send timeout
             results = await asyncio.gather(
                 *(
                     self._send_payload(
@@ -146,7 +207,6 @@ class GlobalChatConnectionManager:
                 return_exceptions=False,
             )
 
-        # Find sockets that failed while receiving the broadcast
         dead_sockets = [
             websocket
             for websocket, was_sent in zip(
@@ -156,9 +216,12 @@ class GlobalChatConnectionManager:
             if not was_sent
         ]
 
-        # Remove failed sockets from the active connection list
         for websocket in dead_sockets:
             await self.disconnect(websocket)
+
+        # Refresh presence when message delivery discovers dead sockets
+        if dead_sockets:
+            await self.broadcast_presence()
 
     async def _send_payload(
         self,
@@ -168,7 +231,7 @@ class GlobalChatConnectionManager:
         """Isolate a slow or dead client from other clients"""
 
         try:
-            # Stop waiting when one client takes too long to receive data
+            # Limit one network write so a dead client cannot block broadcasts
             await asyncio.wait_for(
                 websocket.send_json(payload),
                 timeout=CHAT_SEND_TIMEOUT_SECONDS,
@@ -179,10 +242,8 @@ class GlobalChatConnectionManager:
             OSError,
             RuntimeError,
         ):
-            # Treat common connection failures as a dead socket
             return False
         except Exception:
-            # Log unexpected failures without stopping the whole broadcast
             logger.warning(
                 "Global chat send failed for one connection",
                 exc_info=True,
@@ -190,5 +251,4 @@ class GlobalChatConnectionManager:
             return False
 
 
-# Share one connection manager instance across the current FastAPI worker
 global_chat_manager = GlobalChatConnectionManager()

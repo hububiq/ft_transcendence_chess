@@ -30,19 +30,11 @@ from chat.schemas import (
 
 logger = logging.getLogger(__name__)
 
-# Register the WebSocket endpoint as part of the global chat router
 router = APIRouter(tags=["global-chat"])
 
-# Limit how long a new connection can wait before authenticating
 AUTHENTICATION_TIMEOUT_SECONDS = 10.0
-
-# Reject client frames that are larger than the allowed chat payload size
 MAX_CLIENT_FRAME_BYTES = 8_192
-
-# Close connections that break authentication or chat rules
 POLICY_VIOLATION_CLOSE_CODE = 1008
-
-# Close connections when an unexpected server error happens
 INTERNAL_ERROR_CLOSE_CODE = 1011
 
 
@@ -64,7 +56,7 @@ async def _send_pre_auth_error(
 ) -> None:
     """Send a safe error before authentication finishes"""
 
-    # Use the same server error format before the socket is registered
+    # Pre-auth errors cannot use the connection manager yet
     await _send_pre_auth_event(
         websocket,
         ErrorServerEvent(
@@ -83,7 +75,6 @@ async def _close_safely(
     try:
         await websocket.close(code=code)
     except RuntimeError:
-        # Ignore closing a socket that is already closed
         return
 
 
@@ -92,17 +83,14 @@ async def _receive_json_payload(
 ) -> object:
     """Receive a bounded text frame and decode its JSON value"""
 
-    # Read one raw WebSocket frame from the client
     message = await websocket.receive()
     message_type = message.get("type")
 
-    # Convert a client disconnect into the standard FastAPI exception
     if message_type == "websocket.disconnect":
         raise WebSocketDisconnect(
             code=message.get("code", 1000)
         )
 
-    # Reject unexpected WebSocket message types
     if message_type != "websocket.receive":
         raise ValueError(
             "Unsupported WebSocket message type"
@@ -110,16 +98,15 @@ async def _receive_json_payload(
 
     raw_text = message.get("text")
 
-    # Accept only text frames because chat events use JSON text
+    # Binary frames are rejected because the protocol accepts JSON text only
     if not isinstance(raw_text, str):
         raise ValueError(
             "Only text WebSocket frames are supported"
         )
 
-    # Measure the real UTF-8 payload size before parsing JSON
+    # Limit the raw frame before JSON parsing to avoid oversized client payloads
     raw_size = len(raw_text.encode("utf-8"))
 
-    # Reject oversized frames before doing further processing
     if raw_size > MAX_CLIENT_FRAME_BYTES:
         raise ValueError(
             "WebSocket frame is too large"
@@ -144,12 +131,11 @@ def _validation_error_event(
 ) -> ErrorServerEvent:
     """Map Pydantic details to the public chat error contract"""
 
-    # Check validation details to return a more useful public error
+    # Convert internal validation details into stable client-safe error codes
     for item in error.errors():
         location = item.get("loc", ())
         error_type = item.get("type")
 
-        # Return a specific error for an empty message
         if (
             "text" in location
             and error_type == "string_too_short"
@@ -159,7 +145,6 @@ def _validation_error_event(
                 message="Message cannot be empty",
             )
 
-        # Return a specific error for a message above the text limit
         if (
             "text" in location
             and error_type == "string_too_long"
@@ -169,7 +154,6 @@ def _validation_error_event(
                 message="Message is too long",
             )
 
-    # Hide internal validation details behind a safe generic error
     return ErrorServerEvent(
         code="INVALID_EVENT",
         message="Unsupported or invalid chat event",
@@ -181,14 +165,13 @@ async def _authenticate_connection(
 ) -> AuthenticatedChatUser | None:
     """Require authentication as the first client event"""
 
+    # The first frame must arrive within the authentication timeout
     try:
-        # Wait only a limited time for the first authentication event
         payload = await asyncio.wait_for(
             _receive_json_payload(websocket),
             timeout=AUTHENTICATION_TIMEOUT_SECONDS,
         )
     except asyncio.TimeoutError:
-        # Reject clients that do not authenticate in time
         await _send_pre_auth_error(
             websocket,
             code="AUTH_REQUIRED",
@@ -200,7 +183,6 @@ async def _authenticate_connection(
         )
         return None
     except json.JSONDecodeError:
-        # Reject malformed JSON during authentication
         await _send_pre_auth_error(
             websocket,
             code="INVALID_JSON",
@@ -212,7 +194,6 @@ async def _authenticate_connection(
         )
         return None
     except ValueError:
-        # Reject unsupported frames or invalid payload structure
         await _send_pre_auth_error(
             websocket,
             code="INVALID_EVENT",
@@ -225,15 +206,13 @@ async def _authenticate_connection(
         return None
 
     try:
-        # Validate the first payload using the shared chat event schemas
         event = parse_client_event(payload)
     except ValidationError:
-        # Use an authentication error when authentication itself was malformed
+        # Distinguish malformed authentication from a missing first auth event
         if _is_authentication_payload(payload):
             error_code: ChatErrorCode = "AUTH_INVALID"
             error_message = "Authentication is invalid"
         else:
-            # Require authentication when another event was sent first
             error_code = "AUTH_REQUIRED"
             error_message = (
                 "Authentication must be the first event"
@@ -250,7 +229,7 @@ async def _authenticate_connection(
         )
         return None
 
-    # Do not allow any other event before authentication
+    # No chat event is accepted before successful authentication
     if not isinstance(event, AuthenticateClientEvent):
         await _send_pre_auth_error(
             websocket,
@@ -264,19 +243,17 @@ async def _authenticate_connection(
         return None
 
     try:
-        # Verify the token and get the trusted user identity from Django
+        # Resolve the trusted user identity from the verified access token
         return await authenticate_chat_user(
             event.access_token
         )
     except ChatAuthenticationError as error:
-        # Send only the safe public authentication error to the client
         await _send_pre_auth_error(
             websocket,
             code=error.code,
             message=error.public_message,
         )
 
-        # Use a server error close code only for internal authentication failures
         close_code = (
             INTERNAL_ERROR_CLOSE_CODE
             if error.code == "INTERNAL_ERROR"
@@ -297,7 +274,7 @@ async def _send_registered_error(
 ) -> bool:
     """Send an error through the manager send lock"""
 
-    # Send through the manager so socket writes stay synchronized
+    # Registered sockets use the same serialized send path as broadcasts
     return await global_chat_manager.send_to(
         websocket,
         ErrorServerEvent(
@@ -313,14 +290,12 @@ async def global_chat_socket(
 ) -> None:
     """Run the authenticated global chat connection lifecycle"""
 
-    # Complete the WebSocket handshake before receiving chat events
+    # Accept the transport first but do not register the user before authentication
     await websocket.accept()
 
-    # Track whether this socket needs manager cleanup later
     is_registered = False
 
     try:
-        # Require successful authentication before joining the active chat
         authenticated_user = (
             await _authenticate_connection(websocket)
         )
@@ -328,10 +303,10 @@ async def global_chat_socket(
         if authenticated_user is None:
             return
 
-        # Use only the trusted user identity returned by authentication
+        # The author comes only from verified backend authentication
         user = authenticated_user.author
 
-        # Confirm authentication and register the socket for broadcasts
+        # Register the socket only after authentication succeeds
         await global_chat_manager.activate(
             websocket,
             user,
@@ -339,14 +314,15 @@ async def global_chat_socket(
         )
         is_registered = True
 
-        # Keep receiving chat events until the connection ends
+        # Tell all clients that the logged user list changed
+        await global_chat_manager.broadcast_presence()
+
         while True:
-            # Calculate how long the current access token remains valid
+            # Limit the connection lifetime to the lifetime of the access token
             seconds_until_expiry = (
                 authenticated_user.seconds_until_expiry()
             )
 
-            # Stop the connection when authentication has already expired
             if seconds_until_expiry <= 0:
                 await _send_registered_error(
                     websocket,
@@ -360,13 +336,12 @@ async def global_chat_socket(
                 return
 
             try:
-                # Never wait for the next message longer than the token remains valid
+                # Waiting only until token expiry prevents stale authenticated sockets
                 payload = await asyncio.wait_for(
                     _receive_json_payload(websocket),
                     timeout=seconds_until_expiry,
                 )
             except asyncio.TimeoutError:
-                # Expire an idle connection when its token reaches expiration
                 await _send_registered_error(
                     websocket,
                     code="AUTH_EXPIRED",
@@ -378,7 +353,6 @@ async def global_chat_socket(
                 )
                 return
             except json.JSONDecodeError:
-                # Report malformed JSON without closing a valid chat connection
                 was_sent = await _send_registered_error(
                     websocket,
                     code="INVALID_JSON",
@@ -390,7 +364,6 @@ async def global_chat_socket(
 
                 continue
             except ValueError:
-                # Report unsupported frames or invalid payload structure
                 was_sent = await _send_registered_error(
                     websocket,
                     code="INVALID_EVENT",
@@ -404,7 +377,7 @@ async def global_chat_socket(
 
                 continue
 
-            # Check token expiry again after waiting for the client message
+            # Check expiry again after receiving because the token may expire while data arrives
             if (
                 authenticated_user.seconds_until_expiry()
                 <= 0
@@ -421,10 +394,9 @@ async def global_chat_socket(
                 return
 
             try:
-                # Parse and validate the received event before using its data
+                # Validate every decoded payload against the shared client event schema
                 event = parse_client_event(payload)
             except ValidationError as error:
-                # Convert validation details into the public chat error format
                 was_sent = await global_chat_manager.send_to(
                     websocket,
                     _validation_error_event(error),
@@ -435,7 +407,7 @@ async def global_chat_socket(
 
                 continue
 
-            # Authentication is allowed only once at the start of the connection
+            # Authentication is allowed only once at the beginning of the connection
             if isinstance(event, AuthenticateClientEvent):
                 was_sent = await _send_registered_error(
                     websocket,
@@ -450,7 +422,7 @@ async def global_chat_socket(
 
                 continue
 
-            # Reject any validated client event that is not a chat message
+            # The basic global chat accepts only validated message events after auth
             if not isinstance(event, SendMessageClientEvent):
                 was_sent = await _send_registered_error(
                     websocket,
@@ -465,7 +437,7 @@ async def global_chat_socket(
 
                 continue
 
-            # Apply the message limit to the authenticated user identity
+            # Rate limiting is keyed by the authenticated backend user identifier
             is_allowed = (
                 await global_chat_rate_limiter.allow(
                     user.id
@@ -473,7 +445,6 @@ async def global_chat_socket(
             )
 
             if not is_allowed:
-                # Reject excessive messages without disconnecting the user
                 was_sent = await _send_registered_error(
                     websocket,
                     code="RATE_LIMITED",
@@ -487,7 +458,7 @@ async def global_chat_socket(
 
                 continue
 
-            # Create message metadata on the server instead of trusting the client
+            # The server assigns message identity author and timestamp
             message_event = ChatMessageServerEvent(
                 message_id=uuid4(),
                 author=user,
@@ -495,13 +466,12 @@ async def global_chat_socket(
                 sent_at=datetime.now(timezone.utc),
             )
 
-            # Send the validated message to every authenticated connection
+            # Broadcast only server-created messages to authenticated sockets
             await global_chat_manager.broadcast(
                 message_event
             )
 
     except WebSocketDisconnect:
-        # Normal client disconnect does not need to be reported as an error
         return
     except Exception:
         # Never log tokens or raw client payloads
@@ -510,7 +480,6 @@ async def global_chat_socket(
         )
 
         try:
-            # Use the manager only when the socket has already been registered
             if is_registered:
                 await _send_registered_error(
                     websocket,
@@ -524,7 +493,6 @@ async def global_chat_socket(
                     message="Unexpected chat error",
                 )
         except Exception:
-            # Do not hide the original failure if sending the error also fails
             pass
 
         await _close_safely(
@@ -532,8 +500,11 @@ async def global_chat_socket(
             INTERNAL_ERROR_CLOSE_CODE,
         )
     finally:
-        # Always remove registered sockets when their lifecycle finishes
         if is_registered:
+            # Cleanup always removes the socket even after errors or normal disconnects
             await global_chat_manager.disconnect(
                 websocket
             )
+
+            # Tell remaining clients that the logged user list changed
+            await global_chat_manager.broadcast_presence()

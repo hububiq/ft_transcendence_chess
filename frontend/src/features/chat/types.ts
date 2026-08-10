@@ -1,14 +1,8 @@
-// Keep the frontend message limit consistent with the backend contract
 export const CHAT_MESSAGE_MAX_LENGTH = 500;
-
-// Limit the size of error messages accepted from the server
 export const CHAT_ERROR_MESSAGE_MAX_LENGTH = 200;
-
-// Keep only a limited number of messages in the current browser session
 export const MAX_VISIBLE_CHAT_MESSAGES = 200;
 
-
-// Describe every connection state that can be shown in the UI
+// Represent the full lifecycle of the global chat WebSocket connection
 export type ChatConnectionState =
   | "disconnected"
   | "connecting"
@@ -17,42 +11,36 @@ export type ChatConnectionState =
   | "reconnecting"
   | "error";
 
-
-// Store only the public identity provided by the server
+// Public user identity shared by chat messages and presence updates
 export interface ChatAuthor {
   id: number;
   username: string;
 }
 
-
-// Send the access token as the first event after opening the socket
+// Authentication must be the first event sent by the client
 export interface AuthenticateClientEvent {
   type: "authenticate";
   access_token: string;
 }
 
-
-// Send only message text without client-controlled author data
+// The client sends only message text and never controls the author
 export interface SendMessageClientEvent {
   type: "chat_message";
   text: string;
 }
 
-
-// List every event that the browser is allowed to send
+// Events that are allowed to travel from the client to the backend
 export type ChatClientEvent =
   | AuthenticateClientEvent
   | SendMessageClientEvent;
 
-
-// Confirm that the server accepted the authenticated user
+// Confirms that the backend verified the current WebSocket user
 export interface AuthenticatedServerEvent {
   type: "authenticated";
   user: ChatAuthor;
 }
 
-
-// Describe a trusted chat message created by the server
+// Chat messages received from the backend contain server-controlled metadata
 export interface ChatMessageServerEvent {
   type: "chat_message";
   message_id: string;
@@ -61,8 +49,13 @@ export interface ChatMessageServerEvent {
   sent_at: string;
 }
 
+// Presence is a complete snapshot of currently connected authenticated users
+export interface PresenceServerEvent {
+  type: "presence";
+  users: ChatAuthor[];
+}
 
-// List every safe chat error code returned by the backend
+// Public error codes shared between the backend protocol and frontend UI
 export type ChatErrorCode =
   | "AUTH_REQUIRED"
   | "AUTH_INVALID"
@@ -74,23 +67,20 @@ export type ChatErrorCode =
   | "RATE_LIMITED"
   | "INTERNAL_ERROR";
 
-
-// Describe a safe error event returned by the server
 export interface ErrorServerEvent {
   type: "error";
   code: ChatErrorCode;
   message: string;
 }
 
-
-// List every event that the frontend accepts from the server
+// Every validated event that the backend may send to the frontend
 export type ChatServerEvent =
   | AuthenticatedServerEvent
   | ChatMessageServerEvent
+  | PresenceServerEvent
   | ErrorServerEvent;
 
-
-// Give the UI a clear result after trying to send a message
+// Return a predictable result to the UI without throwing for expected send failures
 export type SendChatMessageResult =
   | {
       ok: true;
