@@ -84,7 +84,7 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
 # ------------------------------------------------------------
 # Game WebSocket (game_id + user_id)
 # ------------------------------------------------------------
-@app.websocket("/ws/game/{game_id}/{user_id}")
+@app.websocket("/ws/game/{game_id}")
 async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
     # NEW: pass user_id into manager.connect()
     await manager.connect(game_id, websocket, user_id)
