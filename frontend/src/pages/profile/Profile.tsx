@@ -74,9 +74,11 @@ export function Profile() {
               </div>
             </div>
 
-            <p className="text-neutral-300 text-sm max-w-2xl">
-              {user?.profile?.bio}
-            </p>
+			<div className="max-w-3xs overflow-hidden">
+				<p className="text-neutral-300 text-sm max-w-2xl">
+				{user?.profile?.bio}
+				</p>
+			</div>
           </div>
 
           {/* Edit Profile Button & Modal */}
