@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
-import { Link, useParams } from "react-router";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
 import { useUser } from "../../hooks/useUser";
@@ -7,45 +7,55 @@ import { useWebSocket } from "../../hooks/useWebSocket";
 import avatar_1 from "../../assets/avatar_1.png";
 import avatar_2 from "../../assets/avatar_2.png";
 import { resolveMediaUrl } from "../../utils/utils";
-
 import { GameSidebar } from "../../features/gameplay/components/GameSidebar";
-
-interface Move {
-  n: number;
-  white: string;
-  black?: string;
-}
-
-const formatNotation = (move?: string) => {
-  if (!move) return "";
-  return move
-    .replace(/N/g, "♞")
-    .replace(/B/g, "♝")
-    .replace(/R/g, "♜")
-    .replace(/Q/g, "♛")
-    .replace(/K/g, "♚");
-};
+import { GameOverModal } from "../../features/gameplay/components/GameOverModal";
+import { type GameOutcome } from "../../utils/constants";
+import { api } from "../../api/axios";
+import {
+  type MoveRecord,
+  parseHistory,
+  formatNotation,
+} from "../../utils/chessHelpers";
 
 export function Game() {
   const { gameId } = useParams<{ gameId: string }>();
   const { user } = useUser();
 
+  const [opponentId, setOpponentId] = useState<number | null>(null);
+
   // Game States
   const [playerColor, setPlayerColor] = useState<"w" | "b">("w");
   const [currentFen, setCurrentFen] = useState("start");
-  const [moveHistory, setMoveHistory] = useState<Move[]>([]);
-
-  // Clocks & Turns
-  const [playerTime, setPlayerTime] = useState(600);
-  const [opponentTime, setOpponentTime] = useState(600);
-  const [gameOver, setGameOver] = useState(false);
+  const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
+  const [gameOver, setGameOver] = useState<GameOutcome | null>(null);
   const [isResignModalOpen, setIsResignModalOpen] = useState(false);
   const [isWaitingForRematch, setIsWaitingForRematch] = useState(false);
   const [receivedRematchOffer, setReceivedRematchOffer] = useState(false);
 
+  // Clocks & Turns
+  const [playerTime, setPlayerTime] = useState(600);
+  const [opponentTime, setOpponentTime] = useState(600);
+
   // Derive active turn safely
   const activeColor = currentFen === "start" ? "w" : currentFen.split(" ")[1];
   const isPlayerTurn = activeColor === playerColor;
+  const navigate = useNavigate();
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+
+  const handleHomeClick = () => {
+    if (gameOver) {
+      navigate("/");
+    } else {
+      setShowLeaveConfirm(true);
+    }
+  };
+  const confirmLeave = () => {
+    sendMessage({
+      type: "surrender",
+      player_id: user?.id,
+    });
+    navigate("/");
+  };
 
   const [opponent, setOpponent] = useState({
     username: "Waiting...",
@@ -53,23 +63,35 @@ export function Game() {
     avatar: avatar_1,
   });
 
-  const handleServerMessage = useCallback((data: any) => {
+  const handleServerMessage = (data: any) => {
+    console.log("WebSocket Data Received:", data);
+    if (data.opponent) {
+      setOpponent(data.opponent);
+    }
+
     switch (data.type) {
       case "board_state":
         setCurrentFen(data.fen);
         if (data.color) setPlayerColor(data.color);
-        if (data.opponent) setOpponent(data.opponent);
+        if (data.opponent_id) {
+          setOpponentId(data.opponent_id);
+          setOpponent((prev) => ({
+            ...prev,
+            username: `Loading Opponent...`,
+          }));
+        }
+        if (data.history) {
+          setMoveHistory(parseHistory(data.history));
+        }
         break;
 
       case "move":
         setCurrentFen(data.fen);
         setMoveHistory((prev) => {
           const lastMove = prev[prev.length - 1];
-
           const prettyMove = formatNotation(data.san_move);
 
           if (!lastMove || lastMove.black) {
-            // 💡 CHANGE 5: Updated to use 'n' instead of 'number'
             return [...prev, { n: prev.length + 1, white: prettyMove }];
           } else {
             const newHistory = [...prev];
@@ -83,32 +105,36 @@ export function Game() {
         break;
 
       case "game_over":
-        setGameOver(true);
-        setIsResignModalOpen(false); // Force modal closed if backend ends game
+        if (data.result === "1/2-1/2") {
+          setGameOver("draw");
+        } else if (data.loser_id === user?.id) {
+          setGameOver("loss");
+        } else if (data.winner_id === user?.id) {
+          setGameOver("win");
+        } else {
+          setGameOver("draw");
+        }
+        setIsResignModalOpen(false);
         break;
 
       case "rematch_request":
-        // The opponent clicked Rematch! Show the modal to this player.
         setReceivedRematchOffer(true);
         break;
 
       case "rematch_accepted":
-        // The opponent accepted! Navigate BOTH players to the brand new game URL
-        // (Assuming you use react-router, adjust this to however you navigate)
         window.location.href = `/game/${data.new_game_id}`;
         break;
 
       case "rematch_declined":
-        // The opponent said no. Reset our waiting button.
         setIsWaitingForRematch(false);
-        alert("Opponent declined the rematch."); // Or show a nicer toast notification
+        alert("Opponent declined the rematch.");
         break;
 
       case "error":
         console.error("Server Error:", data.message);
         break;
     }
-  }, []);
+  };
 
   const { sendMessage } = useWebSocket({
     url:
@@ -118,6 +144,33 @@ export function Game() {
     enabled: !!gameId && !!user?.id,
     onMessage: handleServerMessage,
   });
+
+  // fetch opponents ID
+  useEffect(() => {
+    if (!opponentId) return;
+
+    const fetchOpponentProfile = async () => {
+      try {
+        const response = await api.get(
+          `http://localhost:8000/api/users/${opponentId}/`,
+        );
+        const data = response.data;
+
+        console.log("Opponent Profile Data:", data);
+
+        setOpponent({
+          username: data.username || "Unknown",
+          elo_rating: data.profile.elo_rating || "?",
+          avatar: data.avatar || avatar_2,
+        });
+      } catch (error) {
+        console.error("Error fetching opponent:", error);
+        setOpponent((prev) => ({ ...prev, username: "Player--" }));
+      }
+    };
+
+    fetchOpponentProfile();
+  }, [opponentId]);
 
   // Clock countdown logic
   useEffect(() => {
@@ -180,23 +233,25 @@ export function Game() {
   return (
     <div className="min-h-screen bg-black flex flex-col text-neutral-200 relative">
       {/*Rematch Offer Modal*/}
-      {receivedRematchOffer && (
-        <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 max-w-sm w-full shadow-2xl transition-all">
-            <h2 className="text-xl font-bold text-white mb-2">Rematch?</h2>
-            <p className="text-neutral-400 text-sm mb-6">
-              Your opponent has challenged you to a rematch. Do you accept?
-            </p>
-            <div className="flex gap-3">
+      {receivedRematchOffer && !gameOver && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-70">
+          <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">Rematch?</h2>
+              <p className="text-neutral-500 text-sm">
+                Your opponent has challenged you to a rematch. Do you accept?
+              </p>
+            </div>
+            <div className="flex gap-3 w-full">
               <button
                 onClick={handleDeclineRematch}
-                className="flex-1 py-2.5 rounded-lg font-medium text-neutral-300 bg-neutral-800 hover:bg-neutral-700 transition-colors"
+                className="flex-1 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg text-sm font-medium transition-colors"
               >
                 Decline
               </button>
               <button
                 onClick={handleAcceptRematch}
-                className="flex-1 py-2.5 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                className="flex-1 py-2.5 bg-blue-950/30 hover:bg-blue-900/40 text-blue-500 border border-blue-900/30 rounded-lg text-sm font-medium transition-colors"
               >
                 Accept
               </button>
@@ -206,24 +261,28 @@ export function Game() {
       )}
 
       {/*Resign Modal*/}
-      {isResignModalOpen && (
-        <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 max-w-sm w-full shadow-2xl transition-all">
-            <h2 className="text-xl font-bold text-white mb-2">Resign Game?</h2>
-            <p className="text-neutral-400 text-sm mb-6">
-              Are you sure you want to resign? This will count as a loss and
-              your ELO will be updated.
-            </p>
-            <div className="flex gap-3">
+      {isResignModalOpen && !gameOver && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-70">
+          <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">
+                Resign Game?
+              </h2>
+              <p className="text-neutral-500 text-sm">
+                Are you sure you want to resign? This will count as a loss and
+                your ELO will be updated.
+              </p>
+            </div>
+            <div className="flex gap-3 w-full">
               <button
                 onClick={() => setIsResignModalOpen(false)}
-                className="flex-1 py-2.5 rounded-lg font-medium text-neutral-300 bg-neutral-800 hover:bg-neutral-700 transition-colors"
+                className="flex-1 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg text-sm font-medium transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmResign}
-                className="flex-1 py-2.5 rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
+                className="flex-1 py-2.5 bg-red-950/30 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded-lg text-sm font-medium transition-colors"
               >
                 Yes, Resign
               </button>
@@ -232,14 +291,50 @@ export function Game() {
         </div>
       )}
 
+      {/*Game Over Modal*/}
+      {gameOver && (
+        <div className="relative z-70">
+          <GameOverModal outcome={gameOver} onRestart={handleRematchRequest} />
+        </div>
+      )}
+
+      {/*Leave Warning Modal */}
+      {showLeaveConfirm && !gameOver && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-70">
+          <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">Leave Game?</h2>
+              <p className="text-neutral-500 text-sm">
+                If you leave now, you will automatically resign and lose ELO.
+                Are you sure?
+              </p>
+            </div>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="flex-1 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg text-sm font-medium transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                onClick={confirmLeave}
+                className="flex-1 py-2.5 bg-red-950/30 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded-lg text-sm font-medium transition-colors"
+              >
+                Yes, Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="p-4 border-b border-neutral-900 flex items-center justify-between">
-        <Link
-          to="/"
-          className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors text-sm font-medium"
+        <button
+          onClick={handleHomeClick}
+          className="flex items-center gap-2 text-neutral-500 hover:text-white transition-colors text-sm font-medium bg-transparent border-none cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Home
-        </Link>
+        </button>
         <div className="text-xs font-bold tracking-widest text-neutral-600 uppercase">
           Rapid 10|0 • Ranked
         </div>
@@ -275,11 +370,11 @@ export function Game() {
           </div>
 
           {/* Board */}
-          <div className="w-[600px] h-[600px] rounded-sm overflow-hidden border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800 pointer-events-auto">
+          <div className="w-[600px] h-[600px] rounded-sm relative z-50 border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800 pointer-events-auto">
             <ChessBoard
               fen={currentFen}
               onMove={handlePlayerMove}
-              onGameEnd={() => setGameOver(true)}
+              onGameEnd={setGameOver as any}
               playerColor={playerColor}
             />
           </div>
@@ -302,7 +397,7 @@ export function Game() {
                 <h3 className="font-semibold text-lg text-white">
                   {user?.username || "Loading..."}{" "}
                   <span className="text-sm font-normal text-neutral-500">
-                    ({user?.profile?.elo_rating || "1200"})
+                    ({user?.profile?.elo_rating || ""})
                   </span>
                 </h3>
               </div>
@@ -317,7 +412,7 @@ export function Game() {
 
         <GameSidebar
           mode="multiplayer"
-          isGameOver={gameOver}
+          isGameOver={!!gameOver}
           isWaitingForRematch={isWaitingForRematch}
           moveHistory={moveHistory}
           onLeftAction={

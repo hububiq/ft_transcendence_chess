@@ -6,7 +6,7 @@
 **Step A: Configure Environment Variables (.env)**
 1. Copy the `.env.example` file and rename it to `.env`.
 
-2. **PASSWORD COMPLIANCE:** You must ensure the password defined in `POSTGRES_PASSWORD` perfectly matches the password written inside the `DATABASE_URL` string. If they do not match, PostgreSQL will lock Django out.
+2. (outdated)**PASSWORD COMPLIANCE:** You must ensure the password defined in `POSTGRES_PASSWORD` perfectly matches the password written inside the `DATABASE_URL` string. If they do not match, PostgreSQL will lock Django out.
 **Django project SECRET_KEY** you can generate at https://djecrety.ir/ and copy paste to your own .env.
    ```env
     # Example: 'supersecret42' MUST be exactly the same in both places!
@@ -90,7 +90,7 @@ INSTALLED_APPS = [
 
 After pushing new requirements or settings.py, anyone pulling must remember to migrate models to update one's local database and **setup OAuth infrastructure (requires client ID and secret github key - ask superuser for that)**
 ```bash
-sudo docker exec -it django_backend python setup_oauth.py
+docker exec -it django_backend python setup_oauth.py
 ```
  
 ### How to create superuser to manage CRUD

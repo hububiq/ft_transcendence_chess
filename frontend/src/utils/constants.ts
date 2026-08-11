@@ -1,27 +1,9 @@
-import {
-  Zap,
-  Trophy,
-  Shield,
-  Star,
-  Award,
-} from "lucide-react";
+import { Zap, Trophy, Shield, Star, Award } from "lucide-react";
 
 export const USER_REGEX = /^[A-Za-z][A-Za-z0-9_-]{3,23}$/;
 export const PWD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[a-zA-Z0-9]{8,24}$/;
 
-export type Difficulty = "easy" | "medium" | "hard" | "master";
-
 export type GameOutcome = "win" | "loss" | "draw";
-
-export const DIFFICULTY_CONFIG: Record<
-  Difficulty,
-  { label: string; elo: number; color: string; delay: number }
-> = {
-  easy: { label: "Easy", elo: 800, color: "text-green-500", delay: 1200 },
-  medium: { label: "Medium", elo: 1400, color: "text-yellow-500", delay: 800 },
-  hard: { label: "Hard", elo: 1900, color: "text-orange-500", delay: 500 },
-  master: { label: "Master", elo: 2400, color: "text-red-500", delay: 200 },
-};
 
 export const PIECE_SYMBOLS: Record<string, string> = {
   r: "♜",
@@ -83,5 +65,3 @@ export const achievements = [
     rarity: "common",
   },
 ];
-
-

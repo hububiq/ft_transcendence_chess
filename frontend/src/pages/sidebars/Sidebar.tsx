@@ -12,6 +12,7 @@ import clsx from "clsx";
 import { useUser } from "../../hooks/useUser";
 import { useAuth } from "../../features/auth/context/AuthProvider";
 import { resolveMediaUrl } from "../../utils/utils";
+import playerAvatar from "../../assets/avatar_1.png";
 
 export function Sidebar() {
   const location = useLocation();
@@ -71,11 +72,9 @@ export function Sidebar() {
           className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-black border border-neutral-900 hover:border-neutral-700 transition-colors cursor-pointer"
         >
           <img
-            src={
-              resolveMediaUrl(user?.profile?.avatar) ||
-              user?.profile?.oauth_avatar_url ||
-              "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=150&h=150"
-            }
+
+            src={user?.profile.avatar || playerAvatar}
+
             alt="User Avatar"
             className="w-10 h-10 rounded-full border border-neutral-800 object-cover"
           />
