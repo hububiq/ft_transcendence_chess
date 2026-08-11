@@ -8,6 +8,7 @@ import { ParticipantBannerBot } from "../../features/gameplay/components/Partici
 import { GameSidebar } from "../../features/gameplay/components/GameSidebar";
 import clsx from "clsx";
 import playerAvatar from "../../assets/avatar_1.png";
+import { formatNotation } from "../../utils/chessHelpers";
 import { useUser } from "../../hooks/useUser";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { createBotGame } from "../../api/gameApi";
