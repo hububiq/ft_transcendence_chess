@@ -7,6 +7,7 @@ import { StatsGrid } from "./ProfileStatsGrid";
 import { useUpdateUser } from "../../hooks/useUpdateUser";
 import type { UserData } from "../../utils/interfaces";
 import { Achievements } from "./ProfileAchievements";
+import playerAvatar from "../../assets/avatar_1.png";
 import { resolveMediaUrl } from "../../utils/utils";
 
 export function Profile() {
