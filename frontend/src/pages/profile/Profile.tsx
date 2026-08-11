@@ -7,7 +7,7 @@ import { StatsGrid } from "./ProfileStatsGrid";
 import { useUpdateUser } from "../../hooks/useUpdateUser";
 import type { UserData } from "../../utils/interfaces";
 import { Achievements } from "./ProfileAchievements";
-import playerAvatar from "../../assets/avatar_1.png";
+import { resolveMediaUrl } from "../../utils/utils";
 
 export function Profile() {
   const { user, setUser, loading, error } = useUser();
@@ -20,9 +20,9 @@ export function Profile() {
     );
   }
 
-  const handleSave = async (formData: UserData) => {
+  const handleSave = async (formData: UserData, avatarFile?: File | null) => {
     if (!user) return;
-    const updatedUser = await updateUser(user, formData);
+    const updatedUser = await updateUser(user, formData, avatarFile);
     if (updatedUser) {
       setUser(updatedUser);
       setIsEditing(false);

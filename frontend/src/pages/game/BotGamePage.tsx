@@ -11,11 +11,8 @@ import playerAvatar from "../../assets/avatar_1.png";
 import { useUser } from "../../hooks/useUser";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { createBotGame } from "../../api/gameApi";
-import {
-  type MoveRecord,
-  parseHistory,
-  formatNotation,
-} from "../../utils/chessHelpers";
+import { resolveMediaUrl } from "../../utils/utils";
+
 
 const SYSTEM_BOT_ID = null;
 
@@ -285,7 +282,11 @@ export function BotGame() {
             <ParticipantBannerBot
               avatar={
                 <img
-                  src={user?.profile?.avatar || playerAvatar}
+                  src={
+                    resolveMediaUrl(user?.profile?.avatar) ||
+                    user?.profile?.oauth_avatar_url ||
+                    playerAvatar
+                  }
                   alt="Player avatar"
                   className="w-12 h-12 rounded-lg border-2 border-blue-500 object-cover"
                 />
