@@ -16,4 +16,4 @@ frontend/build/
 build/
 
 
-backend/
+venv/
