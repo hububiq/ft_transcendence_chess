@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import select
 from database import async_session
+from auth import get_current_user
 
 from models import (
     Tournament,
@@ -78,8 +79,38 @@ async def create_tournament(creator_id: int, size: int = 8):
         await session.commit()
         await session.refresh(tournament)
 
-        return {"tournament_id": tournament.id, "status": "waiting"}
+        return {"id": tournament.id, "status": "waiting"}
 
+
+# ------------------------------------------------------------
+# DELETE TOURNAMENT
+# ------------------------------------------------------------
+@router.delete("/{tournament_id}/delete")
+async def delete_tournament(tournament_id: int, user = Depends(get_current_user)): # This automatically decodes the JWT and gets the secure ID!
+    async with async_session as session:
+        # 1. Find the tournament in the database
+        tournament = await session.get(Tournament, tournament_id)
+        if not tournament:
+            raise HTTPException(status_code=404, detail="Tournament not found")
+
+        # 2. SECURITY CHECK: Is the person clicking the button the actual creator?
+        if tournament.creator_id != user.id:
+            raise HTTPException(status_code=403, detail="Forbidden: You are not the creator of this tournament!")
+        
+        # 3. Clean up the database (Delete Participants & Matches first to prevent SQL Foreign Key crashes)
+        participants_res = await session.execute(select(TournamentParticipant).where(TournamentParticipant.tournament_id == tournament_id))
+        for p in participants_res.scalars().all():
+            await session.delete(p)
+
+        matches_res = await session.execute(select(TournamentMatch).where(TournamentMatch.tournament_id == tournament_id))
+        for m in matches_res.scalars().all():
+            await session.delete(m)
+
+        # 4. Delete the Tournament itself
+        await session.delete(tournament)
+        await session.commit()
+
+        return {"message": f"Tournament {tournament_id} has been securely deleted."}
 
 # ------------------------------------------------------------
 # JOIN TOURNAMENT
@@ -115,6 +146,7 @@ async def join_tournament(tournament_id: int, player_id: int):
         await session.commit()
 
         # Auto-start when minimum 4 players joined
+        # !!! DUE TO CORRECTION - tournament can be started by creator when at least 4 players within !!!
         if len(participants_list) + 1 >= 4:
             await _start_tournament(tournament, session)
 
