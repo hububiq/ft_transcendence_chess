@@ -79,7 +79,7 @@ async def create_tournament(creator_id: int, size: int = 8):
         await session.commit()
         await session.refresh(tournament)
 
-        return {"tournament_id": tournament.id, "status": "waiting"}
+        return {"id": tournament.id, "status": "waiting"}
 
 
 # ------------------------------------------------------------
