@@ -132,7 +132,7 @@ async def get_player_tournament(player_id: int):
                 TournamentParticipant.player_id == player_id
             )
         )
-        tp = result.scalars.first()
+        tp = result.scalars().first()
         if not tp:
             return {"active": False}
 
@@ -156,7 +156,7 @@ async def get_next_match(tournament_id: int, player_id: int):
                 (TournamentMatch.player2 == player_id)
             )
         )
-        matches = result.scalars.all()
+        matches = result.scalars().all()
 
         for m in matches:
             if m.winner is None:
