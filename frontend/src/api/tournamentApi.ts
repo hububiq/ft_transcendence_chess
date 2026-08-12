@@ -113,7 +113,7 @@ export async function getTournamentHistory(
 
 // GET /{tournament_id}/
 export async function getTournamentDetails(tournamentId: number | string) {
-  const response = await api.get(`/api/tournaments/${tournamentId}/`);
+  const response = await api.get(`/api/tournaments/${tournamentId}/`, config);
   return response.data;
 }
 

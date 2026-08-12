@@ -66,7 +66,8 @@ async def get_tournament(tournament_id: int):
 @router.post("/create")
 async def create_tournament(creator_id: int, size: int = 8):
     if size not in [4, 5, 6, 7, 8]:
-        raise HTTPException(status_code=400, detail="Tournament size must be 4–8 players.")
+        raise HTTPException(
+            status_code=400, detail="Tournament size must be 4–8 players.")
 
     async with async_session() as session:
         tournament = Tournament(
@@ -78,7 +79,7 @@ async def create_tournament(creator_id: int, size: int = 8):
         await session.commit()
         await session.refresh(tournament)
 
-        return {"tournament_id": tournament.id, "status": "waiting"}
+        return {"id": tournament.id, "status": "waiting"}
 
 
 # ------------------------------------------------------------
@@ -92,19 +93,20 @@ async def join_tournament(tournament_id: int, player_id: int):
             raise HTTPException(status_code=404, detail="Tournament not found")
 
         if tournament.status != "waiting":
-            raise HTTPException(status_code=400, detail="Tournament already started")
+            raise HTTPException(
+                status_code=400, detail="Tournament already started")
 
         result = await session.execute(
             select(TournamentParticipant).where(
                 TournamentParticipant.tournament_id == tournament_id
-                )
+            )
         )
         participants_list = result.scalars().all()
 
         if len(participants_list) >= tournament.size:
             raise HTTPException(status_code=400, detail="Tournament is full")
 
-        bracket_position = len(participants.scalars().all()) + 1
+        bracket_position = len(participants_list) + 1
 
         tp = TournamentParticipant(
             tournament_id=tournament_id,
@@ -115,7 +117,7 @@ async def join_tournament(tournament_id: int, player_id: int):
         await session.commit()
 
         # Auto-start when minimum 4 players joined
-        if len(participants_list) + 1 >= 4:
+        if len(participants_list) + 1 >= tournament.size:
             await _start_tournament(tournament, session)
 
         return {"joined": True, "position": bracket_position}
@@ -200,6 +202,8 @@ async def get_tournament_history(tournament_id: int):
 # ------------------------------------------------------------
 # INTERNAL: START TOURNAMENT
 # ------------------------------------------------------------
+
+
 async def _start_tournament(tournament: Tournament, session):
     tournament.status = "ongoing"
     session.add(tournament)
@@ -212,7 +216,7 @@ async def _start_tournament(tournament: Tournament, session):
         )
     )
     participants = participants_result.scalars().all()
-    
+
     players = [p.player_id for p in participants]
 
     # Generate bracket (with byes)
@@ -222,4 +226,3 @@ async def _start_tournament(tournament: Tournament, session):
     await import_bracket(tournament.id, rounds, session)
 
     return True
-
