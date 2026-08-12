@@ -16,7 +16,7 @@ export interface JoinTournamentRequest {
 }
 
 export interface Tournament {
-  id: number;
+  tournament_id: number;
   status: string;
   creator_id: number;
   size: number;
@@ -42,11 +42,10 @@ export async function getTournament(
 export async function createTournament(
   payload: CreateTournamentRequest,
 ): Promise<Tournament> {
-  const response = await api.post<Tournament>(
-    "/api/tournaments/create",
-    payload,
-    config,
-  );
+  const response = await api.post<Tournament>("/api/tournaments/create", null, {
+    ...config,
+    params: payload,
+  });
   return response.data;
 }
 
@@ -57,8 +56,8 @@ export async function joinTournament(
 ): Promise<any> {
   const response = await api.post(
     `/api/tournaments/${tournamentId}/join`,
-    payload,
-    config,
+    null,
+    { ...config, params: payload }, // payload as query parameter
   );
   return response.data;
 }

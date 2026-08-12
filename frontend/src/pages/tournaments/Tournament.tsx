@@ -113,7 +113,7 @@ export function Tournament() {
         // Ask backend Is this player already in a tournament?
         const currentTourney = await getPlayerTournament(user.id);
 
-        if (currentTourney && currentTourney.id) {
+        if (currentTourney && currentTourney.tournament_id) {
           setActiveTournament(currentTourney);
         } else {
           // If not, fetch all available tournaments for the lobby
@@ -139,7 +139,7 @@ export function Tournament() {
 
     const loadBracket = async () => {
       try {
-        const rawData = await getTournamentBracket(activeTournament.id);
+        const rawData = await getTournamentBracket(activeTournament.tournament_id);
 
         // Ensure the backend actually sent something before we try to map it
         if (rawData && rawData.rounds) {
@@ -161,7 +161,7 @@ export function Tournament() {
         }
 
         if (user?.id) {
-          const matchData = await getNextMatch(activeTournament.id, user.id);
+          const matchData = await getNextMatch(activeTournament.tournament_id, user.id);
 
           // Assuming the backend returns an object with a game_id when it's time to play
           if (matchData && matchData.game_id) {
@@ -181,7 +181,7 @@ export function Tournament() {
     // so you can see other players' scores update!
     const intervalId = setInterval(loadBracket, 10000);
     return () => clearInterval(intervalId);
-  }, [activeTournament?.id]);
+  }, [activeTournament?.tournament_id]);
 
   // ACTIONS
   const handleCreate = async () => {
@@ -194,7 +194,7 @@ export function Tournament() {
       });
 
       // Auto-join the creator to their own tournament to save them a click
-      await joinTournament(newTourney.id, { player_id: user.id });
+      await joinTournament(newTourney.tournament_id, { player_id: user.id });
 
       const current = await getPlayerTournament(user.id);
       setActiveTournament(current);
@@ -254,12 +254,12 @@ export function Tournament() {
           ) : (
             lobbyTournaments.map((tourney) => (
               <div
-                key={tourney.id}
+                key={tourney.tournament_id}
                 className="bg-[#0a0a0a] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 hover:border-neutral-700 transition-colors"
               >
                 <div className="flex justify-between items-start">
                   <h3 className="text-lg font-bold text-white">
-                    Tournament #{tourney.id}
+                    Tournament #{tourney.tournament_id}
                   </h3>
                   <span className="bg-neutral-900 text-neutral-400 text-xs px-2 py-1 rounded">
                     {tourney.status || "Waiting"}
@@ -270,7 +270,7 @@ export function Tournament() {
                   <span>Capacity: {tourney.size || 4} Players</span>
                 </div>
                 <button
-                  onClick={() => handleJoin(tourney.id)}
+                  onClick={() => handleJoin(tourney.tournament_id)}
                   className="mt-2 w-full py-2 bg-blue-950/30 hover:bg-blue-900/40 text-blue-500 border border-blue-900/30 rounded-lg text-sm font-medium transition-colors"
                 >
                   Join Tournament
@@ -290,7 +290,7 @@ export function Tournament() {
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
             <Trophy className="w-8 h-8 text-purple-500" />
-            Tournament #{activeTournament.id}
+            Tournament #{activeTournament.tournament_id}
           </h2>
           {/* 💡 Dynamic status text */}
           <p className="text-neutral-500 mt-2 text-sm">
