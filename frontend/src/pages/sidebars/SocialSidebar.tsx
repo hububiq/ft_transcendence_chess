@@ -18,6 +18,10 @@ export function SocialSidebar() {
     friends,
     isLoading: areFriendsLoading,
     errorMessage: friendsErrorMessage,
+    pendingFriendId,
+    actionErrorMessage,
+    addFriend,
+    removeFriend,
   } = useFriends();
 
   const { onlineUsers } = useGlobalChat();
@@ -59,6 +63,13 @@ export function SocialSidebar() {
             Logged Users
           </button>
         </div>
+
+
+        {actionErrorMessage && (
+          <p className="px-2 text-xs text-red-400">
+            {actionErrorMessage}
+          </p>
+        )}
 
         {activeSocialTab === "friends" && (
           <div className="space-y-1">
@@ -119,6 +130,18 @@ export function SocialSidebar() {
                         ELO {friend.profile.elo_rating}
                       </p>
                     </div>
+                    <button
+                      type="button"
+                      disabled={pendingFriendId !== null}
+                      onClick={() => {
+                        void removeFriend(friend.id);
+                      }}
+                      className="shrink-0 rounded-md border border-neutral-800 px-2 py-1 text-[10px] font-medium text-neutral-500 transition-colors hover:border-red-900 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {pendingFriendId === friend.id
+                        ? "Removing..."
+                        : "Remove"}
+                    </button>
                   </div>
                 );
               })}
@@ -127,7 +150,14 @@ export function SocialSidebar() {
         
 
         {activeSocialTab === "logged" && (
-          <LoggedUsersPanel />
+          <LoggedUsersPanel 
+            friends={friends}
+            friendActionsAvailable={
+              !areFriendsLoading && !friendsErrorMessage
+            }
+            pendingFriendId={pendingFriendId}
+            onAddFriend={addFriend}
+          />
         )}
       </div>
 
