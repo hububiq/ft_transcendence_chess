@@ -13,7 +13,7 @@ import { useUser } from "../../hooks/useUser";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { createBotGame } from "../../api/gameApi";
 import { resolveMediaUrl } from "../../utils/utils";
-
+import { type MoveRecord, parseHistory } from "../../utils/chessHelpers";
 
 const SYSTEM_BOT_ID = null;
 
