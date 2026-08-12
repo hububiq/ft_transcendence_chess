@@ -94,14 +94,14 @@ async def join_tournament(tournament_id: int, player_id: int):
         if tournament.status != "waiting":
             raise HTTPException(status_code=400, detail="Tournament already started")
 
-        # Count current participants
-        participants = await session.execute(
+        result = await session.execute(
             select(TournamentParticipant).where(
                 TournamentParticipant.tournament_id == tournament_id
-            )
+                )
         )
+        participants_list = result.scalars().all()
 
-        if len(participants.scalars().all()) >= tournament.size:
+        if len(participants_list) >= tournament.size:
             raise HTTPException(status_code=400, detail="Tournament is full")
 
         bracket_position = len(participants.scalars().all()) + 1
@@ -115,7 +115,7 @@ async def join_tournament(tournament_id: int, player_id: int):
         await session.commit()
 
         # Auto-start when minimum 4 players joined
-        if len(participants.scalars().all()) + 1 >= 4:
+        if len(participants_list) + 1 >= 4:
             await _start_tournament(tournament, session)
 
         return {"joined": True, "position": bracket_position}
@@ -127,12 +127,12 @@ async def join_tournament(tournament_id: int, player_id: int):
 @router.get("/player/{player_id}")
 async def get_player_tournament(player_id: int):
     async with async_session() as session:
-        result = await session.exec(
+        result = await session.execute(
             select(TournamentParticipant).where(
                 TournamentParticipant.player_id == player_id
             )
         )
-        tp = result.first()
+        tp = result.scalars.first()
         if not tp:
             return {"active": False}
 
@@ -149,14 +149,14 @@ async def get_player_tournament(player_id: int):
 @router.get("/{tournament_id}/next/{player_id}")
 async def get_next_match(tournament_id: int, player_id: int):
     async with async_session() as session:
-        result = await session.exec(
+        result = await session.execute(
             select(TournamentMatch).where(
                 TournamentMatch.tournament_id == tournament_id,
                 (TournamentMatch.player1 == player_id) |
                 (TournamentMatch.player2 == player_id)
             )
         )
-        matches = result.all()
+        matches = result.scalars.all()
 
         for m in matches:
             if m.winner is None:
@@ -171,12 +171,12 @@ async def get_next_match(tournament_id: int, player_id: int):
 @router.get("/{tournament_id}/bracket")
 async def get_bracket(tournament_id: int):
     async with async_session() as session:
-        result = await session.exec(
+        result = await session.execute(
             select(TournamentMatch).where(
                 TournamentMatch.tournament_id == tournament_id
             )
         )
-        matches = result.all()
+        matches = result.scalars().all()
 
         rounds = {}
         for m in matches:
@@ -191,10 +191,10 @@ async def get_bracket(tournament_id: int):
 @router.get("/{tournament_id}/history")
 async def get_tournament_history(tournament_id: int):
     async with async_session() as session:
-        result = await session.exec(
+        result = await session.execute(
             select(Game).where(Game.tournament_id == tournament_id)
         )
-        games = result.all()
+        games = result.scalars().all()
         return {"games": games}
 
 # ------------------------------------------------------------
@@ -206,7 +206,7 @@ async def _start_tournament(tournament: Tournament, session):
     await session.commit()
 
     # Load participants
-    participants_result = await session.exec(
+    participants_result = await session.execute(
         select(TournamentParticipant).where(
             TournamentParticipant.tournament_id == tournament.id
         )
