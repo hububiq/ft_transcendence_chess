@@ -16,10 +16,17 @@ export interface JoinTournamentRequest {
 }
 
 export interface Tournament {
-  tournament_id: number;
+  id: number;
   status: string;
   creator_id: number;
   size: number;
+  winner_id?: number | null;
+  create_at?: string;
+}
+
+export interface PlayerTournamentResponse {
+  active: boolean;
+  tournament: Tournament;
 }
 
 // --- API Functions ---
@@ -64,8 +71,8 @@ export async function joinTournament(
 
 // GET /api/tournaments/player/{player_id}
 export async function getPlayerTournament(
-  playerId: number | string,
-): Promise<Tournament | null> {
+  playerId: number,
+): Promise<PlayerTournamentResponse> {
   const response = await api.get(`/api/tournaments/player/${playerId}`, config);
   return response.data;
 }
@@ -100,6 +107,24 @@ export async function getTournamentHistory(
   const response = await api.get(
     `/api/tournaments/${tournamentId}/history`,
     config,
+  );
+  return response.data;
+}
+
+// GET /{tournament_id}/
+export async function getTournamentDetails(tournamentId: number | string) {
+  const response = await api.get(`/api/tournaments/${tournamentId}/`);
+  return response.data;
+}
+
+// Leaving tournament
+export async function leaveTournament(
+  tournamentId: number,
+  data: { player_id: number },
+) {
+  const response = await api.post(
+    `/api/tournaments/${tournamentId}/leave`,
+    data,
   );
   return response.data;
 }
