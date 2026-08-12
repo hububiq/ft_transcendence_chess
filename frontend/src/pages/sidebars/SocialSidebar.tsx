@@ -60,68 +60,70 @@ export function SocialSidebar() {
           </button>
         </div>
 
-        <div className="space-y-1">
-          {areFriendsLoading && (
-            <p className="px-2 py-2 text-xs text-neutral-600">
-              Loading friends...
-            </p>
-          )}
-
-          {friendsErrorMessage && (
-            <p className="px-2 py-2 text-xs text-neutral-600">
-              {friendsErrorMessage}
-            </p>
-          )}
-
-          {!areFriendsLoading &&
-            !friendsErrorMessage &&
-            friends.length === 0 && (
+        {activeSocialTab === "friends" && (
+          <div className="space-y-1">
+            {areFriendsLoading && (
               <p className="px-2 py-2 text-xs text-neutral-600">
-                No friends yet
+                Loading friends...
               </p>
             )}
 
-          {!friendsErrorMessage &&
-            friends.map((friend) => {
-              // Presence changes only the status and never filters the friends list
-              const isOnline = onlineUsers.some(
-                (onlineUser) =>
-                  onlineUser.id === friend.id,
-              );
+            {friendsErrorMessage && (
+              <p className="px-2 py-2 text-xs text-neutral-600">
+                {friendsErrorMessage}
+              </p>
+            )}
 
-              return (
-                <div
-                  key={friend.id}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-900/50 cursor-pointer transition-colors group"
-                >
-                  <div className="relative">
-                    <div className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-xs font-bold text-neutral-500">
-                      {friend.username.charAt(0)}
+            {!areFriendsLoading &&
+              !friendsErrorMessage &&
+              friends.length === 0 && (
+                <p className="px-2 py-2 text-xs text-neutral-600">
+                  No friends yet
+                </p>
+              )}
+
+            {!friendsErrorMessage &&
+              friends.map((friend) => {
+                // Presence changes only the status and never filters the friends list
+                const isOnline = onlineUsers.some(
+                  (onlineUser) =>
+                    onlineUser.id === friend.id,
+                );
+
+                return (
+                  <div
+                    key={friend.id}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-900/50 cursor-pointer transition-colors group"
+                  >
+                    <div className="relative">
+                      <div className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-xs font-bold text-neutral-500">
+                        {friend.username.charAt(0)}
+                      </div>
+
+                      <div
+                        className={clsx(
+                          "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#050505]",
+                          isOnline
+                            ? "bg-green-500"
+                            : "bg-neutral-600",
+                        )}
+                      />
                     </div>
 
-                    <div
-                      className={clsx(
-                        "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#050505]",
-                        isOnline
-                          ? "bg-green-500"
-                          : "bg-neutral-600",
-                      )}
-                    />
-                  </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-neutral-400 group-hover:text-neutral-200 truncate transition-colors">
+                        {friend.username}
+                      </p>
 
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-neutral-400 group-hover:text-neutral-200 truncate transition-colors">
-                      {friend.username}
-                    </p>
-
-                    <p className="text-xs text-neutral-600">
-                      ELO {friend.profile.elo_rating}
-                    </p>
+                      <p className="text-xs text-neutral-600">
+                        ELO {friend.profile.elo_rating}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-        </div>
+                );
+              })}
+          </div>
+        )}
         
 
         {activeSocialTab === "logged" && (
