@@ -122,6 +122,82 @@ async def join_tournament(tournament_id: int, player_id: int):
 
 
 # ------------------------------------------------------------
+# GET PLAYER'S ACTIVE TOURNAMENT
+# ------------------------------------------------------------
+@router.get("/player/{player_id}")
+async def get_player_tournament(player_id: int):
+    async with async_session() as session:
+        result = await session.exec(
+            select(TournamentParticipant).where(
+                TournamentParticipant.player_id == player_id
+            )
+        )
+        tp = result.first()
+        if not tp:
+            return {"active": False}
+
+        tournament = await session.get(Tournament, tp.tournament_id)
+        return {
+            "active": True,
+            "tournament": tournament
+        }
+
+
+# ------------------------------------------------------------
+# GET NEXT MATCH FOR PLAYER
+# ------------------------------------------------------------
+@router.get("/{tournament_id}/next/{player_id}")
+async def get_next_match(tournament_id: int, player_id: int):
+    async with async_session() as session:
+        result = await session.exec(
+            select(TournamentMatch).where(
+                TournamentMatch.tournament_id == tournament_id,
+                (TournamentMatch.player1 == player_id) |
+                (TournamentMatch.player2 == player_id)
+            )
+        )
+        matches = result.all()
+
+        for m in matches:
+            if m.winner is None:
+                return {"match": m}
+
+        return {"match": None}
+
+
+# ------------------------------------------------------------
+# GET BRACKET STRUCTURE
+# ------------------------------------------------------------
+@router.get("/{tournament_id}/bracket")
+async def get_bracket(tournament_id: int):
+    async with async_session() as session:
+        result = await session.exec(
+            select(TournamentMatch).where(
+                TournamentMatch.tournament_id == tournament_id
+            )
+        )
+        matches = result.all()
+
+        rounds = {}
+        for m in matches:
+            rounds.setdefault(m.round_number, []).append(m)
+
+        return {"rounds": rounds}
+
+
+# ------------------------------------------------------------
+# GET TOURNAMENT MATCH HISTORY
+# ------------------------------------------------------------
+@router.get("/{tournament_id}/history")
+async def get_tournament_history(tournament_id: int):
+    async with async_session() as session:
+        result = await session.exec(
+            select(Game).where(Game.tournament_id == tournament_id)
+        )
+        games = result.all()
+        return {"games": games}
+
+# ------------------------------------------------------------
 # INTERNAL: START TOURNAMENT
 # ------------------------------------------------------------
 async def _start_tournament(tournament: Tournament, session):
