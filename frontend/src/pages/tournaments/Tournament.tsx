@@ -12,6 +12,7 @@ import {
   getNextMatch,
   getTournamentDetails,
   leaveTournament,
+  deleteTournament,
   type Tournament as TournamentType,
 } from "../../api/tournamentApi";
 
@@ -50,7 +51,7 @@ export function Tournament() {
     const fetchTournamentState = async () => {
       setLoading(true);
       try {
-        // Ask backend Is this player already in a tournament?
+        // Is this player already in a tournament?
         const currentTourney = await getPlayerTournament(user.id);
 
         if (currentTourney && currentTourney.tournament) {
@@ -178,6 +179,28 @@ export function Tournament() {
       setParticipants([]);
     } catch (error) {
       console.error("Error leaving tournament:", error);
+    }
+  };
+
+  // DELETE
+  const handleDelete = async () => {
+    if (!user?.id || !activeTournament?.id) return;
+
+    // Safety check just like the backend
+    if (user.id !== activeTournament.creator_id) {
+      alert("Only the tournament creator can delete this lobby.");
+      return;
+    }
+
+    try {
+      await deleteTournament(activeTournament.id);
+
+      // Wipe the local state to kick everyone back to the lobby
+      setActiveTournament(null);
+      setBracketData([]);
+      setParticipants([]);
+    } catch (error) {
+      console.error("Error deleting tournament:", error);
     }
   };
 
@@ -324,13 +347,24 @@ export function Tournament() {
             </div>
           </div>
 
-          {/*Leav Tournament Button*/}
-          <button
-            onClick={handleLeave}
-            className="mt-2 border border-red-900/50 text-red-500 bg-red-950/20 hover:bg-red-900/40 px-6 py-2.5 rounded-lg font-medium transition-colors"
-          >
-            Leave Tournament
-          </button>
+          {/* 💡 Role-based Buttons */}
+          <div className="mt-4">
+            {user?.id === activeTournament.creator_id ? (
+              <button
+                onClick={handleDelete}
+                className="border border-red-900/50 text-red-500 bg-red-950/20 hover:bg-red-900/40 px-6 py-2.5 rounded-lg font-medium transition-colors"
+              >
+                Delete Tournament
+              </button>
+            ) : (
+              <button
+                onClick={handleLeave}
+                className="border border-neutral-700 text-neutral-400 bg-neutral-900/50 hover:bg-neutral-800 hover:text-white px-6 py-2.5 rounded-lg font-medium transition-colors"
+              >
+                Leave Tournament
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <div className="flex-1 overflow-x-auto overflow-y-hidden flex items-center py-10">

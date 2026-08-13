@@ -128,3 +128,10 @@ export async function leaveTournament(
   );
   return response.data;
 }
+
+// Delete Trournament
+export async function deleteTournament(tournamentId: number) {
+  // Uses api.delete to send the authorization headers automatically
+  const response = await api.delete(`/api/tournaments/${tournamentId}/delete`);
+  return response.data;
+}
