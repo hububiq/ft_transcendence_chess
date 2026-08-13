@@ -89,7 +89,7 @@ async def create_tournament(creator_id: int, size: int = 8):
 # ------------------------------------------------------------
 @router.delete("/{tournament_id}/delete")
 async def delete_tournament(tournament_id: int, user = Depends(get_current_user)): # This automatically decodes the JWT and gets the secure ID!
-    async with async_session as session:
+    async with async_session() as session:
         # 1. Find the tournament in the database
         tournament = await session.get(Tournament, tournament_id)
         if not tournament:

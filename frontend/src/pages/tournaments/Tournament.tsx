@@ -171,7 +171,7 @@ export function Tournament() {
     if (!user?.id || !activeTournament?.id) return;
     try {
       // Tell backend to remove us
-      await leaveTournament(activeTournament.id, { player_id: user.id });
+      await leaveTournament(activeTournament.id);
 
       // Wipe the local state to kick the user back to the lobby
       setActiveTournament(null);

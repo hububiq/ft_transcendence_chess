@@ -117,14 +117,11 @@ export async function getTournamentDetails(tournamentId: number | string) {
   return response.data;
 }
 
-// Leaving tournament
-export async function leaveTournament(
-  tournamentId: number,
-  data: { player_id: number },
-) {
-  const response = await api.post(
+// Leaving tournament (Removed the data payload because backend uses your JWT token automatically!)
+export async function leaveTournament(tournamentId: number) {
+  const response = await api.delete(
     `/api/tournaments/${tournamentId}/leave`,
-    data,
+    config,
   );
   return response.data;
 }
@@ -132,6 +129,9 @@ export async function leaveTournament(
 // Delete Trournament
 export async function deleteTournament(tournamentId: number) {
   // Uses api.delete to send the authorization headers automatically
-  const response = await api.delete(`/api/tournaments/${tournamentId}/delete`);
+  const response = await api.delete(
+    `/api/tournaments/${tournamentId}/delete`,
+    config,
+  );
   return response.data;
 }
