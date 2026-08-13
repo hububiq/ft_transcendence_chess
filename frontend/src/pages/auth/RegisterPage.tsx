@@ -26,6 +26,8 @@ export function Register() {
   const userValid = USER_REGEX.test(user);
   const pwdValid = PWD_REGEX.test(pwd);
 
+  const formValid = userValid && pwdValid;
+
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
@@ -201,7 +203,12 @@ export function Register() {
             </div>
             <button
               type="submit"
-              className="w-full mt-6 bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all"
+              disabled={!formValid}
+              className={`w-full mt-6 font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
+                formValid
+                  ? "bg-blue-600 hover:bg-blue-500 text-white"
+                  : "bg-neutral-800 text-neutral-500 cursor-not-allowed"
+              }`}
             >
               Create Account
               <ArrowRight className="w-4 h-4" />
