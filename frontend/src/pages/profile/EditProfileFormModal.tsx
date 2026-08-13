@@ -3,6 +3,7 @@ import { X, AlertCircle } from "lucide-react";
 import clsx from "clsx";
 import type { UserData } from "../../utils/interfaces";
 import { resolveMediaUrl } from "../../utils/utils";
+import defaultAvatar from "../../assets/avatar_1.png";
 
 interface EditProfileFormProps {
   initialData: UserData;
@@ -24,7 +25,7 @@ export function EditProfileForm({
   const [avatarPreview, setAvatarPreview] = useState(
     resolveMediaUrl(initialData.profile.avatar) ||
       initialData.profile.oauth_avatar_url ||
-      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200&h=200",
+      defaultAvatar,
   );
   const [localError, setLocalError] = useState("");
 
@@ -34,7 +35,7 @@ export function EditProfileForm({
     setAvatarPreview(
       resolveMediaUrl(initialData.profile.avatar) ||
         initialData.profile.oauth_avatar_url ||
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200&h=200",
+        defaultAvatar,
     );
   }, [initialData]);
 
@@ -154,7 +155,7 @@ export function EditProfileForm({
               Bio
             </label>
             <textarea
-              maxLength={250}
+              maxLength={100}
               rows={3}
               value={draftData.profile.bio || ""}
               onChange={(e) =>
@@ -171,10 +172,10 @@ export function EditProfileForm({
             />
             <div className="flex items-center justify-between mt-1.5">
               <p className="text-xs text-neutral-500">
-                Bio can be up to 250 characters.
+                Bio can be up to 100 characters.
               </p>
               <p className="text-xs text-neutral-500">
-                {draftData.profile.bio?.length ?? 0}/250
+                {draftData.profile.bio?.length ?? 0}/100
               </p>
 </div>
           </div>
