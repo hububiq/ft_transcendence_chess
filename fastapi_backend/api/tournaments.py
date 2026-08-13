@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlmodel import select
 from database import async_session
 from auth import get_current_user
+from tournament_progression_service import _create_game_for_match
 
 from models import (
     Tournament,
@@ -156,6 +157,36 @@ async def join_tournament(tournament_id: int, player_id: int):
 
 
 # ------------------------------------------------------------
+# LEAVE TOURNAMENT LOBBY
+# ------------------------------------------------------------
+@router.delete("/{tournament_id}/leave")
+async def leave_tournament(tournament_id: int, user = Depends(get_current_user)):
+    async with async_session() as session:
+        # 1. Ensure the tournament exists and hasn't started yet
+        tournament = await session.get(Tournament, tournament_id)
+        if not tournament:
+            raise HTTPException(status_code=404, detail="Tournament not found")
+        if tournament.status != "waiting":
+            raise HTTPException(status_code=400, detail="Cannot leave a tournament that already started!")
+
+        # 2. Find the participant row
+        query = select(TournamentParticipant).where(
+            TournamentParticipant.tournament_id == tournament_id,
+            TournamentParticipant.player_id == user.id
+        )
+        participant = (await session.execute(query)).scalars().first()
+
+        if not participant:
+            raise HTTPException(status_code=400, detail="You are not in this tournament.")
+
+        # 3. Delete the participant from the database
+        await session.delete(participant)
+        await session.commit()
+
+        return {"message": "Successfully left the tournament."}
+
+
+# ------------------------------------------------------------
 # GET PLAYER'S ACTIVE TOURNAMENT
 # ------------------------------------------------------------
 @router.get("/player/{player_id}")
@@ -256,5 +287,19 @@ async def _start_tournament(tournament: Tournament, session):
 
     # Import bracket into DB
     await import_bracket(tournament.id, rounds, session)
+
+    # Find all matches for Round 1 in the database
+    matches_result = await session.execute(
+        select(TournamentMatch).where(
+            TournamentMatch.tournament_id == tournament.id,
+            TournamentMatch.round_number == 1
+        )
+    )
+    round_1_matches = matches_result.scalars().all()
+
+    # Create the actual Game rows and notify the WebSockets
+    for match in round_1_matches:
+        # This function (from progression service) creates the game AND sends the "match_start" WebSocket alert
+        await _create_game_for_match(match, session) 
 
     return True
