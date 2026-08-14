@@ -13,7 +13,12 @@ export function SocialSidebar() {
   const [activeSocialTab, setActiveSocialTab] =
     useState<"friends" | "logged">("friends");
 
-  // Load friendship data from Django and reuse WebSocket presence for status
+  const {
+    onlineUsers,
+    friendsRevision,
+  } = useGlobalChat();
+
+  // Load friendship data from Django and refresh it after realtime invalidation
   const {
     friends,
     isLoading: areFriendsLoading,
@@ -22,9 +27,7 @@ export function SocialSidebar() {
     actionErrorMessage,
     addFriend,
     removeFriend,
-  } = useFriends();
-
-  const { onlineUsers } = useGlobalChat();
+  } = useFriends(friendsRevision);
 
   return (
     <aside className="w-72 bg-[#050505] border-l border-neutral-900 flex flex-col h-full">

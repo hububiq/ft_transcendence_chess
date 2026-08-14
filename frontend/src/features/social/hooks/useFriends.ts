@@ -22,7 +22,9 @@ interface UseFriendsResult {
 }
 
 
-export function useFriends(): UseFriendsResult {
+export function useFriends(
+friendsRevision: number,
+): UseFriendsResult {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] =
@@ -72,7 +74,7 @@ export function useFriends(): UseFriendsResult {
       isDisposed = true;
       controller.abort();
     };
-  }, []);
+  }, [friendsRevision]);
 
   const refreshFriends = useCallback(async () => {
     // Reload from Django so the backend remains the source of truth after each mutation

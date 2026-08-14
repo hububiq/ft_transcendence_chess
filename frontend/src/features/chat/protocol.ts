@@ -147,6 +147,12 @@ export function parseChatServerEvent(
     };
   }
 
+  if (value.type === "friends_changed") {
+    return {
+      type: "friends_changed",
+    };
+  }
+
   if (value.type === "error") {
     // Accept only documented error codes and bounded public messages
     if (
