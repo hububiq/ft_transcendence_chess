@@ -132,6 +132,11 @@ class PresenceServerEvent(ServerEventModel):
     # Each authenticated user appears only once in the presence list
     users: list[ChatAuthor]
 
+class FriendsChangedServerEvent(ServerEventModel):
+    """Notify an authenticated client that its friends data changed"""
+
+    type: Literal["friends_changed"] = "friends_changed"
+
 class ChatMessageServerEvent(ServerEventModel):
     """Server confirmed message prepared for broadcasting"""
 
@@ -188,6 +193,7 @@ class ErrorServerEvent(ServerEventModel):
 ServerEvent = (
     AuthenticatedServerEvent
     | PresenceServerEvent
+    | FriendsChangedServerEvent
     | ChatMessageServerEvent
     | ErrorServerEvent
 )
