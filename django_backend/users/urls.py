@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     UserViewSet, register_user, update_elo, 
     update_my_profile, upload_avatar, get_my_profile,
+    get_public_user_profile,
     list_friends, add_friend, remove_friend,
     GithubLogin 
 )
@@ -19,7 +20,11 @@ urlpatterns = [
     path('me/', get_my_profile, name='my_profile'),
     path('me/update/', update_my_profile, name='update_profile'),
     path('me/avatar/', upload_avatar, name='upload_avatar'),
-    
+    path(
+    'users/<int:user_id>/public-profile/',
+    get_public_user_profile,
+    name='public_user_profile',
+),
     # --- FRIENDS APIs ---
     path('friends/', list_friends, name='list_friends'),
     path('friends/add/<int:user_id>/', add_friend, name='add_friend'),
