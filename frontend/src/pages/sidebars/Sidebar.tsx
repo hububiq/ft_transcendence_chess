@@ -73,7 +73,7 @@ export function Sidebar() {
         >
           <img
 
-            src={user?.profile.avatar || playerAvatar}
+            src={resolveMediaUrl(user?.profile.avatar) || playerAvatar}
 
             alt="User Avatar"
             className="w-10 h-10 rounded-full border border-neutral-800 object-cover"

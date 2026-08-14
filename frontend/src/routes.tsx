@@ -4,7 +4,7 @@ import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
 import { PublicOnlyRoute } from "./features/auth/components/PublicOnlyRoute.tsx";
 
 // features and pages
-import { Tournament } from "./features/tournaments/Tournament";
+import { Tournament } from "./pages/tournaments/Tournament.tsx";
 import { Game } from "./pages/game/MultiplayerGamePage";
 import { DesignSystem } from "./pages/design/DesignSystem";
 import { Profile } from "./pages/profile/Profile";
