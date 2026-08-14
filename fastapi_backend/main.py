@@ -17,7 +17,8 @@ from api.tournaments import router as tournaments_router
 from api.games import router as games_router
 from garbage_games_collector import clean_dead_games
 from database import async_session
-from chat.router import router as chat_router 
+from chat.router import router as chat_router
+from chat.friendship_events import listen_for_friendship_events
 
 
 app = FastAPI(debug=settings.debug)
@@ -54,6 +55,7 @@ async def startup_event():
     await init_db()
     asyncio.create_task(matchmaking_loop())
     asyncio.create_task(clean_dead_games())
+    asyncio.create_task(listen_for_friendship_events())
 
 
 # ------------------------------------------------------------

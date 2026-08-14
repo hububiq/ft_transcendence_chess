@@ -55,6 +55,11 @@ export interface PresenceServerEvent {
   users: ChatAuthor[];
 }
 
+// Notify the client that its friendship data must be refreshed
+export interface FriendsChangedServerEvent {
+  type: "friends_changed";
+}
+
 // Public error codes shared between the backend protocol and frontend UI
 export type ChatErrorCode =
   | "AUTH_REQUIRED"
@@ -78,6 +83,7 @@ export type ChatServerEvent =
   | AuthenticatedServerEvent
   | ChatMessageServerEvent
   | PresenceServerEvent
+  | FriendsChangedServerEvent
   | ErrorServerEvent;
 
 // Return a predictable result to the UI without throwing for expected send failures

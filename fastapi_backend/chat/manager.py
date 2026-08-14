@@ -176,6 +176,58 @@ class GlobalChatConnectionManager:
             await self.disconnect(websocket)
 
         return was_sent
+    
+    async def send_to_users(
+        self,
+        user_ids: set[int],
+        event: ServerEvent,
+    ) -> None:
+        """Send one event to every active socket owned by selected users"""
+
+        if not user_ids:
+            return
+
+        payload = event.model_dump(mode="json")
+
+        async with self._send_lock:
+            async with self._state_lock:
+                # Include every active tab that belongs to an affected user
+                sockets = [
+                    websocket
+                    for websocket, user
+                    in self._users_by_socket.items()
+                    if user.id in user_ids
+                ]
+
+            if not sockets:
+                return
+
+            results = await asyncio.gather(
+                *(
+                    self._send_payload(
+                        websocket,
+                        payload,
+                    )
+                    for websocket in sockets
+                ),
+                return_exceptions=False,
+            )
+
+        dead_sockets = [
+            websocket
+            for websocket, was_sent in zip(
+                sockets,
+                results,
+            )
+            if not was_sent
+        ]
+
+        for websocket in dead_sockets:
+            await self.disconnect(websocket)
+
+        # Refresh presence when targeted delivery discovers dead sockets
+        if dead_sockets:
+            await self.broadcast_presence()
 
     async def broadcast(
         self,

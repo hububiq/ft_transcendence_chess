@@ -11,7 +11,7 @@ from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from redis_client import publish
+from .friendship_events import publish_friendship_change
 
 def _is_allowed_avatar(file_obj):
     """Validate that the uploaded file is a JPG or PNG image."""
@@ -186,6 +186,7 @@ def add_friend(request, user_id):
     try:
         target_user = User.objects.get(id=user_id)
         request.user.friends.add(target_user)
+        publish_friendship_change([request.user.id, target_user.id])
         return Response({"message": f"Successfully added {target_user.username} tp friends."}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
@@ -198,6 +199,7 @@ def remove_friend(request, user_id):
         target_user = User.objects.get(id=user_id)
         # Django removes them from the hidden junction table!
         request.user.friends.remove(target_user)
+        publish_friendship_change([request.user.id, target_user.id])
         return Response({"message": f"Successfully removed {target_user.username} from friends."}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)

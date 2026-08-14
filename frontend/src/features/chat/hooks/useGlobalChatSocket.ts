@@ -35,6 +35,7 @@ const RECONNECT_DELAYS_MS = [
 interface UseGlobalChatSocketResult {
   messages: ChatMessageServerEvent[];
   onlineUsers: ChatAuthor[];
+  friendsRevision: number;
   connectionState: ChatConnectionState;
   authenticatedUser: ChatAuthor | null;
   errorMessage: string | null;
@@ -56,6 +57,8 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
   const [onlineUsers, setOnlineUsers] = useState<
     ChatAuthor[]
   >([]);
+  const [friendsRevision, setFriendsRevision] =
+    useState(0);
   const [connectionState, setConnectionState] =
     useState<ChatConnectionState>("disconnected");
   const [authenticatedUser, setAuthenticatedUser] =
@@ -71,6 +74,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
   const isIntentionalCloseRef = useRef(false);
   const authFailureRef = useRef<ChatErrorCode | null>(null);
   const authRefreshAttemptedRef = useRef(false);
+  const hasAuthenticatedConnectionRef = useRef(false);
 
   // Resolve the WebSocket URL once and expose configuration errors to the UI
   const socketUrlResult = useMemo(() => {
@@ -95,6 +99,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     if (!userId) {
       setMessages([]);
       setOnlineUsers([]);
+      setFriendsRevision(0);
       setAuthenticatedUser(null);
       setConnectionState("disconnected");
       setErrorMessage(null);
@@ -116,6 +121,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     setMessages([]);
     setOnlineUsers([]);
     authRefreshAttemptedRef.current = false;
+    hasAuthenticatedConnectionRef.current = false;
 
     const clearReconnectTimer = () => {
       if (reconnectTimerRef.current !== null) {
@@ -303,6 +309,17 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
           setAuthenticatedUser(event.user);
           setConnectionState("connected");
           setErrorMessage(null);
+
+          if (hasAuthenticatedConnectionRef.current) {
+            // Refresh friendship data after recovering a lost WebSocket connection
+            setFriendsRevision(
+              (currentRevision) =>
+                currentRevision + 1,
+            );
+          } else {
+            hasAuthenticatedConnectionRef.current = true;
+          }
+
           return;
         }
 
@@ -330,6 +347,15 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         if (event.type === "presence") {
           // Replace the previous presence snapshot with the newest server state
           setOnlineUsers(event.users);
+          return;
+        }
+
+        if (event.type === "friends_changed") {
+          // Trigger friendship refresh without storing friendship data in the chat hook
+          setFriendsRevision(
+            (currentRevision) =>
+              currentRevision + 1,
+          );
           return;
         }
 
@@ -499,6 +525,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
   return {
     messages,
     onlineUsers,
+    friendsRevision,
     connectionState,
     authenticatedUser,
     errorMessage,
