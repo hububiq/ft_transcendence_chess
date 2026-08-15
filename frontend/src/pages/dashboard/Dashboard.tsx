@@ -1,10 +1,18 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Swords, Bot, Loader2, ServerOff } from "lucide-react";
 import { useMatchmaking } from "../../hooks/useMatchmaking";
 import { useUser } from "../../hooks/useUser";
+import { useActiveGame } from "../../hooks/useActiveGame";
 
 export function Dashboard() {
   const { user, loading, error } = useUser();
+  const navigate = useNavigate();
+
+  const {
+    activeGame,
+    isLoading: isActiveGameLoading,
+    errorMessage: activeGameErrorMessage,
+  } = useActiveGame();
 
   // init hook
   const { isSearching, joinQueue, cancelQueue } = useMatchmaking(
@@ -38,14 +46,46 @@ export function Dashboard() {
       <div className="relative overflow-hidden rounded-2xl bg-[#0a0a0a] border border-neutral-800 p-10 flex flex-col items-center justify-center text-center">
         <Swords className="w-12 h-12 text-blue-500 mb-6 relative z-10" />
         <h3 className="text-2xl font-bold text-white mb-2 relative z-10">
-          Find a Match
+          {activeGame
+            ? "Game in Progress"
+            : "Find a Match"}
         </h3>
         <p className="text-neutral-400 mb-8 max-w-md relative z-10 text-sm leading-relaxed">
-          Join our localhost:3000 queue and play against opponent of probably
-          similar skill level instantly.
+          {activeGame
+            ? "You already have an active game. Return to continue playing."
+            : "Join our localhost:3000 queue and play against opponent of probably similar skill level instantly."}
         </p>
         <div className="relative z-10 flex gap-3">
-          {isSearching ? (
+          {isActiveGameLoading ? (
+            <button
+              type="button"
+              disabled
+              className="flex items-center gap-2 bg-neutral-800 text-neutral-400 font-medium py-3 px-8 rounded-lg cursor-not-allowed"
+            >
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Checking Game...
+            </button>
+          ) : activeGame ? (
+            <button
+              type="button"
+              onClick={() => {
+                // Return directly to the existing game without starting matchmaking
+                navigate(`/game/${activeGame.game_id}`);
+              }}
+              className="bg-green-600 hover:bg-green-500 text-white font-medium py-3 px-8 rounded-lg transition-all hover:shadow-[0_0_20px_rgba(22,163,74,0.2)]"
+            >
+              Return to Game
+            </button>
+          ) : activeGameErrorMessage ? (
+            <button
+              type="button"
+              disabled
+              className="flex items-center gap-2 bg-neutral-800 text-neutral-500 font-medium py-3 px-8 rounded-lg cursor-not-allowed"
+            >
+              <ServerOff className="w-5 h-5" />
+              Game Status Unavailable
+            </button>
+          ) : isSearching ? (
             <button
               onClick={cancelQueue}
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-medium py-3 px-8 rounded-lg transition-all"

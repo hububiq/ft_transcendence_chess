@@ -12,6 +12,12 @@ export interface BotMatchResponse {
   game_id: number;
 }
 
+export interface ActiveGameResponse {
+  game_id: number;
+  color: "white" | "black";
+  opponent_id: number;
+}
+
 export async function createBotGame(
   payload: BotMatchRequest,
 ): Promise<BotMatchResponse> {
@@ -22,5 +28,19 @@ export async function createBotGame(
       baseURL: FASTAPI_BASE_URL,
     },
   );
+  return response.data;
+}
+
+export async function fetchActiveGame(
+  signal?: AbortSignal,
+): Promise<ActiveGameResponse | null> {
+  const response = await api.get<ActiveGameResponse | null>(
+    "/api/games/active/",
+    {
+      baseURL: FASTAPI_BASE_URL,
+      signal,
+    },
+  );
+
   return response.data;
 }
