@@ -7,6 +7,8 @@ from ai_engine import compute_best_move
 from database import async_session
 from models import Game, TournamentMatch
 from server import manager
+from chat.manager import global_chat_manager
+from chat.schemas import ActiveGameChangedServerEvent
 
 from tournament_progression_service import advance_tournament
 
@@ -28,11 +30,23 @@ async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surre
     winner_id = None
     loser_id = None
 
+    affected_user_ids: set[int] = set()
+
      # SAVE TO POSTGRESQL AND GRAB THE TRUE IDs
     async with async_session() as session:
         game = await session.get(Game, int(game_id))
         if not game:
             return
+
+        # Refresh active game state for every human player affected by this result
+        affected_user_ids = {
+            player_id
+            for player_id in (
+                game.white_player_id,
+                game.black_player_id,
+            )
+            if player_id is not None
+        }
 
         # Surrender overrides python-chess
         if is_surrender:
@@ -78,6 +92,12 @@ async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surre
                     winner_id=winner_id,
                     session=session
                 )
+
+    # Notify authenticated application sockets after the completed state is committed
+    await global_chat_manager.send_to_users(
+        affected_user_ids,
+        ActiveGameChangedServerEvent(),
+    )
 
     # Notify players
     await manager.broadcast_to_game(game_id, {

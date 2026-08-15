@@ -3,7 +3,7 @@ import {
   fetchActiveGame,
   type ActiveGameResponse,
 } from "../api/gameApi";
-
+import { useGlobalChat } from "../features/chat/context/GlobalChatProvider";
 
 interface UseActiveGameResult {
   activeGame: ActiveGameResponse | null;
@@ -13,6 +13,7 @@ interface UseActiveGameResult {
 
 
 export function useActiveGame(): UseActiveGameResult {
+  const { activeGameRevision } = useGlobalChat();
   const [activeGame, setActiveGame] =
     useState<ActiveGameResponse | null>(null);
 
@@ -66,7 +67,7 @@ export function useActiveGame(): UseActiveGameResult {
       isDisposed = true;
       controller.abort();
     };
-  }, []);
+  }, [activeGameRevision]);
 
 
   return {
