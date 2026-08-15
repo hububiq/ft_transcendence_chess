@@ -33,8 +33,8 @@ export function Game() {
   const [receivedRematchOffer, setReceivedRematchOffer] = useState(false);
 
   // Clocks & Turns
-  const [playerTime, setPlayerTime] = useState(600);
-  const [opponentTime, setOpponentTime] = useState(600);
+  const [playerTime, setPlayerTime] = useState(15);
+  const [opponentTime, setOpponentTime] = useState(15);
 
   // Derive active turn safely
   const activeColor = currentFen === "start" ? "w" : currentFen.split(" ")[1];
@@ -178,14 +178,29 @@ export function Game() {
 
     const timer = setInterval(() => {
       if (isPlayerTurn) {
-        setPlayerTime((t) => Math.max(0, t - 1));
+        // If it's my turn, tick my clock down to 0
+        setPlayerTime((t) => (t > 0 ? t - 1 : 0));
       } else {
-        setOpponentTime((t) => Math.max(0, t - 1));
+        // If it's their turn, tick their clock down
+        setOpponentTime((t) => {
+          const newTime = t - 1;
+          
+          // If their time hits 0, claim the win!
+          if (newTime <= 0) {
+            clearInterval(timer); // Stop the clock
+            sendMessage({
+              type: "claim_timeout",
+              player_id: user?.id,
+              opponent_id: opponentId
+            });
+          }
+          return newTime > 0 ? newTime : 0;
+        });
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isPlayerTurn, gameOver]);
+  }, [isPlayerTurn, gameOver, user?.id, opponentId, sendMessage]); // Hubert: addeed dependencies
 
   // ACTIONS
   const handlePlayerMove = (move: string) => {

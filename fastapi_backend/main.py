@@ -19,7 +19,8 @@ from garbage_games_collector import clean_dead_games
 from database import async_session
 from chat.router import router as chat_router
 from chat.friendship_events import listen_for_friendship_events
-
+import time
+from game_service import handle_timeout_claim
 
 app = FastAPI(debug=settings.debug)
 
@@ -157,6 +158,9 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
                 player_id = data.get("player_id")
                 await handle_game_over(board, game_id, websocket=websocket,
                                        is_surrender=True, surrender_loser_id=player_id)
+            
+            elif msg_type == "claim_timeout":
+                await handle_timeout_claim(data, str(game_id), websocket)
 
             else:
                 await websocket.send_json({

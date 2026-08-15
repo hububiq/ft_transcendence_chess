@@ -2,6 +2,8 @@ import chess
 import chess.pgn
 import httpx
 import json
+import time
+import json
 from redis_client import get_redis
 from ai_engine import compute_best_move
 from database import async_session
@@ -11,7 +13,15 @@ from server import manager
 from tournament_progression_service import advance_tournament
 
 
-async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surrender: bool = False, surrender_loser_id: int = None):
+async def handle_game_over(
+    board: chess.Board,
+    game_id: str,
+    websocket,
+    is_surrender: bool = False,
+    surrender_loser_id: int = None,
+    is_timeout: bool = False,
+    timeout_loser_id: int = None
+):
     """Generates the game history, cleans RAM, updates ELO, and advances tournaments."""
     
     redis = await get_redis()
@@ -39,6 +49,10 @@ async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surre
             loser_id = surrender_loser_id
             winner_id = game.white_player_id if loser_id == game.black_player_id else game.black_player_id
             result = "Surrender"
+        elif is_timeout:
+            loser_id = timeout_loser_id
+            winner_id = game.white_player_id if loser_id == game.black_player_id else game.black_player_id
+            result = "Timeout"
 
         else:
             # Normal chess result
@@ -53,21 +67,21 @@ async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surre
                 loser_id = None
                 game.is_draw = True
 
-            game.moves_pgn = game_pgn
-            game.winner_id = winner_id
-            game.status = "completed"
-            session.add(game)
-            await session.commit()
-            print(f"[DB] Game {game_id} saved. Winner: {winner_id}")
+        game.moves_pgn = game_pgn
+        game.winner_id = winner_id
+        game.status = "completed"
+        session.add(game)
+        await session.commit()
+        print(f"[DB] Game {game_id} saved. Winner: {winner_id}")
 
-            # TOURNAMENT PROGRESSION TRIGGER
-            if game.tournament_id is not None:
-                print(f"[TOURNAMENT] Advancing tournament {game.tournament_id}...")
-                await advance_tournament(
-                    game_id=game.id,
-                    winner_id=winner_id,
-                    session=session
-                )
+        # TOURNAMENT PROGRESSION TRIGGER
+        if game.tournament_id is not None:
+            print(f"[TOURNAMENT] Advancing tournament {game.tournament_id}...")
+            await advance_tournament(
+                game_id=game.id,
+                winner_id=winner_id,
+                session=session
+            )
 
     # Notify players
     await manager.broadcast_to_game(game_id, {
@@ -112,6 +126,7 @@ async def handle_player_move(data: dict, game_id: str, websocket):
     human_san = board.san(move)
 
     if move in board.legal_moves:
+        await update_clock(game_id, is_white_turn=board.turn == chess.WHITE)
         board.push(move)
         await redis.set(redis_key, board.fen())
         await redis.rpush(f"game:{game_id}:moves", move.uci())
@@ -154,3 +169,67 @@ async def handle_player_move(data: dict, game_id: str, websocket):
     else:
         await websocket.send_json({"type": "error", "message": "Illegal move"})
 
+
+async def update_clock(game_id: str, is_white_turn: bool):
+    redis = await get_redis()
+    time_key = f"game:{game_id}:time"
+    
+    time_data_str = await redis.get(time_key)
+    current_time = int(time.time())
+    
+    if not time_data_str:
+        # First move of the game. Initialize 10 minutes (600 seconds)
+        time_data = {
+            "white_time": 15,
+            "black_time": 15,
+            "last_move_at": current_time
+        }
+    else:
+        time_data = json.loads(time_data_str)
+        time_spent = current_time - time_data["last_move_at"]
+        
+        # Deduct time from whoever just moved
+        if is_white_turn:
+            time_data["white_time"] -= time_spent
+        else:
+            time_data["black_time"] -= time_spent
+            
+        time_data["last_move_at"] = current_time
+
+    # Save updated clock back to Redis
+    await redis.set(time_key, json.dumps(time_data))
+
+
+async def handle_timeout_claim(data: dict, game_id: str, websocket):
+    """The Arbiter: Checks if a player actually ran out of time."""
+    redis = await get_redis()
+    time_data_str = await redis.get(f"game:{game_id}:time")
+    
+    if not time_data_str:
+        return # Game hasn't even started moving yet
+        
+    time_data = json.loads(time_data_str)
+    
+    # Check board to see whose turn it currently is
+    current_fen = await redis.get(f"game:{game_id}:fen")
+    board = chess.Board(current_fen) if current_fen else chess.Board()
+    
+    active_color = "white" if board.turn == chess.WHITE else "black"
+    
+    # Do the math: Time left minus time since last move
+    seconds_passed = int(time.time()) - time_data["last_move_at"]
+    time_left = time_data[f"{active_color}_time"] - seconds_passed
+    
+    if time_left <= 0:
+        # The opponent's timer hit 0. The person who clicked "Claim" wins.
+        winner_id = data.get("player_id") 
+        loser_id = data.get("opponent_id")
+        
+        # Call handle_game_over with Timeout flags
+        await handle_game_over(
+            board, game_id, websocket=websocket, 
+            is_timeout=True, timeout_loser_id=loser_id
+        )
+    else:
+        # React lied, or network lag caused a false alarm. Reject the claim
+        await websocket.send_json({"type": "error", "message": "Opponent still has time left!"})

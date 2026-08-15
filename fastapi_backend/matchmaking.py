@@ -45,14 +45,14 @@ async def matchmaking_loop():
                 official_game_id = new_game.id
             
             # Tell Player 1 (White) what room to go to
-            await manager.broadcast_to_game(waiting_player_id, {
+            await manager.send_to_user(waiting_player_id, {
                 "type": "match_start",
                 "game_id": official_game_id,
                 "color": "white"
             })
                 
             # Tell Player 2 (Black) what room to go to
-            await manager.broadcast_to_game(joined_id, {
+            await manager.send_to_user(joined_id, {
                 "type": "match_start",
                 "game_id": official_game_id,
                 "color": "black"
