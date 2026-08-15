@@ -53,12 +53,22 @@ async def handle_game_over(board: chess.Board, game_id: str, websocket, is_surre
                 loser_id = None
                 game.is_draw = True
 
-            game.moves_pgn = game_pgn
-            game.winner_id = winner_id
-            game.status = "completed"
-            session.add(game)
-            await session.commit()
-            print(f"[DB] Game {game_id} saved. Winner: {winner_id}")
+        # Persist the final game state for both normal endings and surrender
+        game.moves_pgn = game_pgn
+        game.winner_id = winner_id
+        game.status = "completed"
+        session.add(game)
+        await session.commit()
+        print(f"[DB] Game {game_id} saved. Winner: {winner_id}")
+
+        # Keep the existing tournament progression behavior unchanged
+        if not is_surrender and game.tournament_id is not None:
+            print(f"[TOURNAMENT] Advancing tournament {game.tournament_id}...")
+            await advance_tournament(
+                game_id=game.id,
+                winner_id=winner_id,
+                session=session
+            )
 
             # TOURNAMENT PROGRESSION TRIGGER
             if game.tournament_id is not None:
