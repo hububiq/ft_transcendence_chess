@@ -1,6 +1,7 @@
 from rest_framework import viewsets
 from .models import User, Profile
 from .serializers import UserSerializer
+from .public_profile_serializers import PublicUserProfileSerializer
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -108,6 +109,28 @@ def update_elo(request):
 def get_my_profile(request):
     serializer = UserSerializer(request.user) #request.user is populated with JWT token, Django knows rightaway who is making the request.
     return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_public_user_profile(request, user_id):
+    try:
+        target_user = User.objects.select_related("profile").get(id=user_id)
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # Return only fields intended for other authenticated users
+    serializer = PublicUserProfileSerializer(
+        target_user,
+        context={"request": request},
+    )
+
+    return Response(
+        serializer.data,
+        status=status.HTTP_200_OK,
+    )
 
 @api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])

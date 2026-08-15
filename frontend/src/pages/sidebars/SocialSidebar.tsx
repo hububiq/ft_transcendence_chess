@@ -4,6 +4,7 @@ import { GlobalChatPanel } from "../../features/chat/components/GlobalChatPanel"
 // import { GlobalChatProvider } from "../../features/chat/context/GlobalChatProvider";
 import { useGlobalChat } from "../../features/chat/context/GlobalChatProvider";
 import { LoggedUsersPanel } from "../../features/social/components/LoggedUsersPanel";
+import { UserHoverCard } from "../../features/social/components/UserHoverCard";
 import { useFriends } from "../../features/social/hooks/useFriends";
 import clsx from "clsx";
 
@@ -105,10 +106,12 @@ export function SocialSidebar() {
                 );
 
                 return (
-                  <div
-                    key={friend.id}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-900/50 cursor-pointer transition-colors group"
-                  >
+                  <UserHoverCard
+                      key={friend.id}
+                      userId={friend.id}
+                      isOnline={isOnline}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-900/50 cursor-pointer transition-colors group"
+                    >
                     <div className="relative">
                       <div className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-xs font-bold text-neutral-500">
                         {friend.username.charAt(0)}
@@ -145,7 +148,7 @@ export function SocialSidebar() {
                         ? "Removing..."
                         : "Remove"}
                     </button>
-                  </div>
+                  </UserHoverCard>
                 );
               })}
           </div>

@@ -1,5 +1,6 @@
 import { useGlobalChat } from "../../chat/context/GlobalChatProvider";
 import type { Friend } from "../hooks/useFriends";
+import { UserHoverCard } from "./UserHoverCard";
 
 interface LoggedUsersPanelProps {
   friends: Friend[];
@@ -52,10 +53,12 @@ export function LoggedUsersPanel({
           pendingFriendId === onlineUser.id;
 
         return (
-          <div
-            key={onlineUser.id}
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-900/50 transition-colors group"
-          >
+          <UserHoverCard
+              key={onlineUser.id}
+              userId={onlineUser.id}
+              isOnline={true}
+              className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-900/50 transition-colors group"
+            >
             <div className="relative">
               <div className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-xs font-bold text-neutral-500">
                 {onlineUser.username
@@ -95,7 +98,7 @@ export function LoggedUsersPanel({
                   {isPending ? "Adding..." : "Add"}
                 </button>
               ))}
-          </div>
+          </UserHoverCard>
         );
       })}
     </div>
