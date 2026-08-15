@@ -1,6 +1,7 @@
 import { Outlet } from "react-router";
 import { Sidebar } from "../pages/sidebars/Sidebar";
 import { SocialSidebar } from "../pages/sidebars/SocialSidebar";
+import { ActiveGamePreview } from "../features/gameplay/components/ActiveGamePreview";
 
 export function Root() {
   return (
@@ -9,6 +10,7 @@ export function Root() {
       <main className="flex-1 overflow-y-auto">
         <Outlet />
       </main>
+      <ActiveGamePreview />
       <SocialSidebar />
     </div>
   );

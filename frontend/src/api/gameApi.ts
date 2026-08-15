@@ -16,6 +16,7 @@ export interface ActiveGameResponse {
   game_id: number;
   color: "white" | "black";
   opponent_id: number;
+  fen: string | null;
 }
 
 export async function createBotGame(
