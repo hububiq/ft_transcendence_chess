@@ -44,6 +44,10 @@ async def handle_game_over(
         if not game:
             return
 
+        if game.status == "completed":
+            print(f"[SHIELD] Game {game_id} is already over. Ignoring duplicate request.")
+            return
+
         # Surrender overrides python-chess
         if is_surrender:
             loser_id = surrender_loser_id
@@ -84,7 +88,7 @@ async def handle_game_over(
             )
 
     # Notify players
-    await manager.broadcast_to_game(game_id, {
+    await manager.broadcast_to_game(int(game_id), {
         "type": "game_over",
         "winner_id": winner_id,
         "loser_id": loser_id,
@@ -95,6 +99,7 @@ async def handle_game_over(
     # Clean Redis
     await redis.delete(f"game:{game_id}:fen")
     await redis.delete(f"game:{game_id}:moves")
+    await redis.delete(f"game:{game_id}:time")
 
     # Update ELO in Django
     async with httpx.AsyncClient() as client:
@@ -131,7 +136,7 @@ async def handle_player_move(data: dict, game_id: str, websocket):
         await redis.set(redis_key, board.fen())
         await redis.rpush(f"game:{game_id}:moves", move.uci())
 
-        await manager.broadcast_to_game(game_id, {
+        await manager.broadcast_to_game(int(game_id), {
             "type": "move",
             "move": move.uci(),
             "san_move": human_san,
@@ -173,40 +178,32 @@ async def handle_player_move(data: dict, game_id: str, websocket):
 async def update_clock(game_id: str, is_white_turn: bool):
     redis = await get_redis()
     time_key = f"game:{game_id}:time"
-    
     time_data_str = await redis.get(time_key)
-    current_time = int(time.time())
     
     if not time_data_str:
-        # First move of the game. Initialize 10 minutes (600 seconds)
-        time_data = {
-            "white_time": 15,
-            "black_time": 15,
-            "last_move_at": current_time
-        }
-    else:
-        time_data = json.loads(time_data_str)
-        time_spent = current_time - time_data["last_move_at"]
-        
-        # Deduct time from whoever just moved
-        if is_white_turn:
-            time_data["white_time"] -= time_spent
-        else:
-            time_data["black_time"] -= time_spent
-            
-        time_data["last_move_at"] = current_time
+        return # Game is over, ignore
 
-    # Save updated clock back to Redis
+    time_data = json.loads(time_data_str)
+    current_time = int(time.time())
+    time_spent = current_time - time_data["last_move_at"]
+    
+    if is_white_turn:
+        time_data["white_time"] -= time_spent
+    else:
+        time_data["black_time"] -= time_spent
+        
+    time_data["last_move_at"] = current_time
     await redis.set(time_key, json.dumps(time_data))
 
 
 async def handle_timeout_claim(data: dict, game_id: str, websocket):
     """The Arbiter: Checks if a player actually ran out of time."""
     redis = await get_redis()
-    time_data_str = await redis.get(f"game:{game_id}:time")
+    time_key = f"game:{game_id}:time"
+    time_data_str = await redis.get(time_key)
     
     if not time_data_str:
-        return # Game hasn't even started moving yet
+        return
         
     time_data = json.loads(time_data_str)
     
@@ -220,16 +217,20 @@ async def handle_timeout_claim(data: dict, game_id: str, websocket):
     seconds_passed = int(time.time()) - time_data["last_move_at"]
     time_left = time_data[f"{active_color}_time"] - seconds_passed
     
-    if time_left <= 0:
-        # The opponent's timer hit 0. The person who clicked "Claim" wins.
-        winner_id = data.get("player_id") 
-        loser_id = data.get("opponent_id")
+    # 3-second grace period for network lag
+    if time_left <= 3:
+        # THE ARBITER DECIDES THE WINNER (Ignore React's payload)
+        async with async_session() as session:
+            game = await session.get(Game, int(game_id))
+            if not game: return
+            
+            true_loser = game.white_player_id if active_color == "white" else game.black_player_id
         
         # Call handle_game_over with Timeout flags
         await handle_game_over(
             board, game_id, websocket=websocket, 
-            is_timeout=True, timeout_loser_id=loser_id
+            is_timeout=True, timeout_loser_id=true_loser
         )
     else:
         # React lied, or network lag caused a false alarm. Reject the claim
-        await websocket.send_json({"type": "error", "message": "Opponent still has time left!"})
+        await websocket.send_json({"type": "error", "message": f"Opponent still has time! Server says they have {time_left} seconds left."})

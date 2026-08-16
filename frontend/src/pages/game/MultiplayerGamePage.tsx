@@ -178,16 +178,24 @@ export function Game() {
 
     const timer = setInterval(() => {
       if (isPlayerTurn) {
-        // If it's my turn, tick my clock down to 0
-        setPlayerTime((t) => (t > 0 ? t - 1 : 0));
+        setPlayerTime((t) => {
+          const newTime = t - 1;
+          if (newTime <= 0) {
+            clearInterval(timer);
+            sendMessage({
+              type: "claim_timeout",
+              player_id: opponentId,
+              opponenet_id: user?.id
+            });
+          }
+          return newTime > 0 ? newTime : 0;
+        });  
       } else {
-        // If it's their turn, tick their clock down
         setOpponentTime((t) => {
           const newTime = t - 1;
-          
-          // If their time hits 0, claim the win!
           if (newTime <= 0) {
-            clearInterval(timer); // Stop the clock
+            clearInterval(timer);
+            console.log("CLOCK HIT ZERO! Firing claim_timeout to FastAPI!");
             sendMessage({
               type: "claim_timeout",
               player_id: user?.id,
