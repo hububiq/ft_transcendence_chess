@@ -33,8 +33,8 @@ export function Game() {
   const [receivedRematchOffer, setReceivedRematchOffer] = useState(false);
 
   // Clocks & Turns
-  const [playerTime, setPlayerTime] = useState(600);
-  const [opponentTime, setOpponentTime] = useState(600);
+  const [playerTime, setPlayerTime] = useState(15);
+  const [opponentTime, setOpponentTime] = useState(15);
 
   // Derive active turn safely
   const activeColor = currentFen === "start" ? "w" : currentFen.split(" ")[1];
@@ -178,14 +178,37 @@ export function Game() {
 
     const timer = setInterval(() => {
       if (isPlayerTurn) {
-        setPlayerTime((t) => Math.max(0, t - 1));
+        setPlayerTime((t) => {
+          const newTime = t - 1;
+          if (newTime <= 0) {
+            clearInterval(timer);
+            sendMessage({
+              type: "claim_timeout",
+              player_id: opponentId,
+              opponenet_id: user?.id
+            });
+          }
+          return newTime > 0 ? newTime : 0;
+        });  
       } else {
-        setOpponentTime((t) => Math.max(0, t - 1));
+        setOpponentTime((t) => {
+          const newTime = t - 1;
+          if (newTime <= 0) {
+            clearInterval(timer);
+            console.log("CLOCK HIT ZERO! Firing claim_timeout to FastAPI!");
+            sendMessage({
+              type: "claim_timeout",
+              player_id: user?.id,
+              opponent_id: opponentId
+            });
+          }
+          return newTime > 0 ? newTime : 0;
+        });
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isPlayerTurn, gameOver]);
+  }, [isPlayerTurn, gameOver, user?.id, opponentId, sendMessage]); // Hubert: addeed dependencies
 
   // ACTIONS
   const handlePlayerMove = (move: string) => {

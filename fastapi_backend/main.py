@@ -19,7 +19,8 @@ from garbage_games_collector import clean_dead_games
 from database import async_session
 from chat.router import router as chat_router
 from chat.friendship_events import listen_for_friendship_events
-
+import time
+from game_service import handle_timeout_claim
 
 app = FastAPI(debug=settings.debug)
 
@@ -90,7 +91,6 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
 # ------------------------------------------------------------
 @app.websocket("/ws/game/{game_id}")
 async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
-    # NEW: pass user_id into manager.connect()
     await manager.connect(game_id, websocket, user_id)
 
     redis = await get_redis()
@@ -114,6 +114,13 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
         starting_fen = chess.Board().fen()
         await redis.set(redis_key, starting_fen)
         current_fen = starting_fen
+
+        time_data = {
+            "white_time": 15, 
+            "black_time": 15, 
+            "last_move_at": int(time.time())
+        }
+        await redis.set(f"game:{game_id}:time", json.dumps(time_data))
 
      # GRAB THE HISTORY FROM REDIS 
     moves_key = f"game:{game_id}:moves"
@@ -157,6 +164,10 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
                 player_id = data.get("player_id")
                 await handle_game_over(board, game_id, websocket=websocket,
                                        is_surrender=True, surrender_loser_id=player_id)
+            
+            elif msg_type == "claim_timeout":
+                print(f"[WS] Received timeout claim from user for Game {game_id}!")
+                await handle_timeout_claim(data, str(game_id), websocket)
 
             else:
                 await websocket.send_json({
