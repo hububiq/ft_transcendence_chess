@@ -20,7 +20,8 @@ async def handle_game_over(
     is_surrender: bool = False,
     surrender_loser_id: int = None,
     is_timeout: bool = False,
-    timeout_loser_id: int = None
+    timeout_loser_id: int = None,
+    is_agreed_draw: bool = False
 ):
     """Generates the game history, cleans RAM, updates ELO, and advances tournaments."""
     
@@ -57,7 +58,11 @@ async def handle_game_over(
             loser_id = timeout_loser_id
             winner_id = game.white_player_id if loser_id == game.black_player_id else game.black_player_id
             result = "Timeout"
-
+        elif is_agreed_draw:
+            winner_id = None
+            loser_id = None
+            result = "1/2-1/2"
+            game.is_draw = True
         else:
             # Normal chess result
             if result == "1-0":
@@ -112,6 +117,7 @@ async def handle_game_over(
             print(f"[GAME OVER] ELO updated for Game {game_id}")
         except Exception as e:
             print(f"[ERROR] Failed to reach Django: {e}")
+
 
 
 
