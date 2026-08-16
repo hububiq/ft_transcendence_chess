@@ -152,7 +152,7 @@ export function Game() {
     const fetchOpponentProfile = async () => {
       try {
         const response = await api.get(
-          `http://localhost:8000/api/users/${opponentId}/`,
+          `api/users/${opponentId}/`,
         );
         const data = response.data;
 
