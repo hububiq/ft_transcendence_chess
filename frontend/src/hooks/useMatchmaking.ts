@@ -50,8 +50,16 @@ export function useMatchmaking(
 
   const cancelQueue = useCallback(() => {
     if (wsRef.current) {
+      if (wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "leave_lobby",
+          }),
+        );
+      }
       wsRef.current.close();
     }
+    console.log("Cancelled matchmaking search");
     setIsSearching(false);
   }, []);
 
