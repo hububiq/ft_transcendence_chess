@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
 
 export function useMatchmaking(
@@ -33,10 +33,14 @@ export function useMatchmaking(
 
         if (data.type === "info") {
           console.log("Matchmaking:", data.message);
+          
+          
+          if (data.message === "Left matchmaking queue.") {
+             ws.close();
+          }
         } else if (data.type === "match_start") {
           setIsSearching(false);
           ws.close();
-
           navigate(`/game/${data.game_id}`);
         }
       } catch (err) {
@@ -49,18 +53,25 @@ export function useMatchmaking(
   }, [userId, eloRating, navigate]);
 
   const cancelQueue = useCallback(() => {
-    if (wsRef.current) {
-      if (wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "leave_lobby",
-          }),
-        );
-      }
-      wsRef.current.close();
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "leave_lobby",
+        }),
+      );
     }
     console.log("Cancelled matchmaking search");
     setIsSearching(false);
+  }, []);
+
+
+  useEffect(() => {
+    return () => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "leave_lobby" }));
+        wsRef.current.close();
+      }
+    };
   }, []);
 
   return { isSearching, joinQueue, cancelQueue };
