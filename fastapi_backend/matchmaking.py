@@ -30,6 +30,14 @@ async def matchmaking_loop():
             waiting_player_id = joined_id
             print(f"[MATCHMAKING] Player 1 waiting: {waiting_player_id}")
         else:
+            is_p1_cancelled = await redis.sismember("cancelled_users", waiting_player_id)
+            if is_p1_cancelled:
+                print(f"[MATCHMAKING] Player 1 ({waiting_player_id}) canceled! Discarding.")
+                await redis.srem("cancelled_users", waiting_player_id) # Clean up
+                # Player 1 is gone, so Player 2 becomes the new Player 1
+                waiting_player_id = joined_id
+                print(f"[MATCHMAKING] Player 1 waiting: {waiting_player_id}")
+                continue # Go back to waiting for another player
             print(f"[MATCHMAKING] Player 2 joined: {joined_id}")
             
             async with async_session() as session:

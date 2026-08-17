@@ -104,6 +104,9 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
                 await redis.lrem("matchmaking_queue", 0, item)
                 print(f"[LOBBY] User {user_id} removed from matchmaking queue.")
                 break
+        # Tell the matchmaking loop to drop them if it's holding them
+        await redis.sadd("cancelled_users", user_id)
+        await redis.expire("cancelled_users", 60) # Auto-delete this note after 60 seconds
     try:
         while True:
             data = await websocket.receive_json()
@@ -115,6 +118,7 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
                 })
                 await redis.lpush("matchmaking_queue", queue_payload)
                 await websocket.send_json({"type": "info", "message": "Joined matchmaking queue!"})
+
             elif data.get("type") == "leave_lobby":
                 await remove_from_queue()
                 await websocket.send_json({"type": "info", "message": "Left matchmaking queue."})
