@@ -8,7 +8,7 @@ export function useOAuth() {
 
     const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
     const redirectUri = encodeURIComponent(
-      "http://localhost:3000/auth/github/callback",
+      `${window.location.origin}/auth/github/callback` //window.location.origin dynamically grabs whatever IP/domain the user is currently on
     );
     const scope = encodeURIComponent("openid email profile");
 

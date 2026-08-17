@@ -11,6 +11,7 @@ from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
 from django.contrib.auth import authenticate
+from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from .friendship_events import publish_friendship_change
 
@@ -229,5 +230,5 @@ def remove_friend(request, user_id):
 
 class GithubLogin(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
-    callback_url = "http://localhost:3000/auth/github/callback" 
+    callback_url = f"{settings.FRONTEND_URL}/auth/github/callback"
     client_class = OAuth2Client    
