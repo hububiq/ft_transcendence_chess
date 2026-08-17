@@ -7,10 +7,11 @@ from ai_engine import compute_best_move
 from matchmaking import matchmaking_loop
 import asyncio
 import json
+import io
 import chess
 from database import init_db
 from models import Game, Tournament
-from game_service import handle_game_over
+from game_service import handle_game_over, handle_timeout_claim, handle_player_move
 from game_service import handle_player_move
 from api.history import router as history_router
 from api.tournaments import router as tournaments_router
@@ -20,7 +21,7 @@ from database import async_session
 from chat.router import router as chat_router
 from chat.friendship_events import listen_for_friendship_events
 import time
-from game_service import handle_timeout_claim
+
 
 app = FastAPI(debug=settings.debug)
 
@@ -43,6 +44,33 @@ app.include_router(tournaments_router)
 app.include_router(games_router)
 app.include_router(chat_router)  # Expose the /ws/chat endpoint
 
+
+# ---------------------------------------------------------
+# HELPER FUNCTIONS FOR REMATCHES
+# ---------------------------------------------------------
+async def process_rematch_request(user_id: int, opponent_id: int):
+    """Handles logic when a player asks for a rematch."""
+    if opponent_id is not None:
+        await manager.send_to_user(opponent_id, {"type": "rematch_request"})
+
+
+async def process_rematch_accepted(game_id: int):
+    """Creates a new game with swapped colors and broadcasts the new ID."""
+    async with async_session() as session:
+        old_game = await session.get(Game, game_id)
+        if old_game:
+            new_white = old_game.black_player_id
+            new_black = old_game.white_player_id
+            
+            new_game = Game(white_player_id=new_white, black_player_id=new_black, status="ongoing")
+            session.add(new_game)
+            await session.commit()
+            await session.refresh(new_game)
+            
+            await manager.broadcast_to_game(game_id, {
+                "type": "rematch_accepted",
+                "new_game_id": new_game.id
+            })
 
 @app.get("/")
 def read_root():
@@ -97,6 +125,12 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
 
     color = "w"
     opponent_id = None
+    is_completed = False
+    winner_id = None
+    loser_id = None
+    result = None
+    saved_pgn = ""
+    is_draw = False
 
     async with async_session() as session:
         game = await session.get(Game, game_id)
@@ -107,43 +141,89 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
             else:
                 color = "b"
                 opponent_id = game.white_player_id
+            
+            if game.status == "completed":
+                is_completed = True
+                winner_id = game.winner_id
+                saved_pgn = game.moves_pgn
+                is_draw = game.is_draw
 
-    redis_key = f"game:{game_id}:fen"
-    current_fen = await redis.get(redis_key)
-    if not current_fen:
-        starting_fen = chess.Board().fen()
-        await redis.set(redis_key, starting_fen)
-        current_fen = starting_fen
-
-        time_data = {
-            "white_time": 15, 
-            "black_time": 15, 
-            "last_move_at": int(time.time())
-        }
-        await redis.set(f"game:{game_id}:time", json.dumps(time_data))
-
-     # GRAB THE HISTORY FROM REDIS 
-    moves_key = f"game:{game_id}:moves"
-    raw_moves_uci = await redis.lrange(moves_key, 0, -1)
+                if is_draw:
+                    result = "1/2-1/2"
+                elif winner_id == game.white_player_id:
+                    result = "1-0"
+                    loser_id = game.black_player_id
+                else:
+                    # If Black won, OR if winner is None (Bot playing as Black won)
+                    result = "0-1"
+                    loser_id = game.white_player_id
     
-    # Translate the UCI moves (e2e4) back into SAN (e4) for frontend history sidebar
-    san_history = []
-    temp_board = chess.Board()
-    for move_uci in raw_moves_uci:
-        move_obj = chess.Move.from_uci(move_uci)
-        san_history.append(temp_board.san(move_obj))
-        temp_board.push(move_obj)
-
     try:
-        await websocket.send_json({
-            "type": "board_state",
-            "fen": current_fen,
-            "color": color,            # Tells React to flip the board or not
-            "opponent_id": opponent_id,  # Tells React who they are playing
-            "history": san_history
-        })
+        if is_completed:
+            final_fen = chess.Board().fen() # Default to start
+            # Don't touch Redis. We just tell React it's over
+            if saved_pgn:
+                pgn_io = io.StringIO(saved_pgn)
+                parsed_game = chess.pgn.read_game(pgn_io)
+                if parsed_game:
+                    final_board = parsed_game.end().board()
+                    final_fen = final_board.fen()
+
+            await websocket.send_json({
+                "type": "board_state",
+                "fen": final_fen,
+                "color": color,
+                "opponent_id": opponent_id,
+                "history": []
+            })        
+            await websocket.send_json({
+                "type": "game_over",
+                "winner_id": winner_id,
+                "loser_id": loser_id,
+                "result": result,
+                "pgn": saved_pgn
+            })
+        else:
+            redis_key = f"game:{game_id}:fen"
+            current_fen = await redis.get(redis_key)
+            if not current_fen:
+                starting_fen = chess.Board().fen()
+                await redis.set(redis_key, starting_fen)
+                current_fen = starting_fen
+
+                time_data = {
+                    "white_time": 15, 
+                    "black_time": 15, 
+                    "last_move_at": int(time.time())
+                }
+                await redis.set(f"game:{game_id}:time", json.dumps(time_data))
+
+            # GRAB THE HISTORY FROM REDIS 
+            moves_key = f"game:{game_id}:moves"
+            raw_moves_uci = await redis.lrange(moves_key, 0, -1)
+
+            # Translate the UCI moves (e2e4) back into SAN (e4) for frontend history sidebar
+            san_history = []
+            temp_board = chess.Board()
+            for move_uci in raw_moves_uci:
+                move_obj = chess.Move.from_uci(move_uci)
+                san_history.append(temp_board.san(move_obj))
+                temp_board.push(move_obj)
+
+            try:
+                await websocket.send_json({
+                    "type": "board_state",
+                    "fen": current_fen,
+                    "color": color,            # Tells React to flip the board or not
+                    "opponent_id": opponent_id,  # Tells React who they are playing
+                    "history": san_history
+                })
+            except Exception as e:
+                print(f"[WS] Browser disconnected before receiving board state: {e}")
+                await manager.disconnect(game_id, websocket, user_id)
+                return
+
     except Exception as e:
-        print(f"[WS] Browser disconnected before receiving board state: {e}")
         await manager.disconnect(game_id, websocket, user_id)
         return
 
@@ -168,6 +248,23 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
             elif msg_type == "claim_timeout":
                 print(f"[WS] Received timeout claim from user for Game {game_id}!")
                 await handle_timeout_claim(data, str(game_id), websocket)
+            elif msg_type == "rematch_request":
+                await process_rematch_request(user_id, opponent_id)
+            elif msg_type == "rematch_declined":
+                if opponent_id is not None:
+                    await manager.send_to_user(opponent_id, {"type": "rematch_declined"})
+            elif msg_type == "rematch_accepted":
+                await process_rematch_accepted(game_id)
+            
+            elif msg_type == "offer_draw":
+                await manager.send_to_user(opponent_id, {"type": "draw_offer"})
+            elif msg_type == "draw_declined":
+                if opponent_id is not None:
+                    await manager.send_to_user(opponent_id, {"type": "draw_declined"})
+            elif msg_type == "draw_accepted":
+                current_fen = await redis.get(redis_key)
+                board = chess.Board(current_fen) if current_fen else chess.Board()
+                await handle_game_over(board, game_id, websocket=websocket, is_agreed_draw=True)
 
             else:
                 await websocket.send_json({
