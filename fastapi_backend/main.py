@@ -93,8 +93,17 @@ async def startup_event():
 @app.websocket("/ws/lobby/{user_id}")
 async def lobby_socket(websocket: WebSocket, user_id: int):
     await manager.connect_lobby(user_id, websocket)
-
     redis = await get_redis()
+
+    async def remove_from_queue():
+        queue_items = await redis.lrange("matchmaking_queue", 0, -1)
+        for item in queue_items:
+            # Parse the JSON string back into a dictionary
+            player_data = json.loads(item)
+            if player_data.get("user_id") == user_id:
+                await redis.lrem("matchmaking_queue", 0, item)
+                print(f"[LOBBY] User {user_id} removed from matchmaking queue.")
+                break
     try:
         while True:
             data = await websocket.receive_json()
@@ -106,11 +115,16 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
                 })
                 await redis.lpush("matchmaking_queue", queue_payload)
                 await websocket.send_json({"type": "info", "message": "Joined matchmaking queue!"})
+            elif data.get("type") == "leave_lobby":
+                await remove_from_queue()
+                await websocket.send_json({"type": "info", "message": "Left matchmaking queue."})
 
     except WebSocketDisconnect:
+        await remove_from_queue()
         await manager.disconnect_lobby(user_id, websocket)
 
     except Exception as e:
+        await remove_from_queue()
         await manager.disconnect_lobby(user_id, websocket)
 
 
