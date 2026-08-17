@@ -31,6 +31,7 @@ export function Game() {
   const [isResignModalOpen, setIsResignModalOpen] = useState(false);
   const [isWaitingForRematch, setIsWaitingForRematch] = useState(false);
   const [receivedRematchOffer, setReceivedRematchOffer] = useState(false);
+  const [receivedDrawOffer, setReceivedDrawOffer] = useState(false);
 
   // Clocks & Turns
   const [playerTime, setPlayerTime] = useState(15);
@@ -116,6 +117,14 @@ export function Game() {
         }
         setIsResignModalOpen(false);
         break;
+      
+      case "draw_offer":
+        setReceivedDrawOffer(true); // Pops up the Draw Modal!
+        break;
+      
+      case "draw_declined":
+        alert("Opponent declined your draw offer.");
+        break;
 
       case "rematch_request":
         setReceivedRematchOffer(true);
@@ -185,7 +194,7 @@ export function Game() {
             sendMessage({
               type: "claim_timeout",
               player_id: opponentId,
-              opponenet_id: user?.id
+              opponent_id: user?.id
             });
           }
           return newTime > 0 ? newTime : 0;
@@ -231,6 +240,16 @@ export function Game() {
     sendMessage({ type: "offer_draw" });
   };
 
+  const handleAcceptDraw = () => {
+    setReceivedDrawOffer(false);
+    sendMessage({ type: "draw_accepted" });
+  };
+
+  const handleDeclineDraw = () => {
+    setReceivedDrawOffer(false);
+    sendMessage({ type: "draw_declined" });
+  };
+
   const handleRematchRequest = () => {
     setIsWaitingForRematch(true);
     sendMessage({ type: "rematch_request", player_id: user?.id });
@@ -256,8 +275,8 @@ export function Game() {
   return (
     <div className="min-h-screen bg-black flex flex-col text-neutral-200 relative">
       {/*Rematch Offer Modal*/}
-      {receivedRematchOffer && !gameOver && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-70">
+      {receivedRematchOffer && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
           <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
             <div>
               <h2 className="text-xl font-bold text-white mb-2">Rematch?</h2>
@@ -274,6 +293,34 @@ export function Game() {
               </button>
               <button
                 onClick={handleAcceptRematch}
+                className="flex-1 py-2.5 bg-blue-950/30 hover:bg-blue-900/40 text-blue-500 border border-blue-900/30 rounded-lg text-sm font-medium transition-colors"
+              >
+                Accept
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Draw Offer Modal */}
+      {receivedDrawOffer && !gameOver && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-70">
+          <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">Draw Offer</h2>
+              <p className="text-neutral-500 text-sm">
+                Your opponent has offered a draw. Do you accept?
+              </p>
+            </div>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={handleDeclineDraw}
+                className="flex-1 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg text-sm font-medium transition-colors"
+              >
+                Decline
+              </button>
+              <button
+                onClick={handleAcceptDraw}
                 className="flex-1 py-2.5 bg-blue-950/30 hover:bg-blue-900/40 text-blue-500 border border-blue-900/30 rounded-lg text-sm font-medium transition-colors"
               >
                 Accept
@@ -442,6 +489,7 @@ export function Game() {
             gameOver ? () => window.location.reload() : handleDrawOffer
           }
           onResign={() => setIsResignModalOpen(true)}
+          onDraw={handleDrawOffer}
         />
       </main>
     </div>
