@@ -170,7 +170,7 @@ export function Game() {
         setOpponent({
           username: data.username || "Unknown",
           elo_rating: data.profile.elo_rating || "?",
-          avatar: data.avatar || avatar_2,
+           avatar: resolveMediaUrl(data.profile?.avatar) || data.profile?.oauth_avatar_url || avatar_2,
         });
       } catch (error) {
         console.error("Error fetching opponent:", error);
