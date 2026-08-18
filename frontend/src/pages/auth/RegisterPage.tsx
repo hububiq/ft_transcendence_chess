@@ -120,7 +120,7 @@ export function Register() {
                 className="w-full bg-black border border-neutral-800 rounded-lg py-3 pl-10 pr-4 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all text-sm"
               />
               <p id="usernameHelp" className="text-xs text-neutral-500 mt-1">
-                Username: 4–24 characters, must start with a letter; allowed: letters, numbers, _ and -.
+                Username: 4–24 characters, allowed: letters, numbers, _ and -, must contain at least one letter.
               </p>
               {user.length > 0 && (
                 <p
