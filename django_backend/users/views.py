@@ -159,7 +159,7 @@ def update_my_profile(request):
     if 'username' in request.data:
         new_username = request.data['username'].strip() # Remove accidental spaces
         # Validation 1: Length
-        if len(new_username) < 3 or len(new_username) > 24:
+        if len(new_username) < 4 or len(new_username) > 24:
             return Response({"error": "Username must be between 3 and 15 characters."}, status=status.HTTP_400_BAD_REQUEST)
         # Validation 2: Characters (Only letters and numbers, no weird symbols!)
         if not new_username.isalnum():

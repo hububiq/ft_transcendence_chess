@@ -239,7 +239,7 @@ export function Tournament() {
     setIsStarting(true);
     try {
       await api.post(
-        `/api/tournaments/${activeTournament.id}/start`,
+        `${import.meta.env.VITE_FASTAPI_URL}/api/tournaments/${activeTournament.id}/start`,
         {},
         {
           headers: {
