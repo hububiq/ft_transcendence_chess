@@ -3,6 +3,7 @@ from sqlmodel import select
 from database import async_session
 from auth import get_current_user
 from tournament_progression_service import _create_game_for_match
+from server import manager
 
 from models import (
     Tournament,
@@ -81,6 +82,10 @@ async def create_tournament(creator_id: int, size: int = 8):
         await session.commit()
         await session.refresh(tournament)
 
+        await manager.broadcast_to_all({
+            "type": "tournament_updated"
+        })
+
         return {"id": tournament.id, "status": "waiting"}
 
 
@@ -111,6 +116,10 @@ async def delete_tournament(tournament_id: int, user = Depends(get_current_user)
         # 4. Delete the Tournament itself
         await session.delete(tournament)
         await session.commit()
+
+        await manager.broadcast_to_all({
+            "type": "tournament_updated"
+        })
 
         return {"message": f"Tournament {tournament_id} has been securely deleted."}
 
@@ -150,6 +159,11 @@ async def join_tournament(tournament_id: int, player_id: int):
 
         if len(participants_list) + 1 == tournament.size:
             await _start_tournament(tournament, session)
+        
+        await manager.broadcast_to_all({
+            "type": "tournament_updated",
+            "tournament_id": tournament_id
+        })
 
         return {"joined": True, "position": bracket_position}
 
@@ -181,6 +195,11 @@ async def leave_tournament(tournament_id: int, user = Depends(get_current_user))
         await session.delete(participant)
         await session.commit()
 
+        await manager.broadcast_to_all({
+            "type": "tournament_updated",
+            "tournament_id": tournament_id
+        })
+
         return {"message": "Successfully left the tournament."}
 
 
@@ -195,16 +214,18 @@ async def get_player_tournament(player_id: int):
                 TournamentParticipant.player_id == player_id
             )
         )
-        tp = result.scalars().first()
-        if not tp:
-            return {"active": False}
+        participants = result.scalars().all()
 
-        tournament = await session.get(Tournament, tp.tournament_id)
-        return {
-            "active": True,
-            "tournament": tournament
-        }
+        for tp in participants:
+            tournament = await session.get(Tournament, tp.tournament_id)
 
+        if tournament and tournament.status in ["waiting", "ongoing"]:
+            return {
+                "active": True,
+                "tournament": tournament
+            }
+
+        return {"active": False}
 
 # ------------------------------------------------------------
 # GET NEXT MATCH FOR PLAYER

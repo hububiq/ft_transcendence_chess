@@ -31,7 +31,8 @@ app.add_middleware(
         "http://10.18.200.89:3000",  # for campus 1vs1 2 machines testing - add your own IP
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://10.13.9.2:3000"
+        "http://10.13.9.2:3000",
+        "http://172.29.45.254:3000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
