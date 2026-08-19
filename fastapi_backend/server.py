@@ -84,5 +84,13 @@ class ConnectionManager:
                 del self.user_sockets[user_id]
         print(f"[WS] User {user_id} disconnected from Lobby")
 
+    async def broadcast_to_all(self, message: dict):
+        """Sends a message to EVERY user currently connected to the global lobby."""
+        for user_id, websocket in self.user_sockets.items():
+            try:
+                await websocket.send_json(message)
+            except Exception:
+                pass
+
 # global instance used by main.py
 manager = ConnectionManager()

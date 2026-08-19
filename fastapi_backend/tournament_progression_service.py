@@ -145,3 +145,7 @@ async def _finish_tournament(tournament_id: int, winner_id: int, session):
         "tournament_id": tournament_id
     })
 
+    await manager.broadcast_to_all({
+        "type": "tournament_updated"
+    })
+

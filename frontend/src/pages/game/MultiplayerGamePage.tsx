@@ -183,7 +183,7 @@ export function Game() {
 
   // Clock countdown logic
   useEffect(() => {
-    if (gameOver) return;
+    if (gameOver || moveHistory.length === 0) return;
 
     const timer = setInterval(() => {
       if (isPlayerTurn) {
@@ -413,6 +413,7 @@ export function Game() {
 
       <main className="flex-1 flex items-center justify-center p-8 gap-12">
         <div className="flex flex-col gap-6 max-w-[600px] w-full">
+          
           {/* Opponent Panel */}
           <div
             className={`flex justify-between items-end transition-opacity duration-300 ${!isPlayerTurn ? "opacity-100" : "opacity-60"}`}
@@ -430,6 +431,16 @@ export function Game() {
                     ({opponent.elo_rating})
                   </span>
                 </h3>
+                {/* THE NEW "WAITING" BADGE */}
+                {moveHistory.length === 0 && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                    <span className="text-xs text-yellow-500 font-medium tracking-wide">
+                    Waiting for opponent...
+                  </span>
+                </div>
+              )}
+              {/* END OF BADGE */}
               </div>
             </div>
             <div

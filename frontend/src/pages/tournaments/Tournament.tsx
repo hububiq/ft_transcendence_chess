@@ -17,6 +17,8 @@ import {
   type Tournament as TournamentType,
 } from "../../api/tournamentApi";
 
+import { useWebSocket } from "../../hooks/useWebSocket";
+
 const rounds = [
   {
     title: "Quarterfinals",
@@ -47,6 +49,33 @@ export function Tournament() {
   const [isStarting, setIsStarting] = useState(false);
   const [userNames, setUserNames] = useState<Record<int, string>>({});
 
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(true);
+
+  const handleLobbyMessage = (data: any) => {
+    console.log("Lobby WebSocket Message:", data);
+    switch (data.type) {
+      case "match_start":
+        console.log("Match starting! Redirecting to Game:", data.game_id);
+        navigate(`/game/${data.game_id}`);
+        break;
+      case "tournament_won":
+        alert("Congratulations! You won the entire tournament!");
+        break;
+      case "tournament_updated":
+        // Instantly trigger a database re-fetch when someone joins/leaves!
+        setRefreshTrigger((prev) => prev + 1);
+        break;
+    }
+  };
+
+  useWebSocket({
+    url: user?.id ? `${import.meta.env.VITE_WS_BASE_URL}/ws/lobby/${user.id}` : "",
+    enabled: !!user?.id, // Keep the lobby socket open as long as they are logged in
+    onMessage: handleLobbyMessage,
+  });
+
+
   // Fetch participats usernames
   useEffect(() => {
     const fetchNames = async () => {
@@ -71,7 +100,9 @@ export function Tournament() {
     if (!user?.id) return;
 
     const fetchTournamentState = async () => {
-      setLoading(true);
+      if (!activeTournament && lobbyTournaments.length === 0) {
+        setLoading(true);
+      }
       try {
         const currentTourney = await getPlayerTournament(user.id);
         if (currentTourney && currentTourney.tournament) {
@@ -90,18 +121,22 @@ export function Tournament() {
     };
 
     fetchTournamentState();
-  }, [user?.id]);
+  }, [user?.id, refreshTrigger]);
 
   useEffect(() => {
     if (!activeTournament?.id) return;
 
     const loadBracket = async () => {
+      setIsRefreshing(true);
       try {
         // fetch full tournament details
         const details = await getTournamentDetails(activeTournament.id);
         console.log("RAW TOURNAMENT DETAILS:", details);
-        if (details && details.participants) {
-          setParticipants(details.participants);
+        if (details) {
+          if (details.participants) setParticipants(details.participants);
+          
+          //  Update the tournament state so React knows it is finished!
+          if (details.tournament) setActiveTournament(details.tournament);
         }
 
         const rawData = await getTournamentBracket(activeTournament.id);
@@ -147,23 +182,25 @@ export function Tournament() {
 
         if (user?.id) {
           const matchData = await getNextMatch(activeTournament.id, user.id);
-          if (matchData && matchData.game_id) {
-            setNextMatch(matchData);
+          if (matchData && matchData.match && matchData.match.game_id) {
+            setNextMatch(matchData.match);
           } else {
             setNextMatch(null);
           }
         }
       } catch (error) {
         console.error("Failed to load tournament data:", error);
+      } finally {
+        setIsRefreshing(false);
       }
     };
 
     if (Object.keys(userNames).length > 0) {
       loadBracket();
-      const intervalId = setInterval(loadBracket, 10000);
+      const intervalId = setInterval(loadBracket, 3000); // <-- Bring this back!
       return () => clearInterval(intervalId);
     }
-  }, [activeTournament?.id, user?.id, userNames]);
+  }, [activeTournament?.id, user?.id, userNames, refreshTrigger]);
 
   // CREATE
   const handleCreate = async () => {
@@ -289,24 +326,38 @@ export function Tournament() {
                 key={tourney.id}
                 className="bg-[#0a0a0a] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 hover:border-neutral-700 transition-colors"
               >
+                {/* Top Row: Title and Status Badge */}
                 <div className="flex justify-between items-start">
                   <h3 className="text-lg font-bold text-white">
                     Tournament #{tourney.id}
                   </h3>
-                  <span className="bg-neutral-900 text-neutral-400 text-xs px-2 py-1 rounded">
+                  <span className="bg-neutral-900 text-neutral-400 text-xs px-2 py-1 rounded capitalize">
                     {tourney.status || "Waiting"}
                   </span>
                 </div>
+                
+                {/* Middle Row: Capacity */}
                 <div className="flex items-center gap-2 text-neutral-500 text-sm">
                   <Users className="w-4 h-4" />
                   <span>Capacity: {tourney.size || 4} Players</span>
                 </div>
-                <button
-                  onClick={() => handleJoin(tourney.id)}
-                  className="mt-2 w-full py-2 bg-blue-950/30 hover:bg-blue-900/40 text-blue-500 border border-blue-900/30 rounded-lg text-sm font-medium transition-colors"
-                >
-                  Join Tournament
-                </button>
+
+                {/* Bottom Row: Smart Buttons! */}
+                {tourney.status === "waiting" ? (
+                  <button
+                    onClick={() => handleJoin(tourney.id)}
+                    className="mt-2 w-full py-2 bg-blue-950/30 hover:bg-blue-900/40 text-blue-500 border border-blue-900/30 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Join Tournament
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setActiveTournament(tourney)}
+                    className="mt-2 w-full py-2 bg-purple-950/30 hover:bg-purple-900/40 text-purple-500 border border-purple-900/30 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Results
+                  </button>
+                )}
               </div>
             ))
           )}
@@ -332,16 +383,52 @@ export function Tournament() {
           </p>
         </div>
 
-        {/* The Join Match Button */}
-        {nextMatch && (
-          <button
-            onClick={() => navigate(`/game/${nextMatch.game_id}`)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] animate-pulse"
+      {/* The Join Match Button / Waiting Status */}
+        {nextMatch ? (
+          nextMatch.game_id ? (
+            <button
+              onClick={() => navigate(`/game/${nextMatch.game_id}`)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] animate-pulse"
+            >
+              Play Next Match
+            </button>
+          ) : (
+            <button
+              disabled
+              className="flex items-center gap-3 bg-green-950/30 border border-green-900/50 text-green-500 px-8 py-3 rounded-xl font-bold cursor-not-allowed animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.2)]"
+            >
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Waiting for opponents...
+            </button>
+          )
+        ) : null}
+        </div>
+
+      {/* The Eliminated Banner */}
+       {activeTournament?.status === "ongoing" && !isRefreshing && !nextMatch && participants.some(p => p.player_id === user?.id) && (
+        <div className="bg-red-950/40 border border-red-900 text-red-500 p-4 rounded-xl text-center font-bold animate-pulse mt-6 shadow-lg">
+          You have been eliminated! Watch the live bracket to see who wins the championship.
+        </div>
+      )}
+
+      {/* The Finished Banner */}
+      {activeTournament?.status === "finished" && (
+        <div className="bg-green-950/40 border border-green-900 text-green-400 p-6 rounded-xl text-center mt-6 shadow-lg flex flex-col items-center gap-4">
+          <p className="text-xl font-bold">
+            🏆 Tournament Finished! Winner: {userNames[activeTournament.winner_id] || "Unknown"}
+          </p>
+          <button 
+            onClick={() => {
+              setActiveTournament(null); // Clears the UI
+              setBracketData([]);        // Empties the bracket
+              setNextMatch(null);        // Resets the button
+            }} 
+            className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-bold transition-colors"
           >
-            Play Next Match
+            Return to Lobby
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* If bracketData is empty, show the waiting room */}
       {bracketData.length === 0 ? (
