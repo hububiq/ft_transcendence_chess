@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MessageSquare, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { GlobalChatPanel } from "../../features/chat/components/GlobalChatPanel";
 // import { GlobalChatProvider } from "../../features/chat/context/GlobalChatProvider";
@@ -18,6 +18,22 @@ export function SocialSidebar() {
     onlineUsers,
     friendsRevision,
   } = useGlobalChat();
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const isFirstRender = useRef(true); // Prevents the toast from popping up on initial page load
+
+  useEffect(() => {
+  if (isFirstRender.current) {
+    isFirstRender.current = false;
+    return;
+  }
+
+    // If friendsRevision changes, it means the WebSocket heard a change! Pop the toast!
+    setToastMessage("Your friends list has been updated!");
+    const timer = setTimeout(() => setToastMessage(null), 3000);
+
+    return () => clearTimeout(timer);
+  }, [friendsRevision]); 
 
   // Load friendship data from Django and refresh it after realtime invalidation
   const {
@@ -195,6 +211,26 @@ export function SocialSidebar() {
           <GlobalChatPanel />
         </div>
       </div>
+      {/* ... Chat Section ... */}
+      <div className="bg-black border-t border-neutral-900 flex flex-col">
+        {/* ... chat buttons and panel ... */}
+      </div>
+
+      {/* THE CUSTOM TOAST NOTIFICATION  */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className="bg-blue-950/90 border border-blue-500/50 text-blue-200 px-6 py-4 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.3)] flex items-center gap-3 backdrop-blur-md">
+            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-ping absolute top-3 right-3"></span>
+            <div className="w-8 h-8 bg-blue-900/50 rounded-lg flex items-center justify-center border border-blue-700/50 text-lg">
+               🔔
+            </div>
+            <div>
+              <h4 className="font-bold text-white text-sm">Social Update</h4>
+              <p className="text-sm font-medium opacity-80">{toastMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

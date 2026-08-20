@@ -21,6 +21,7 @@ from database import async_session
 from chat.router import router as chat_router
 from chat.friendship_events import listen_for_friendship_events
 import time
+from notifications import friendship_notifications_loop
 
 
 app = FastAPI(debug=settings.debug)
@@ -43,6 +44,7 @@ app.include_router(history_router)
 app.include_router(tournaments_router)
 app.include_router(games_router)
 app.include_router(chat_router)  # Expose the /ws/chat endpoint
+asyncio.create_task(friendship_notifications_loop())
 
 
 # ---------------------------------------------------------
