@@ -17,7 +17,6 @@ export function Dashboard() {
       {/* Header Area */}
       <div className="flex items-center justify-between pt-4">
         <div>
-          {loading && <Loader2 />}
           {!loading && !error && (
             <h2 className="text-3xl font-bold text-white tracking-tight">
               Welcome back, {user?.username}
@@ -35,7 +34,7 @@ export function Dashboard() {
       </div>
 
       {/* Main Action Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-[#0a0a0a] border border-neutral-800 p-10 flex flex-col items-center justify-center text-center">
+      <div className="relative overflow-hidden rounded-2xl bg-[#0a0a0a] border border-neutral-800 p-6 sm:p-10 flex flex-col items-center justify-center text-center">
         <Swords className="w-12 h-12 text-blue-500 mb-6 relative z-10" />
         <h3 className="text-2xl font-bold text-white mb-2 relative z-10">
           Find a Match
@@ -44,11 +43,11 @@ export function Dashboard() {
           Join our localhost:3000 queue and play against opponent of probably
           similar skill level instantly.
         </p>
-        <div className="relative z-10 flex gap-3">
+        <div className="relative z-10 flex flex-col lg:flex-row w-full max-w-xs lg:max-w-none justify-center gap-3">
           {isSearching ? (
             <button
               onClick={cancelQueue}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-medium py-3 px-8 rounded-lg transition-all"
+              className="flex items-center justify-center w-full lg:w-auto gap-2 bg-purple-600 hover:bg-purple-500 text-white font-medium py-3 px-8 rounded-lg transition-all"
             >
               <Loader2 className="w-5 h-5 animate-spin" />
               Cancel Search...
@@ -56,7 +55,7 @@ export function Dashboard() {
           ) : (
             <button
               onClick={joinQueue}
-              className="bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 px-8 rounded-lg transition-all hover:shadow-[0_0_20px_rgba(37,99,235,0.2)]"
+              className="w-full lg:w-auto bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 px-8 rounded-lg transition-all hover:shadow-[0_0_20px_rgba(37,99,235,0.2)]"
             >
               Play Now
             </button>
@@ -64,7 +63,7 @@ export function Dashboard() {
 
           <Link
             to="/bot"
-            className="flex items-center gap-2 bg-[#0d0d0d] hover:bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800 hover:border-purple-500/40 font-medium py-3 px-8 rounded-lg transition-all hover:shadow-[0_0_20px_rgba(147,51,234,0.1)]"
+            className="flex items-center justify-center w-full lg:w-auto gap-2 bg-[#0d0d0d] hover:bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800 hover:border-purple-500/40 font-medium py-3 px-8 rounded-lg transition-all hover:shadow-[0_0_20px_rgba(147,51,234,0.1)]"
           >
             <Bot className="w-4 h-4 text-purple-400" />
             Play vs Bot
