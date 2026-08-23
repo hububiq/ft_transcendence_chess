@@ -117,11 +117,11 @@ export function Game() {
         }
         setIsResignModalOpen(false);
         break;
-      
+
       case "draw_offer":
         setReceivedDrawOffer(true); // Pops up the Draw Modal!
         break;
-      
+
       case "draw_declined":
         alert("Opponent declined your draw offer.");
         break;
@@ -160,9 +160,7 @@ export function Game() {
 
     const fetchOpponentProfile = async () => {
       try {
-        const response = await api.get(
-          `api/users/${opponentId}/`,
-        );
+        const response = await api.get(`api/users/${opponentId}/`);
         const data = response.data;
 
         console.log("Opponent Profile Data:", data);
@@ -170,7 +168,10 @@ export function Game() {
         setOpponent({
           username: data.username || "Unknown",
           elo_rating: data.profile.elo_rating || "?",
-           avatar: resolveMediaUrl(data.profile?.avatar) || data.profile?.oauth_avatar_url || avatar_2,
+          avatar:
+            resolveMediaUrl(data.profile?.avatar) ||
+            data.profile?.oauth_avatar_url ||
+            avatar_2,
         });
       } catch (error) {
         console.error("Error fetching opponent:", error);
@@ -194,11 +195,11 @@ export function Game() {
             sendMessage({
               type: "claim_timeout",
               player_id: opponentId,
-              opponent_id: user?.id
+              opponent_id: user?.id,
             });
           }
           return newTime > 0 ? newTime : 0;
-        });  
+        });
       } else {
         setOpponentTime((t) => {
           const newTime = t - 1;
@@ -208,7 +209,7 @@ export function Game() {
             sendMessage({
               type: "claim_timeout",
               player_id: user?.id,
-              opponent_id: opponentId
+              opponent_id: opponentId,
             });
           }
           return newTime > 0 ? newTime : 0;
@@ -411,21 +412,20 @@ export function Game() {
         <div className="w-24" />
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-8 gap-12">
-        <div className="flex flex-col gap-6 max-w-[600px] w-full">
-          
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-8 gap-4 lg:gap-12">
+        <div className="flex flex-col gap-4 sm:gap-6 max-w-[600px] w-full px-2 sm:px-0">
           {/* Opponent Panel */}
           <div
             className={`flex justify-between items-end transition-opacity duration-300 ${!isPlayerTurn ? "opacity-100" : "opacity-60"}`}
           >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <img
                 src={opponent.avatar}
                 alt="Opponent"
-                className="w-12 h-12 rounded-lg border border-neutral-800 object-cover shadow-lg"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border border-neutral-800 object-cover shadow-lg"
               />
               <div>
-                <h3 className="font-semibold text-lg text-white">
+                <h3 className="font-semibold text-base sm:text-lg text-white">
                   {opponent.username}{" "}
                   <span className="text-sm font-normal text-neutral-500">
                     ({opponent.elo_rating})
@@ -436,11 +436,11 @@ export function Game() {
                   <div className="flex items-center gap-2 mt-1">
                     <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
                     <span className="text-xs text-yellow-500 font-medium tracking-wide">
-                    Waiting for opponent...
-                  </span>
-                </div>
-              )}
-              {/* END OF BADGE */}
+                      Waiting for opponent...
+                    </span>
+                  </div>
+                )}
+                {/* END OF BADGE */}
               </div>
             </div>
             <div
@@ -451,7 +451,7 @@ export function Game() {
           </div>
 
           {/* Board */}
-          <div className="w-[600px] h-[600px] rounded-sm relative z-50 border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800 pointer-events-auto">
+          <div className="w-full aspect-square max-w-[600px] mx-auto rounded-sm relative z-50 border-4 sm:border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800 pointer-events-auto">
             <ChessBoard
               fen={currentFen}
               onMove={handlePlayerMove}
@@ -464,7 +464,7 @@ export function Game() {
           <div
             className={`flex justify-between items-start transition-opacity duration-300 ${isPlayerTurn ? "opacity-100" : "opacity-60"}`}
           >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <img
                 src={
                   resolveMediaUrl(user?.profile?.avatar) ||
@@ -472,7 +472,7 @@ export function Game() {
                   avatar_2
                 }
                 alt="Player"
-                className="w-12 h-12 rounded-lg border border-blue-500 object-cover shadow-[0_0_10px_rgba(37,99,235,0.3)]"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border border-blue-500 object-cover shadow-[0_0_10px_rgba(37,99,235,0.3)]"
               />
               <div>
                 <h3 className="font-semibold text-lg text-white">
@@ -489,19 +489,39 @@ export function Game() {
               {formatTime(playerTime)}
             </div>
           </div>
-        </div>
 
-        <GameSidebar
-          mode="multiplayer"
-          isGameOver={!!gameOver}
-          isWaitingForRematch={isWaitingForRematch}
-          moveHistory={moveHistory}
-          onLeftAction={
-            gameOver ? () => window.location.reload() : handleDrawOffer
-          }
-          onResign={() => setIsResignModalOpen(true)}
-          onDraw={handleDrawOffer}
-        />
+          {/* Mobile Buttons Bar */}
+          <div className="flex lg:hidden gap-3 w-full mt-2">
+            <button
+              onClick={gameOver ? () => window.location.reload() : handleDrawOffer}
+              className="flex-1 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-medium py-3 rounded-lg transition-colors text-sm"
+            >
+              {gameOver ? "New Game" : "Offer Draw"}
+            </button>
+            <button
+              onClick={() => setIsResignModalOpen(true)}
+              disabled={!!gameOver}
+              className="flex-1 bg-red-950/30 border border-red-900/30 hover:bg-red-900/40 text-red-500 font-medium py-3 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Resign
+            </button>
+          </div>
+
+
+        </div>
+        <div className="hidden lg:block">
+          <GameSidebar
+            mode="multiplayer"
+            isGameOver={!!gameOver}
+            isWaitingForRematch={isWaitingForRematch}
+            moveHistory={moveHistory}
+            onLeftAction={
+              gameOver ? () => window.location.reload() : handleDrawOffer
+            }
+            onResign={() => setIsResignModalOpen(true)}
+            onDraw={handleDrawOffer}
+          />
+        </div>
       </main>
     </div>
   );
