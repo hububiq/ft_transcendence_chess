@@ -52,7 +52,6 @@ export function Game() {
   const confirmLeave = () => {
     sendMessage({
       type: "surrender",
-      player_id: user?.id,
     });
     navigate("/");
   };
@@ -199,7 +198,6 @@ export function Game() {
   const confirmResign = () => {
     sendMessage({
       type: "surrender",
-      player_id: user?.id,
     });
     setIsResignModalOpen(false);
   };

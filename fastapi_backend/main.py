@@ -233,9 +233,8 @@ async def game_socket(websocket: WebSocket, game_id: int):
             elif msg_type == "surrender":
                 current_fen = await redis.get(redis_key)
                 board = chess.Board(current_fen) if current_fen else chess.Board()
-                player_id = data.get("player_id")
                 await handle_game_over(board, game_id, websocket=websocket,
-                                       is_surrender=True, surrender_loser_id=player_id)
+                                    is_surrender=True, surrender_loser_id=user_id)
 
             else:
                 await websocket.send_json({
