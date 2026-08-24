@@ -31,7 +31,7 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 # SECURITY WARNING: don't run with debug turned on in production
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django_backend', '10.13.9.2', '172.29.45.254']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django_backend', '10.13.9.2', '172.29.45.254', '10.11.6.2']
 
 
 # Application definition
@@ -150,6 +150,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 	"http://10.13.9.2:3000",
     "http://172.29.45.254:3000",
+	"http://10.11.6.2:3000",
 ]
 
 CORS_ALLOWED_CREDENTIALS = True
