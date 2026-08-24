@@ -136,12 +136,12 @@ export function BotGame() {
   };
 
   const { sendMessage } = useWebSocket({
-    url: gameId
-      ? `ws://localhost:8001/ws/game/${gameId}?user_id=${currentPlayerId}`
-      : "",
-    enabled: gameStarted && !!gameId,
-    onMessage: handleServerMessage,
-  });
+  url: gameId
+    ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}`
+    : "",
+  enabled: gameStarted && !!gameId,
+  onMessage: handleServerMessage,
+});
 
   const handlePlayerMove = (move: string) => {
     const isWhiteTurn =

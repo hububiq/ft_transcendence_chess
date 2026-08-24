@@ -15,15 +15,33 @@ export function useWebSocket({ url, enabled, onMessage }: UseWebSocketProps) {
     savedOnMessage.current = onMessage;
   }, [onMessage]);
 
-  useEffect(() => {
-    if (!enabled) return;
+  if (!enabled) return;
 
-    const socket = new WebSocket(url);
-    wsRef.current = socket;
+  const accessToken = localStorage.getItem("access_token");
 
-    socket.onopen = () => console.log("Connected to Chess Backend!");
+  if (!accessToken) {
+    console.error(
+      "Cannot authenticate game WebSocket without an access token",
+    );
+    return;
+  }
 
-    socket.onmessage = (event) => {
+  const socket = new WebSocket(url);
+  wsRef.current = socket;
+
+  socket.onopen = () => {
+    // Authenticate before sending any game events
+    socket.send(
+      JSON.stringify({
+        type: "authenticate",
+        access_token: accessToken,
+      }),
+    );
+
+    console.log("Connected to Chess Backend!");
+  };
+
+  socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         console.log("Data: ", data);

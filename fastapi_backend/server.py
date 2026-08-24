@@ -15,10 +15,8 @@ class ConnectionManager:
 
     async def connect(self, game_id: int, websocket: WebSocket, user_id: int):
         """
-        Accepts a WebSocket connection and registers it under a game_id and user_id.
+        Registers an accepted WebSocket under a game_id and authenticated user_id.
         """
-        await websocket.accept()
-
         # Register game room
         if game_id not in self.rooms:
             self.rooms[game_id] = []

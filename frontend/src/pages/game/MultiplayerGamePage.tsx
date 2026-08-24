@@ -139,7 +139,7 @@ export function Game() {
   const { sendMessage } = useWebSocket({
     url:
       gameId && user?.id
-        ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}?user_id=${user.id}`
+        ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}`
         : "",
     enabled: !!gameId && !!user?.id,
     onMessage: handleServerMessage,
