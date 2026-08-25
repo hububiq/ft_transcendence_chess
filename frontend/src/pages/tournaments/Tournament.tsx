@@ -51,16 +51,23 @@ export function Tournament() {
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(true);
+  const [showWinnerModal, setShowWinnerModal] = useState(false);
 
   const handleLobbyMessage = (data: any) => {
     console.log("Lobby WebSocket Message:", data);
     switch (data.type) {
       case "match_start":
-        console.log("Match starting! Redirecting to Game:", data.game_id);
-        navigate(`/game/${data.game_id}`);
+        if (!data.round_number || data.round_number === 1) {
+          console.log("Match starting! Redirecting to Game:", data.game_id);
+          navigate(`/game/${data.game_id}`);
+        } else {
+          // It's Round 2+. Don't teleport them. Just refresh the UI so the Blue Button appears
+          console.log("Next round is ready! Showing the Play button.");
+          setRefreshTrigger((prev) => prev + 1);
+        }
         break;
       case "tournament_won":
-        alert("Congratulations! You won the entire tournament!");
+        setShowWinnerModal(true);
         break;
       case "tournament_updated":
         // Instantly trigger a database re-fetch when someone joins/leaves!
@@ -166,12 +173,15 @@ export function Tournament() {
                   id: match.id,
                   p1: p1Name,
                   p2: p2Name,
+                  p1Id: match.player1, // <--- ADD THIS
+                  p2Id: match.player2, // <--- ADD THIS
                   isUserP1,
                   isUserP2,
                   p1Score: match.player1_score ?? null,
                   p2Score: match.player2_score ?? null,
                   isCurrent: match.status === "in_progress",
                   winner: winnerName,
+                  winnerId: match.winner,
                 };
               }),
             }));
@@ -182,7 +192,7 @@ export function Tournament() {
 
         if (user?.id) {
           const matchData = await getNextMatch(activeTournament.id, user.id);
-          if (matchData && matchData.match && matchData.match.game_id) {
+          if (matchData && matchData.match) {
             setNextMatch(matchData.match);
           } else {
             setNextMatch(null);
@@ -202,6 +212,15 @@ export function Tournament() {
     }
   }, [activeTournament?.id, user?.id, userNames, refreshTrigger]);
 
+      // The Fireworks  
+  useEffect(() => {
+    if (activeTournament?.status === "finished" && activeTournament?.winner_id === user?.id) {
+      // Small 500ms delay to let the page finish loading before dropping the fireworks!
+      const timer = setTimeout(() => setShowWinnerModal(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTournament?.status, activeTournament?.winner_id, user?.id]);
+  
   // CREATE
   const handleCreate = async () => {
     if (!user?.id) return;
@@ -367,6 +386,13 @@ export function Tournament() {
   }
 
   // --- BRACKET/LOBBY MANAGEMENT VIEW ---
+
+  const isEliminated = bracketData.some((round) =>
+    round.matches.some(
+      (m: any) =>
+        (m.isUserP1 || m.isUserP2) && m.winnerId !== null && m.winnerId !== user?.id
+    )
+  );
   return (
     <div className="p-8 h-full flex flex-col max-w-7xl mx-auto">
       <div className="mb-10 flex items-center justify-between pt-4">
@@ -384,28 +410,26 @@ export function Tournament() {
         </div>
 
       {/* The Join Match Button / Waiting Status */}
-        {nextMatch ? (
-          nextMatch.game_id ? (
-            <button
-              onClick={() => navigate(`/game/${nextMatch.game_id}`)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] animate-pulse"
-            >
-              Play Next Match
-            </button>
-          ) : (
-            <button
-              disabled
-              className="flex items-center gap-3 bg-green-950/30 border border-green-900/50 text-green-500 px-8 py-3 rounded-xl font-bold cursor-not-allowed animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.2)]"
-            >
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Waiting for opponents...
-            </button>
-          )
+        {nextMatch && nextMatch.game_id ? (
+          <button
+            onClick={() => navigate(`/game/${nextMatch.game_id}`)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] animate-pulse"
+          >
+            Play Next Match
+          </button>
+        ) : !isEliminated && !isRefreshing && activeTournament.status === "ongoing" ? (
+          <button
+            disabled
+            className="flex items-center gap-3 bg-green-950/30 border border-green-900/50 text-green-500 px-8 py-3 rounded-xl font-bold cursor-not-allowed animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.2)]"
+          >
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Waiting for next round...
+          </button>
         ) : null}
         </div>
 
       {/* The Eliminated Banner */}
-       {activeTournament?.status === "ongoing" && !isRefreshing && !nextMatch && participants.some(p => p.player_id === user?.id) && (
+      {activeTournament?.status === "ongoing" && !isRefreshing && isEliminated && (
         <div className="bg-red-950/40 border border-red-900 text-red-500 p-4 rounded-xl text-center font-bold animate-pulse mt-6 shadow-lg">
           You have been eliminated! Watch the live bracket to see who wins the championship.
         </div>
@@ -531,89 +555,50 @@ export function Tournament() {
           </div>
         </div>
       ) : (
-        /* --- BRACKET GRAPHICS --- */
-        <div className="flex-1 overflow-x-auto overflow-y-hidden flex items-center py-10">
-          <div className="flex gap-16 min-w-max mx-auto px-8">
-            {bracketData.map((round, rIndex) => (
-              <div
-                key={round.title}
-                className="flex flex-col justify-around min-w-[260px]"
-              >
-                <h3 className="text-center text-xs font-bold text-neutral-600 uppercase tracking-widest mb-8">
-                  {round.title}
-                </h3>
-
-                <div className="flex flex-col gap-8 flex-1 justify-around">
-                  {round.matches.map((match) => (
-                    <div key={match.id} className="relative">
-                      {/* Connector Lines */}
-                      {rIndex < rounds.length - 1 && (
-                        <div className="absolute top-1/2 -right-16 w-16 h-[1px] bg-neutral-800 pointer-events-none">
-                          {match.id % 2 !== 0 && (
-                            <div className="absolute right-0 top-0 w-[1px] h-[calc(50%+2rem)] bg-neutral-800" />
-                          )}
-                          {match.id % 2 === 0 && (
-                            <div className="absolute right-0 bottom-0 w-[1px] h-[calc(50%+2rem)] bg-neutral-800" />
-                          )}
-                        </div>
-                      )}
-
-                      <div
-                        className={clsx(
-                          "bg-black border rounded-lg overflow-hidden flex flex-col shadow-2xl z-10 relative",
-                          match.isCurrent
-                            ? "border-blue-500/50"
-                            : "border-neutral-900",
-                        )}
-                      >
-                        {/* Player 1 */}
-                        <div
-                          className={clsx(
-                            "flex justify-between items-center p-3 border-b border-neutral-900",
-                            match.winner === match.p1
-                              ? "bg-neutral-900/50"
-                              : "bg-black",
-                            "text-neutral-300",
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded bg-neutral-900 border border-neutral-800 flex items-center justify-center text-[10px] text-neutral-500">
-                              {match.p1?.charAt(0) || "?"}
-                            </div>
-                            <span className="text-sm">{match.p1}</span>
-                          </div>
-                          <span className="text-sm font-medium">
-                            {match.p1Score ?? "-"}
-                          </span>
-                        </div>
-
-                        {/* Player 2 */}
-                        <div
-                          className={clsx(
-                            "flex justify-between items-center p-3",
-                            match.winner === match.p2
-                              ? "bg-neutral-900/50"
-                              : "bg-black",
-                            "text-neutral-300",
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded bg-neutral-900 border border-neutral-800 flex items-center justify-center text-[10px] text-neutral-500">
-                              {match.p2?.charAt(0) || "?"}
-                            </div>
-                            <span className="text-sm">{match.p2}</span>
-                          </div>
-                          <span className="text-sm font-medium">
-                            {match.p2Score ?? "-"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+        /* --- CLEAN VERTICAL TOURNAMENT LIST --- */
+        <div className="flex-1 w-full max-w-3xl mx-auto py-8 px-4">
+          {bracketData.map((round) => (
+            <div key={round.title} className="mb-8 bg-[#0a0a0a] border border-neutral-900 rounded-xl overflow-hidden shadow-lg">
+              
+              {/* Round Header */}
+              <div className="bg-neutral-900/50 px-6 py-3 border-b border-neutral-900">
+                <h3 className="text-sm font-bold text-purple-500 uppercase tracking-widest">{round.title}</h3>
               </div>
-            ))}
-          </div>
+
+              {/* Match List */}
+              <div className="divide-y divide-neutral-900/50">
+                {round.matches.map((match: any) => (
+                  <div key={match.id} className="p-6 flex items-center justify-between hover:bg-neutral-900/20 transition-colors">
+                    
+                    {/* The Players */}
+                    <div className="flex items-center gap-6 text-lg">
+                      <span className={clsx("font-medium", match.winnerId === match.p1Id ? "text-green-500 font-bold" : "text-neutral-300")}>
+                        {match.p1}
+                      </span>
+                      <span className="text-neutral-700 text-xs font-bold px-2">VS</span>
+                      <span className={clsx("font-medium", match.winnerId === match.p2Id ? "text-green-500 font-bold" : "text-neutral-300")}>
+                        {match.p2}
+                      </span>
+                    </div>
+
+                    {/* The Result */}
+                    <div className="text-sm font-mono flex items-center gap-2">
+                      {match.winner ? (
+                        <span className="bg-green-950/30 text-green-500 border border-green-900/50 px-3 py-1 rounded-md">
+                          Winner: {match.winner}
+                        </span>
+                      ) : (
+                        <span className="bg-neutral-900 text-neutral-500 border border-neutral-800 px-3 py-1 rounded-md">
+                          Waiting / Ongoing
+                        </span>
+                      )}
+                    </div>
+                  
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

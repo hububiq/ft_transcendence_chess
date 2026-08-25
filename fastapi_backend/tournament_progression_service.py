@@ -115,12 +115,13 @@ async def _create_game_for_match(match: TournamentMatch, session):
     session.add(match)
     await session.commit()
 
-    # FIX 3: Notify players in their Lobby socket!
+    # FIX 3: Notify players in their Lobby socket
     for pid, color in [(match.player1, "white"), (match.player2, "black")]:
         await manager.send_to_user(pid, {
             "type": "match_start",
             "game_id": new_game.id,
-            "color": color
+            "color": color,
+            "round_number": match.round_number
         })
 
 

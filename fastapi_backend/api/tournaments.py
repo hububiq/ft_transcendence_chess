@@ -219,11 +219,11 @@ async def get_player_tournament(player_id: int):
         for tp in participants:
             tournament = await session.get(Tournament, tp.tournament_id)
 
-        if tournament and tournament.status in ["waiting", "ongoing"]:
-            return {
-                "active": True,
-                "tournament": tournament
-            }
+            if tournament and tournament.status in ["waiting", "ongoing"]:
+                return {
+                    "active": True,
+                    "tournament": tournament
+                }
 
         return {"active": False}
 

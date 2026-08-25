@@ -36,12 +36,14 @@ export function Dashboard() {
       {/* Main Action Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-[#0a0a0a] border border-neutral-800 p-6 sm:p-10 flex flex-col items-center justify-center text-center">
         <Swords className="w-12 h-12 text-blue-500 mb-6 relative z-10" />
-        <h3 className="text-2xl font-bold text-white mb-2 relative z-10">
+        <h3 className="text-2xl font-bold text-white mb-4 relative z-10">
           Find a Match
         </h3>
-        <p className="text-neutral-400 mb-8 max-w-md relative z-10 text-sm leading-relaxed">
-          Join our localhost:3000 queue and play against opponent of probably
-          similar skill level instantly.
+        <p className="text-neutral-400 mb-2 max-w-md relative z-10 text-base leading-relaxed">
+          Join our matchmaking queue to tackle random opponent
+        </p>
+         <p className="text-neutral-400 mb-8 max-w-md relative z-10 text-base leading-relaxed">
+          or try to outsmart AI 
         </p>
         <div className="relative z-10 flex flex-col lg:flex-row w-full max-w-xs lg:max-w-none justify-center gap-3">
           {isSearching ? (

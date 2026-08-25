@@ -114,6 +114,7 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
         while True:
             data = await websocket.receive_json()
             if data.get("type") == "join_queue":
+                await redis.srem("cancelled_users", user_id) 
                 elo = data.get("elo_rating", 1200)
                 queue_payload = json.dumps({
                     "user_id": user_id,
@@ -153,9 +154,12 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
     saved_pgn = ""
     is_draw = False
 
+    tournament_id = None
+
     async with async_session() as session:
         game = await session.get(Game, game_id)
         if game:
+            tournament_id = game.tournament_id
             if game.white_player_id == user_id:
                 color = "w"
                 opponent_id = game.black_player_id
@@ -231,13 +235,34 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
                 san_history.append(temp_board.san(move_obj))
                 temp_board.push(move_obj)
 
+            white_time = 15
+            black_time = 15
+    
+            time_data_str = await redis.get(f"game:{game_id}:time")
+            if time_data_str:
+                td = json.loads(time_data_str)
+                white_time = td["white_time"]
+                black_time = td["black_time"]
+                
+                # Deduct the time spent on the current turn
+                if len(raw_moves_uci) > 0:
+                    time_spent = int(time.time()) - td["last_move_at"]
+                    board_for_time = chess.Board(current_fen)
+                    if board_for_time.turn == chess.WHITE:
+                        white_time -= time_spent
+                    else:
+                        black_time -= time_spent
+
             try:
                 await websocket.send_json({
                     "type": "board_state",
                     "fen": current_fen,
                     "color": color,            # Tells React to flip the board or not
                     "opponent_id": opponent_id,  # Tells React who they are playing
-                    "history": san_history
+                    "tournament_id": tournament_id,
+                    "history": san_history,
+                    "white_time": max(0, white_time),
+                    "black_time": max(0, black_time)
                 })
             except Exception as e:
                 print(f"[WS] Browser disconnected before receiving board state: {e}")
