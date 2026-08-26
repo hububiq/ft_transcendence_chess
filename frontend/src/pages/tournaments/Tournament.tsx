@@ -115,6 +115,7 @@ export function Tournament() {
         if (currentTourney && currentTourney.tournament) {
           setActiveTournament(currentTourney.tournament);
         } else {
+          setActiveTournament(null);
           const allTournaments = await getTournaments();
           setLobbyTournaments(
             Array.isArray(allTournaments) ? allTournaments : [],
@@ -157,10 +158,10 @@ export function Tournament() {
               matches: rawData.rounds[roundNum].map((match: any) => {
                 const p1Name = match.player1
                   ? userNames[match.player1] || `Player ${match.player1}`
-                  : "TBD";
+                  : "--";
                 const p2Name = match.player2
                   ? userNames[match.player2] || `Player ${match.player2}`
-                  : "TBD";
+                  : "--";
                 const winnerName = match.winner
                   ? userNames[match.winner] || `Player ${match.winner}`
                   : null;
@@ -173,8 +174,8 @@ export function Tournament() {
                   id: match.id,
                   p1: p1Name,
                   p2: p2Name,
-                  p1Id: match.player1, // <--- ADD THIS
-                  p2Id: match.player2, // <--- ADD THIS
+                  p1Id: match.player1, 
+                  p2Id: match.player2,
                   isUserP1,
                   isUserP2,
                   p1Score: match.player1_score ?? null,
@@ -200,6 +201,8 @@ export function Tournament() {
         }
       } catch (error) {
         console.error("Failed to load tournament data:", error);
+        setActiveTournament(null);
+        setBracketData([]);
       } finally {
         setIsRefreshing(false);
       }
@@ -253,10 +256,11 @@ export function Tournament() {
   const handleLeave = async () => {
     if (!user?.id || !activeTournament?.id) return;
     try {
-      await leaveTournament(activeTournament.id);
+      const tourneyId = activeTournament.id;
       setActiveTournament(null);
       setBracketData([]);
       setParticipants([]);
+      await leaveTournament(tourneyId);
     } catch (error) {
       console.error("Error leaving tournament:", error);
     }
@@ -370,12 +374,23 @@ export function Tournament() {
                     Join Tournament
                   </button>
                 ) : (
-                  <button
-                    onClick={() => setActiveTournament(tourney)}
-                    className="mt-2 w-full py-2 bg-purple-950/30 hover:bg-purple-900/40 text-purple-500 border border-purple-900/30 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Results
-                  </button>
+                  <div className="mt-2 flex gap-2 w-full">
+                    {/* 👇 The Disabled 'Too Late' Badge 👇 */}
+                    <button
+                      disabled
+                      className="flex-1 py-2 bg-neutral-900/50 border border-neutral-800 text-neutral-500 rounded-lg text-xs font-medium cursor-not-allowed"
+                    >
+                      Too late to join
+                    </button>
+                    
+                    {/* 👇 The Spectate Button (Keeps the original 'Enter' logic!) 👇 */}
+                    <button
+                      onClick={() => setActiveTournament(tourney)}
+                      className="flex-1 py-2 bg-purple-950/30 hover:bg-purple-900/40 text-purple-500 border border-purple-900/30 rounded-lg text-xs font-medium transition-colors"
+                    >
+                      View Bracket
+                    </button>
+                  </div>
                 )}
               </div>
             ))
@@ -393,40 +408,57 @@ export function Tournament() {
         (m.isUserP1 || m.isUserP2) && m.winnerId !== null && m.winnerId !== user?.id
     )
   );
+
+  const isSpectator = participants.length > 0 && !participants.some(p => p.player_id === user?.id);
+
   return (
     <div className="p-8 h-full flex flex-col max-w-7xl mx-auto">
       <div className="mb-10 flex items-center justify-between pt-4">
-        <div>
+                <div>
           <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
             <Trophy className="w-8 h-8 text-purple-500" />
             Tournament #{activeTournament.id}
           </h2>
-          {/* Dynamic status text */}
           <p className="text-neutral-500 mt-2 text-sm">
-            {nextMatch
-              ? "Your opponent is ready. Join the match now!"
-              : "Waiting for other matches to finish..."}
+            {activeTournament.status === "finished" 
+              ? "This tournament has concluded." 
+              : nextMatch 
+                ? "Your opponent is ready. Join the match now!" 
+                : "Watch the live bracket updates below."}
           </p>
         </div>
 
-      {/* The Join Match Button / Waiting Status */}
-        {nextMatch && nextMatch.game_id ? (
-          <button
-            onClick={() => navigate(`/game/${nextMatch.game_id}`)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] animate-pulse"
-          >
-            Play Next Match
-          </button>
-        ) : !isEliminated && !isRefreshing && activeTournament.status === "ongoing" ? (
-          <button
-            disabled
-            className="flex items-center gap-3 bg-green-950/30 border border-green-900/50 text-green-500 px-8 py-3 rounded-xl font-bold cursor-not-allowed animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.2)]"
-          >
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Waiting for next round...
-          </button>
-        ) : null}
+        {/* THE FLAWLESS TOP-RIGHT STATUS AREA */}
+        <div>
+          {activeTournament.status === "finished" ? (
+            <span className="bg-neutral-900 border border-neutral-800 text-neutral-500 px-6 py-3 rounded-xl font-bold shadow-sm">
+              Tournament Finished
+            </span>
+          ) : isSpectator ? (
+            <span className="flex items-center gap-3 bg-green-950/30 border border-green-900/50 text-green-500 px-8 py-3 rounded-xl font-bold shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+              <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
+              Tournament Ongoing
+            </span>
+          ) : nextMatch && nextMatch.game_id ? (
+            <button
+              onClick={() => navigate(`/game/${nextMatch.game_id}`)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] animate-pulse"
+            >
+              Play Next Match
+            </button>
+          ) : !isEliminated && !isRefreshing && activeTournament.status === "ongoing" ? (
+            <button
+              disabled
+              className="flex items-center gap-3 bg-yellow-950/30 border border-yellow-900/50 text-yellow-500 px-8 py-3 rounded-xl font-bold cursor-not-allowed animate-pulse shadow-[0_0_15px_rgba(234,179,8,0.2)]"
+            >
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Waiting for next round...
+            </button>
+          ) : null}
         </div>
+        {/*  END OF TOP-RIGHT STATUS AREA  */}
+
+      </div>
 
       {/* The Eliminated Banner */}
       {activeTournament?.status === "ongoing" && !isRefreshing && isEliminated && (
@@ -587,6 +619,10 @@ export function Tournament() {
                         <span className="bg-green-950/30 text-green-500 border border-green-900/50 px-3 py-1 rounded-md">
                           Winner: {match.winner}
                         </span>
+                      ) : match.p1Id === null && match.p2Id === null ? (
+                        <span className="bg-neutral-900/50 text-neutral-600 border border-neutral-800/50 px-3 py-1 rounded-md">
+                          N/A
+                        </span>
                       ) : (
                         <span className="bg-neutral-900 text-neutral-500 border border-neutral-800 px-3 py-1 rounded-md">
                           Waiting / Ongoing
@@ -599,6 +635,21 @@ export function Tournament() {
               </div>
             </div>
           ))}
+          {/* 2. THE SPECTATOR BUTTON (Outside the loop, so it only prints once!)  */}
+          {isSpectator && activeTournament?.status === "ongoing" && (
+            <div className="mt-4 mb-12 flex justify-center">
+              <button
+                onClick={() => {
+                  setActiveTournament(null);
+                  setBracketData([]);
+                  setNextMatch(null);
+                }}
+                className="bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700 px-8 py-3 rounded-xl font-bold transition-colors shadow-lg"
+              >
+                Return to Lobby
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

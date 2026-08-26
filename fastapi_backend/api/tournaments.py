@@ -306,6 +306,10 @@ async def _start_tournament(tournament: Tournament, session):
     # Import bracket into DB
     await import_bracket(tournament.id, rounds, session)
 
+    await manager.broadcast_to_all({
+        "type": "tournament_updated"
+    })
+
     # Find all matches for Round 1 in the database
     matches_result = await session.execute(
         select(TournamentMatch).where(

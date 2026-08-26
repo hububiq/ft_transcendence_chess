@@ -38,16 +38,17 @@ async def advance_tournament(game_id: int, winner_id: int, session):
     result = await session.execute(query)
     round_matches = result.scalars().all()
 
-    # If ANY match has no winner → round not finished
-    if any(m.winner is None for m in round_matches):
-        return
+    for m in round_matches:
+        if m.winner is None and (m.player1 is not None or m.player2 is not None):
+            return # Still waiting for a real game to finish!
+
 
     # 4. Collect winners from this round
-    winners = [m.winner for m in round_matches if m.winner is not None]
+    winners = [m.winner for m in round_matches]
 
-    # If only 1 winner → tournament is finished
-    if len(winners) == 1:
-        await _finish_tournament(tournament_id, winners[0], session)
+    actual_winners = [w for w in winners if w is not None]
+    if len(actual_winners) == 1:
+        await _finish_tournament(tournament_id, actual_winners[0], session)
         return
 
     # 5. Advance winners to next round
