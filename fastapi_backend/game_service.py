@@ -3,12 +3,13 @@ import chess.pgn
 import httpx
 import json
 import time
-import json
 from redis_client import get_redis
 from ai_engine import compute_best_move
 from database import async_session
 from models import Game, TournamentMatch
 from server import manager
+from chat.manager import global_chat_manager
+from chat.schemas import ActiveGameChangedServerEvent
 
 from tournament_progression_service import advance_tournament
 
@@ -39,6 +40,8 @@ async def handle_game_over(
     winner_id = None
     loser_id = None
 
+    affected_user_ids: set[int] = set()
+
      # SAVE TO POSTGRESQL AND GRAB THE TRUE IDs
     async with async_session() as session:
         game = await session.get(Game, int(game_id))
@@ -48,6 +51,16 @@ async def handle_game_over(
         if game.status == "completed":
             print(f"[SHIELD] Game {game_id} is already over. Ignoring duplicate request.")
             return
+
+        # Refresh active game state for every human player affected by this result
+        affected_user_ids = {
+            player_id
+            for player_id in (
+                game.white_player_id,
+                game.black_player_id,
+            )
+            if player_id is not None
+        }
 
         # Surrender overrides python-chess
         if is_surrender:
@@ -76,6 +89,7 @@ async def handle_game_over(
                 loser_id = None
                 game.is_draw = True
 
+        # Persist the final game state for both normal endings and surrender
         game.moves_pgn = game_pgn
         game.winner_id = winner_id
         game.status = "completed"
@@ -91,6 +105,12 @@ async def handle_game_over(
                 winner_id=winner_id,
                 session=session
             )
+
+    # Notify authenticated application sockets after the completed state is committed
+    await global_chat_manager.send_to_users(
+        affected_user_ids,
+        ActiveGameChangedServerEvent(),
+    )
 
     # Notify players
     await manager.broadcast_to_game(int(game_id), {

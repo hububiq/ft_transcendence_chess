@@ -60,6 +60,11 @@ export interface FriendsChangedServerEvent {
   type: "friends_changed";
 }
 
+// Notify the client that its active game data must be refreshed
+export interface ActiveGameChangedServerEvent {
+  type: "active_game_changed";
+}
+
 // Public error codes shared between the backend protocol and frontend UI
 export type ChatErrorCode =
   | "AUTH_REQUIRED"
@@ -84,6 +89,7 @@ export type ChatServerEvent =
   | ChatMessageServerEvent
   | PresenceServerEvent
   | FriendsChangedServerEvent
+  | ActiveGameChangedServerEvent
   | ErrorServerEvent;
 
 // Return a predictable result to the UI without throwing for expected send failures

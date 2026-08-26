@@ -137,6 +137,11 @@ class FriendsChangedServerEvent(ServerEventModel):
 
     type: Literal["friends_changed"] = "friends_changed"
 
+class ActiveGameChangedServerEvent(ServerEventModel):
+    """Notify an authenticated client that its active game data changed"""
+
+    type: Literal["active_game_changed"] = "active_game_changed"
+
 class ChatMessageServerEvent(ServerEventModel):
     """Server confirmed message prepared for broadcasting"""
 
@@ -194,6 +199,7 @@ ServerEvent = (
     AuthenticatedServerEvent
     | PresenceServerEvent
     | FriendsChangedServerEvent
+    | ActiveGameChangedServerEvent
     | ChatMessageServerEvent
     | ErrorServerEvent
 )

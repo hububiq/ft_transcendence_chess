@@ -56,7 +56,6 @@ export function Game() {
   const confirmLeave = () => {
     sendMessage({
       type: "surrender",
-      player_id: user?.id,
     });
     navigate(isTournamentGame ? "/tournament" : "/");
   };
@@ -180,7 +179,7 @@ export function Game() {
   const { sendMessage } = useWebSocket({
     url:
       gameId && user?.id
-        ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}?user_id=${user.id}`
+        ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}`
         : "",
     enabled: !!gameId && !!user?.id,
     onMessage: handleServerMessage,
@@ -264,7 +263,6 @@ export function Game() {
   const confirmResign = () => {
     sendMessage({
       type: "surrender",
-      player_id: user?.id,
     });
     setIsResignModalOpen(false);
   };

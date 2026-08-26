@@ -1,4 +1,5 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from server import manager
@@ -20,6 +21,7 @@ from garbage_games_collector import clean_dead_games
 from database import async_session
 from chat.router import router as chat_router
 from chat.friendship_events import listen_for_friendship_events
+from auth import get_current_user
 import time
 from notifications import friendship_notifications_loop
 
@@ -140,10 +142,65 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
 # Game WebSocket (game_id + user_id)
 # ------------------------------------------------------------
 @app.websocket("/ws/game/{game_id}")
-async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
-    await manager.connect(game_id, websocket, user_id)
+async def game_socket(websocket: WebSocket, game_id: int):
+    await websocket.accept()
 
-    redis = await get_redis()
+    try:
+        # Require authentication before registering the game connection
+        auth_payload = await asyncio.wait_for(
+            websocket.receive_json(),
+            timeout=10,
+        )
+    except asyncio.TimeoutError:
+        await websocket.close(
+            code=1008,
+            reason="Authentication timeout",
+        )
+        return
+    except WebSocketDisconnect:
+        return
+    except Exception:
+        await websocket.close(
+            code=1008,
+            reason="Invalid authentication message",
+        )
+        return
+
+    if (
+        not isinstance(auth_payload, dict)
+        or auth_payload.get("type") != "authenticate"
+    ):
+        await websocket.close(
+            code=1008,
+            reason="Authentication required",
+        )
+        return
+
+    access_token = auth_payload.get("access_token")
+
+    if not isinstance(access_token, str) or not access_token.strip():
+        await websocket.close(
+            code=1008,
+            reason="Authentication required",
+        )
+        return
+
+    try:
+        current_user = await get_current_user(
+            HTTPAuthorizationCredentials(
+                scheme="Bearer",
+                credentials=access_token,
+            )
+        )
+    except HTTPException:
+        await websocket.close(
+            code=1008,
+            reason="Authentication failed",
+        )
+        return
+
+    # Use only the user identity verified from the access token
+    user_id = current_user.id
 
     color = "w"
     opponent_id = None
@@ -158,30 +215,61 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
 
     async with async_session() as session:
         game = await session.get(Game, game_id)
-        if game:
-            tournament_id = game.tournament_id
-            if game.white_player_id == user_id:
-                color = "w"
-                opponent_id = game.black_player_id
-            else:
-                color = "b"
-                opponent_id = game.white_player_id
-            
-            if game.status == "completed":
-                is_completed = True
-                winner_id = game.winner_id
-                saved_pgn = game.moves_pgn
-                is_draw = game.is_draw
 
-                if is_draw:
-                    result = "1/2-1/2"
-                elif winner_id == game.white_player_id:
-                    result = "1-0"
-                    loser_id = game.black_player_id
-                else:
-                    # If Black won, OR if winner is None (Bot playing as Black won)
-                    result = "0-1"
-                    loser_id = game.white_player_id
+        if not game:
+            await websocket.close(
+                code=1008,
+                reason="Game is not active",
+            )
+            return
+
+        tournament_id = game.tournament_id
+
+        # Use only the authenticated player's membership in this game
+        if game.white_player_id == user_id:
+            color = "w"
+            opponent_id = game.black_player_id
+        elif game.black_player_id == user_id:
+            color = "b"
+            opponent_id = game.white_player_id
+        else:
+            await websocket.close(
+                code=1008,
+                reason="User is not a player in this game",
+            )
+            return
+
+        if game.status == "completed":
+            is_completed = True
+            winner_id = game.winner_id
+            saved_pgn = game.moves_pgn
+            is_draw = game.is_draw
+
+            if is_draw:
+                result = "1/2-1/2"
+            elif winner_id == game.white_player_id:
+                result = "1-0"
+                loser_id = game.black_player_id
+            else:
+                # If Black won, OR if winner is None (Bot playing as Black won)
+                result = "0-1"
+                loser_id = game.white_player_id
+
+        elif game.status != "ongoing":
+            await websocket.close(
+                code=1008,
+                reason="Game is not active",
+            )
+            return
+
+    # Register only an authenticated player belonging to the game
+    await manager.connect(
+        game_id,
+        websocket,
+        user_id,
+    )
+
+    redis = await get_redis()
     
     try:
         if is_completed:
@@ -287,30 +375,53 @@ async def game_socket(websocket: WebSocket, game_id: int, user_id: int):
             elif msg_type == "surrender":
                 current_fen = await redis.get(redis_key)
                 board = chess.Board(current_fen) if current_fen else chess.Board()
-                player_id = data.get("player_id")
-                await handle_game_over(board, game_id, websocket=websocket,
-                                       is_surrender=True, surrender_loser_id=player_id)
-            
+                await handle_game_over(
+                    board,
+                    game_id,
+                    websocket=websocket,
+                    is_surrender=True,
+                    surrender_loser_id=user_id,
+                )
+
             elif msg_type == "claim_timeout":
                 print(f"[WS] Received timeout claim from user for Game {game_id}!")
                 await handle_timeout_claim(data, str(game_id), websocket)
+
             elif msg_type == "rematch_request":
                 await process_rematch_request(user_id, opponent_id)
+
             elif msg_type == "rematch_declined":
                 if opponent_id is not None:
-                    await manager.send_to_user(opponent_id, {"type": "rematch_declined"})
+                    await manager.send_to_user(
+                        opponent_id,
+                        {"type": "rematch_declined"},
+                    )
+
             elif msg_type == "rematch_accepted":
                 await process_rematch_accepted(game_id)
-            
+
             elif msg_type == "offer_draw":
-                await manager.send_to_user(opponent_id, {"type": "draw_offer"})
+                await manager.send_to_user(
+                    opponent_id,
+                    {"type": "draw_offer"},
+                )
+
             elif msg_type == "draw_declined":
                 if opponent_id is not None:
-                    await manager.send_to_user(opponent_id, {"type": "draw_declined"})
+                    await manager.send_to_user(
+                        opponent_id,
+                        {"type": "draw_declined"},
+                    )
+
             elif msg_type == "draw_accepted":
                 current_fen = await redis.get(redis_key)
                 board = chess.Board(current_fen) if current_fen else chess.Board()
-                await handle_game_over(board, game_id, websocket=websocket, is_agreed_draw=True)
+                await handle_game_over(
+                    board,
+                    game_id,
+                    websocket=websocket,
+                    is_agreed_draw=True,
+                )
 
             else:
                 await websocket.send_json({

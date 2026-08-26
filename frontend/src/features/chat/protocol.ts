@@ -153,6 +153,12 @@ export function parseChatServerEvent(
     };
   }
 
+  if (value.type === "active_game_changed") {
+  return {
+    type: "active_game_changed",
+  };
+}
+
   if (value.type === "error") {
     // Accept only documented error codes and bounded public messages
     if (

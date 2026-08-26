@@ -36,6 +36,7 @@ interface UseGlobalChatSocketResult {
   messages: ChatMessageServerEvent[];
   onlineUsers: ChatAuthor[];
   friendsRevision: number;
+  activeGameRevision: number;
   friendshipChangeRevision: number;
   connectionState: ChatConnectionState;
   authenticatedUser: ChatAuthor | null;
@@ -59,6 +60,8 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     ChatAuthor[]
   >([]);
   const [friendsRevision, setFriendsRevision] =
+    useState(0);
+  const [activeGameRevision, setActiveGameRevision] =
     useState(0);
   const [
     friendshipChangeRevision,
@@ -105,6 +108,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
       setMessages([]);
       setOnlineUsers([]);
       setFriendsRevision(0);
+      setActiveGameRevision(0);
       setFriendshipChangeRevision(0);
       setAuthenticatedUser(null);
       setConnectionState("disconnected");
@@ -317,6 +321,12 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
           setConnectionState("connected");
           setErrorMessage(null);
 
+          // Revalidate active game state after every successful application WebSocket connection
+          setActiveGameRevision(
+            (currentRevision) =>
+              currentRevision + 1,
+          );
+
           if (hasAuthenticatedConnectionRef.current) {
             // Refresh friendship data after recovering a lost WebSocket connection
             setFriendsRevision(
@@ -366,6 +376,15 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
 
           // Notify the UI only about actual friendship changes
           setFriendshipChangeRevision(
+            (currentRevision) =>
+              currentRevision + 1,
+          );
+          return;
+        }
+
+        if (event.type === "active_game_changed") {
+          // Trigger active game refresh without storing game data in the chat hook
+          setActiveGameRevision(
             (currentRevision) =>
               currentRevision + 1,
           );
@@ -541,6 +560,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     friendsRevision,
     friendshipChangeRevision,
     connectionState,
+    activeGameRevision,
     authenticatedUser,
     errorMessage,
     sendMessage,

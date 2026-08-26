@@ -47,7 +47,6 @@ export function BotGame() {
   const confirmLeave = () => {
     sendMessage({
       type: "surrender",
-      player_id: currentPlayerId,
       opponent_id: SYSTEM_BOT_ID,
     });
     sessionStorage.removeItem("activeBotGameId"); // Clear it so they don't resume a forfeited game
@@ -126,6 +125,9 @@ export function BotGame() {
         break;
 
       case "game_over":
+        // Clear the completed game so it cannot be resumed later
+        sessionStorage.removeItem("activeBotGameId");
+        
         if (data.result === "1/2-1/2") {
           setGameOver("draw");
         } else if (data.loser_id === currentPlayerId) {
@@ -139,7 +141,7 @@ export function BotGame() {
 
   const { sendMessage } = useWebSocket({
     url: gameId
-      ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}?user_id=${currentPlayerId}`
+      ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}`
       : "",
     enabled: gameStarted && !!gameId,
     onMessage: handleServerMessage,
@@ -161,7 +163,6 @@ export function BotGame() {
   const handleResign = () => {
     sendMessage({
       type: "surrender",
-      player_id: currentPlayerId,
       opponent_id: SYSTEM_BOT_ID,
     });
   };
@@ -177,7 +178,6 @@ export function BotGame() {
     setGameId(null);
 
     sessionStorage.removeItem("activeBotGameId");
-
     hasFetchedRef.current = false;
     initGame();
   };
