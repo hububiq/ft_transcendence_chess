@@ -31,10 +31,14 @@ export function Game() {
   const [isResignModalOpen, setIsResignModalOpen] = useState(false);
   const [isWaitingForRematch, setIsWaitingForRematch] = useState(false);
   const [receivedRematchOffer, setReceivedRematchOffer] = useState(false);
+  const [receivedDrawOffer, setReceivedDrawOffer] = useState(false);
+  const [isTournamentGame, setIsTournamentGame] = useState(false);
+  const [boardKey, setBoardKey] = useState(0);
+  const [isTournamentChampion, setIsTournamentChampion] = useState(false);
 
   // Clocks & Turns
-  const [playerTime, setPlayerTime] = useState(600);
-  const [opponentTime, setOpponentTime] = useState(600);
+  const [playerTime, setPlayerTime] = useState(15);
+  const [opponentTime, setOpponentTime] = useState(15);
 
   // Derive active turn safely
   const activeColor = currentFen === "start" ? "w" : currentFen.split(" ")[1];
@@ -44,7 +48,7 @@ export function Game() {
 
   const handleHomeClick = () => {
     if (gameOver) {
-      navigate("/");
+      navigate(isTournamentGame ? "/tournament" : "/");
     } else {
       setShowLeaveConfirm(true);
     }
@@ -53,7 +57,7 @@ export function Game() {
     sendMessage({
       type: "surrender",
     });
-    navigate("/");
+    navigate(isTournamentGame ? "/tournament" : "/");
   };
 
   const [opponent, setOpponent] = useState({
@@ -72,6 +76,16 @@ export function Game() {
       case "board_state":
         setCurrentFen(data.fen);
         if (data.color) setPlayerColor(data.color);
+        if (data.tournament_id) setIsTournamentGame(true);
+        if (data.white_time !== undefined && data.black_time !== undefined) {
+          if (data.color === "w") {
+            setPlayerTime(data.white_time);
+            setOpponentTime(data.black_time);
+          } else {
+            setPlayerTime(data.black_time);
+            setOpponentTime(data.white_time);
+          }
+        }
         if (data.opponent_id) {
           setOpponentId(data.opponent_id);
           setOpponent((prev) => ({
@@ -81,6 +95,15 @@ export function Game() {
         }
         if (data.history) {
           setMoveHistory(parseHistory(data.history));
+        }
+        if (data.white_time !== undefined && data.black_time !== undefined) {
+          if (data.color === "w") {
+            setPlayerTime(data.white_time);
+            setOpponentTime(data.black_time);
+          } else {
+            setPlayerTime(data.black_time);
+            setOpponentTime(data.white_time);
+          }
         }
         break;
 
@@ -116,6 +139,14 @@ export function Game() {
         setIsResignModalOpen(false);
         break;
 
+      case "draw_offer":
+        setReceivedDrawOffer(true); // Pops up the Draw Modal!
+        break;
+
+      case "draw_declined":
+        alert("Opponent declined your draw offer.");
+        break;
+
       case "rematch_request":
         setReceivedRematchOffer(true);
         break;
@@ -128,9 +159,19 @@ export function Game() {
         setIsWaitingForRematch(false);
         alert("Opponent declined the rematch.");
         break;
+      
+      case "tournament_won":
+        setIsTournamentChampion(true);
+        break;
 
       case "error":
         console.error("Server Error:", data.message);
+        alert(data.message); // Tells the user why it failed
+        // If the server provides the true FEN, snap the board back to reality
+        if (data.fen) {
+          setCurrentFen(data.fen);
+          setBoardKey(prev => prev + 1);
+        }
         break;
     }
   };
@@ -150,9 +191,7 @@ export function Game() {
 
     const fetchOpponentProfile = async () => {
       try {
-        const response = await api.get(
-          `http://localhost:8000/api/users/${opponentId}/`,
-        );
+        const response = await api.get(`api/users/${opponentId}/`);
         const data = response.data;
 
         console.log("Opponent Profile Data:", data);
@@ -160,7 +199,10 @@ export function Game() {
         setOpponent({
           username: data.username || "Unknown",
           elo_rating: data.profile.elo_rating || "?",
-          avatar: data.avatar || avatar_2,
+          avatar:
+            resolveMediaUrl(data.profile?.avatar) ||
+            data.profile?.oauth_avatar_url ||
+            avatar_2,
         });
       } catch (error) {
         console.error("Error fetching opponent:", error);
@@ -173,18 +215,41 @@ export function Game() {
 
   // Clock countdown logic
   useEffect(() => {
-    if (gameOver) return;
+    if (gameOver || moveHistory.length === 0) return;
 
     const timer = setInterval(() => {
       if (isPlayerTurn) {
-        setPlayerTime((t) => Math.max(0, t - 1));
+        setPlayerTime((t) => {
+          const newTime = t - 1;
+          if (newTime <= 0) {
+            clearInterval(timer);
+            sendMessage({
+              type: "claim_timeout",
+              player_id: opponentId,
+              opponent_id: user?.id,
+            });
+          }
+          return newTime > 0 ? newTime : 0;
+        });
       } else {
-        setOpponentTime((t) => Math.max(0, t - 1));
+        setOpponentTime((t) => {
+          const newTime = t - 1;
+          if (newTime <= 0) {
+            clearInterval(timer);
+            console.log("CLOCK HIT ZERO! Firing claim_timeout to FastAPI!");
+            sendMessage({
+              type: "claim_timeout",
+              player_id: user?.id,
+              opponent_id: opponentId,
+            });
+          }
+          return newTime > 0 ? newTime : 0;
+        });
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isPlayerTurn, gameOver]);
+  }, [isPlayerTurn, gameOver, user?.id, opponentId, sendMessage]); // Hubert: addeed dependencies
 
   // ACTIONS
   const handlePlayerMove = (move: string) => {
@@ -204,6 +269,16 @@ export function Game() {
 
   const handleDrawOffer = () => {
     sendMessage({ type: "offer_draw" });
+  };
+
+  const handleAcceptDraw = () => {
+    setReceivedDrawOffer(false);
+    sendMessage({ type: "draw_accepted" });
+  };
+
+  const handleDeclineDraw = () => {
+    setReceivedDrawOffer(false);
+    sendMessage({ type: "draw_declined" });
   };
 
   const handleRematchRequest = () => {
@@ -231,8 +306,8 @@ export function Game() {
   return (
     <div className="min-h-screen bg-black flex flex-col text-neutral-200 relative">
       {/*Rematch Offer Modal*/}
-      {receivedRematchOffer && !gameOver && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-70">
+      {receivedRematchOffer && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[200]">
           <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
             <div>
               <h2 className="text-xl font-bold text-white mb-2">Rematch?</h2>
@@ -249,6 +324,34 @@ export function Game() {
               </button>
               <button
                 onClick={handleAcceptRematch}
+                className="flex-1 py-2.5 bg-blue-950/30 hover:bg-blue-900/40 text-blue-500 border border-blue-900/30 rounded-lg text-sm font-medium transition-colors"
+              >
+                Accept
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Draw Offer Modal */}
+      {receivedDrawOffer && !gameOver && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-70">
+          <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-2">Draw Offer</h2>
+              <p className="text-neutral-500 text-sm">
+                Your opponent has offered a draw. Do you accept?
+              </p>
+            </div>
+            <div className="flex gap-3 w-full">
+              <button
+                onClick={handleDeclineDraw}
+                className="flex-1 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg text-sm font-medium transition-colors"
+              >
+                Decline
+              </button>
+              <button
+                onClick={handleAcceptDraw}
                 className="flex-1 py-2.5 bg-blue-950/30 hover:bg-blue-900/40 text-blue-500 border border-blue-900/30 rounded-lg text-sm font-medium transition-colors"
               >
                 Accept
@@ -290,9 +393,37 @@ export function Game() {
       )}
 
       {/*Game Over Modal*/}
-      {gameOver && (
-        <div className="relative z-70">
-          <GameOverModal outcome={gameOver} onRestart={handleRematchRequest} />
+      {gameOver && !isTournamentChampion && (
+        <div className="relative z-[100]">
+          <GameOverModal outcome={gameOver} onRestart={handleRematchRequest} onHome={handleHomeClick} isTournament={isTournamentGame} />
+        </div>
+      )}
+
+      {/* 2. THE CHAMPION FIRECRACKER MODAL (Replaces the normal win screen!) */}
+      {isTournamentChampion && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[200] animate-in fade-in duration-500 backdrop-blur-sm">
+          <div className="bg-[#0a0a0a] border-2 border-yellow-500/50 p-12 rounded-3xl flex flex-col items-center gap-6 shadow-[0_0_150px_rgba(234,179,8,0.3)] transform animate-in zoom-in-95">
+            
+            <div className="text-8xl animate-bounce drop-shadow-[0_0_20px_rgba(234,179,8,0.8)]">
+              🏆
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-600 uppercase tracking-widest drop-shadow-lg">
+                Champion!
+              </h2>
+              <p className="text-yellow-100/80 text-lg font-medium">
+                🎇 🎆 Congratulations, you won the tournament! 🎆 🎇
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigate("/tournament")} // Drops them back to the bracket to see the final results!
+              className="mt-6 bg-gradient-to-r from-yellow-600 to-yellow-500 text-black px-12 py-4 rounded-full font-black uppercase tracking-widest hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.5)] transition-all duration-300"
+            >
+              Back to Bracket
+            </button>
+          </div>
         </div>
       )}
 
@@ -339,25 +470,35 @@ export function Game() {
         <div className="w-24" />
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-8 gap-12">
-        <div className="flex flex-col gap-6 max-w-[600px] w-full">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-8 gap-4 lg:gap-12">
+        <div className="flex flex-col gap-4 sm:gap-6 max-w-[600px] w-full px-2 sm:px-0">
           {/* Opponent Panel */}
           <div
             className={`flex justify-between items-end transition-opacity duration-300 ${!isPlayerTurn ? "opacity-100" : "opacity-60"}`}
           >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <img
                 src={opponent.avatar}
                 alt="Opponent"
-                className="w-12 h-12 rounded-lg border border-neutral-800 object-cover shadow-lg"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border border-neutral-800 object-cover shadow-lg"
               />
               <div>
-                <h3 className="font-semibold text-lg text-white">
+                <h3 className="font-semibold text-base sm:text-lg text-white">
                   {opponent.username}{" "}
                   <span className="text-sm font-normal text-neutral-500">
                     ({opponent.elo_rating})
                   </span>
                 </h3>
+                {/* THE NEW "WAITING" BADGE */}
+                {moveHistory.length === 0 && !isPlayerTurn && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                    <span className="text-xs text-yellow-500 font-medium tracking-wide">
+                      Waiting for opponent...
+                    </span>
+                  </div>
+                )}
+                {/* END OF BADGE */}
               </div>
             </div>
             <div
@@ -368,8 +509,9 @@ export function Game() {
           </div>
 
           {/* Board */}
-          <div className="w-[600px] h-[600px] rounded-sm relative z-50 border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800 pointer-events-auto">
+          <div className="w-full aspect-square max-w-[600px] mx-auto rounded-sm relative z-50 border-4 sm:border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800 pointer-events-auto">
             <ChessBoard
+              key={boardKey}
               fen={currentFen}
               onMove={handlePlayerMove}
               onGameEnd={setGameOver as any}
@@ -381,7 +523,7 @@ export function Game() {
           <div
             className={`flex justify-between items-start transition-opacity duration-300 ${isPlayerTurn ? "opacity-100" : "opacity-60"}`}
           >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <img
                 src={
                   resolveMediaUrl(user?.profile?.avatar) ||
@@ -389,7 +531,7 @@ export function Game() {
                   avatar_2
                 }
                 alt="Player"
-                className="w-12 h-12 rounded-lg border border-blue-500 object-cover shadow-[0_0_10px_rgba(37,99,235,0.3)]"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border border-blue-500 object-cover shadow-[0_0_10px_rgba(37,99,235,0.3)]"
               />
               <div>
                 <h3 className="font-semibold text-lg text-white">
@@ -406,18 +548,41 @@ export function Game() {
               {formatTime(playerTime)}
             </div>
           </div>
-        </div>
 
-        <GameSidebar
-          mode="multiplayer"
-          isGameOver={!!gameOver}
-          isWaitingForRematch={isWaitingForRematch}
-          moveHistory={moveHistory}
-          onLeftAction={
-            gameOver ? () => window.location.reload() : handleDrawOffer
-          }
-          onResign={() => setIsResignModalOpen(true)}
-        />
+        {/* Mobile Buttons Bar */}
+          <div className="flex lg:hidden gap-3 w-full mt-2">
+            {(!isTournamentGame || gameOver) && (
+            <button
+              onClick={gameOver ? () => window.location.reload() : handleDrawOffer}
+              className="flex-1 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-medium py-3 rounded-lg transition-colors text-sm"
+            >
+              {gameOver ? "New Game" : "Offer Draw"}
+            </button>
+            )}
+            <button
+              onClick={() => setIsResignModalOpen(true)}
+              disabled={!!gameOver}
+              className="flex-1 bg-red-950/30 border border-red-900/30 hover:bg-red-900/40 text-red-500 font-medium py-3 rounded-lg transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Resign
+            </button>
+          </div>
+
+
+        </div>
+        <div className="hidden lg:block">
+          <GameSidebar
+            mode="multiplayer"
+            isGameOver={!!gameOver}
+            isWaitingForRematch={isWaitingForRematch}
+            moveHistory={moveHistory}
+            onLeftAction={
+              gameOver ? () => window.location.reload() : handleDrawOffer
+            }
+            onResign={() => setIsResignModalOpen(true)}
+            onDraw={isTournamentGame ? undefined : handleDrawOffer}
+          />
+        </div>
       </main>
     </div>
   );

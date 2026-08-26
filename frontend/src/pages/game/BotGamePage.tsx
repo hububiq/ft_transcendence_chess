@@ -36,6 +36,8 @@ export function BotGame() {
 
   const handleHomeClick = () => {
     if (gameOver || !gameStarted) {
+      sessionStorage.removeItem("activeBotGameId");
+      setGameId(null);
       navigate("/");
     } else {
       setShowLeaveConfirm(true);
@@ -138,12 +140,12 @@ export function BotGame() {
   };
 
   const { sendMessage } = useWebSocket({
-  url: gameId
-    ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}`
-    : "",
-  enabled: gameStarted && !!gameId,
-  onMessage: handleServerMessage,
-});
+    url: gameId
+      ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}`
+      : "",
+    enabled: gameStarted && !!gameId,
+    onMessage: handleServerMessage,
+  });
 
   const handlePlayerMove = (move: string) => {
     const isWhiteTurn =
@@ -163,7 +165,6 @@ export function BotGame() {
       type: "surrender",
       opponent_id: SYSTEM_BOT_ID,
     });
-    setGameOver("loss");
   };
 
   const handleRestart = () => {
@@ -177,7 +178,6 @@ export function BotGame() {
     setGameId(null);
 
     sessionStorage.removeItem("activeBotGameId");
-
     hasFetchedRef.current = false;
     initGame();
   };
@@ -230,8 +230,8 @@ export function BotGame() {
 
       {/* Game Over Modal */}
       {gameOver && (
-        <div className="relative z-70">
-          <GameOverModal outcome={gameOver} onRestart={handleRestart} />
+        <div className="relative z-[100]">
+          <GameOverModal outcome={gameOver} onRestart={handleRestart} onHome={handleHomeClick} />
         </div>
       )}
 
@@ -264,15 +264,15 @@ export function BotGame() {
       )}
 
       {gameStarted && (
-        <main className="flex-1 flex items-center justify-center p-8 gap-12">
-          <div className="flex flex-col gap-6 max-w-[600px] w-full">
+        <main className="flex-1 flex items-center justify-center p-4 sm:p-8 gap-4 lg:gap-12">
+          <div className="flex flex-col gap-4 sm:gap-6 max-w-[600px] w-full px-2 sm:px-0">
             <ParticipantBannerBot
               avatar={<Bot className={clsx("w-6 h-6")} />}
               name="chess42 Bot"
               isThinking={botThinking}
             />
 
-            <div className="w-[600px] h-[600px] rounded-sm relative z-50 border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
+            <div className="w-full aspect-square max-w-[600px] mx-auto rounded-sm relative z-50 border-4 sm:border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800">
               <ChessBoard
                 fen={currentFen}
                 playerColor="w"
@@ -297,13 +297,31 @@ export function BotGame() {
               nameColor="text-blue-500"
               eloRating={user?.profile?.elo_rating || "?"}
             />
+
+            {/* Mobile Buttons Bar */}
+            <div className="flex lg:hidden gap-3 w-full mt-2">
+              <button
+                onClick={() => setShowRestartConfirm(true)}
+                className="flex-1 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-medium py-3 rounded-lg transition-colors text-sm"
+              >
+                Restart
+              </button>
+              <button
+                onClick={handleResign}
+                className="flex-1 bg-red-950/30 border border-red-900/30 hover:bg-red-900/40 text-red-500 font-medium py-3 rounded-lg transition-colors text-sm"
+              >
+                Resign
+              </button>
+            </div>
           </div>
 
-          <GameSidebar
-            onLeftAction={() => setShowRestartConfirm(true)}
-            onResign={handleResign}
-            moveHistory={moveHistory}
-          />
+          <div className="hidden lg:block">
+            <GameSidebar
+              onLeftAction={() => setShowRestartConfirm(true)}
+              onResign={handleResign}
+              moveHistory={moveHistory}
+            />
+          </div>
         </main>
       )}
     </div>

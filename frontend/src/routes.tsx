@@ -14,6 +14,8 @@ import { OAuthCallback } from "./pages/auth/OAuthCallback";
 import { Register } from "./pages/auth/RegisterPage";
 import { Login } from "./pages/auth/LoginPage";
 import { Dashboard } from "./pages/dashboard/Dashboard";
+import { TermsPage } from "./pages/auth/TermsPage";
+import { PrivacyPage } from "./pages/auth/PrivacyPage";
 
 export const router = createBrowserRouter([
   {
@@ -54,4 +56,7 @@ export const router = createBrowserRouter([
   // public - user can play test game agains bot
   { path: "/auth/github/callback", Component: OAuthCallback },
   { path: "/bot", Component: BotGame },
+  // static legal pages
+  { path: "/terms", Component: TermsPage },
+  { path: "/privacy", Component: PrivacyPage },
 ]);

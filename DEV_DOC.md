@@ -208,3 +208,10 @@ At http://localhost:8080 you can log in using:
 5. Database: django_db or fastapi_db
 
 Use Adminer 4.8.1 (not 5.5.0).
+
+## How to Enable Playing Over IP
+1. Frontend – in the .env file, replace the localhost with your local IP.
+2. Main .env – FRONTEND_URL= change the localhost to your local IP as well.
+3. ../django_backend/core/settings.pysettings.py – add the IP address in ALLOWED_HOSTS = and in CORS_ALLOWED_ORIGINS =.
+4. ../fastapi_backend/main.pymain.py – add the IP address at the end of the list.
+5. Restart both the frontend and backend --> make re

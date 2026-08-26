@@ -11,6 +11,9 @@ from allauth.socialaccount.providers.github.views import GitHubOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
 from django.contrib.auth import authenticate
+from django.conf import settings
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 from .friendship_events import publish_friendship_change
 
@@ -139,25 +142,44 @@ def update_my_profile(request):
     profile = user.profile
     
     if 'email' in request.data:
-        new_email = request.data['email']
+        new_email = request.data['email'].strip()
+
+        # Validation 1: Format (Must be a real email address structure)
+        try:
+            validate_email(new_email)
+        except ValidationError:
+            return Response({"error": "Please provide a valid email address."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validation 2: Uniqueness
         if User.objects.filter(email=new_email).exclude(id=user.id).exists():
             return Response({"error": "This email is already in use."}, status=status.HTTP_400_BAD_REQUEST)
         user.email = new_email
-        
-    user.save()
+        user.save()
 
     if 'username' in request.data:
-        new_username = request.data['username']
+        new_username = request.data['username'].strip() # Remove accidental spaces
+        # Validation 1: Length
+        if len(new_username) < 4 or len(new_username) > 24:
+            return Response({"error": "Username must be between 3 and 15 characters."}, status=status.HTTP_400_BAD_REQUEST)
+        # Validation 2: Characters (Only letters and numbers, no weird symbols!)
+        if not new_username.isalnum():
+            return Response({"error": "Username can only contain letters and numbers."}, status=status.HTTP_400_BAD_REQUEST)
         if User.objects.filter(username=new_username).exclude(id=profile.id).exists():
             return Response({"error": "This username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
         user.username = new_username
         user.save()
 
     if 'bio' in request.data:
-        profile.bio = request.data['bio']
+        new_bio = request.data['bio'].strip()
+        if len(new_bio) > 100:
+            return Response({"error": "Bio cannot exceed 500 characters."}, status=status.HTTP_400_BAD_REQUEST)
+        profile.bio = new_bio
         
     if 'location' in request.data:
-        profile.location = request.data['location']
+        new_location = request.data['location'].strip()
+        if len(new_location) > 30:
+            return Response({"error": "Location cannot exceed 30 characters."}, status=status.HTTP_400_BAD_REQUEST)
+        profile.location = new_location
 
     if 'avatar' in request.FILES:
         if not _is_allowed_avatar(request.FILES['avatar']):
@@ -229,5 +251,5 @@ def remove_friend(request, user_id):
 
 class GithubLogin(SocialLoginView):
     adapter_class = GitHubOAuth2Adapter
-    callback_url = "http://localhost:3000/auth/github/callback" 
+    callback_url = f"{settings.FRONTEND_URL}/auth/github/callback"
     client_class = OAuth2Client    

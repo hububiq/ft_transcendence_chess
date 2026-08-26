@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MessageSquare, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { GlobalChatPanel } from "../../features/chat/components/GlobalChatPanel";
 // import { GlobalChatProvider } from "../../features/chat/context/GlobalChatProvider";
@@ -11,13 +11,27 @@ import clsx from "clsx";
 export function SocialSidebar() {
   const [isChatOpen, setIsChatOpen] = useState(true);
 
-  const [activeSocialTab, setActiveSocialTab] =
-    useState<"friends" | "logged">("friends");
+  const [activeSocialTab, setActiveSocialTab] = useState<"friends" | "logged">(
+    "friends",
+  );
 
-  const {
-    onlineUsers,
-    friendsRevision,
-  } = useGlobalChat();
+  const { onlineUsers, friendsRevision } = useGlobalChat();
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const isFirstRender = useRef(true); // Prevents the toast from popping up on initial page load
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
+    // If friendsRevision changes, it means the WebSocket heard a change! Pop the toast!
+    setToastMessage("Your friends list has been updated!");
+    const timer = setTimeout(() => setToastMessage(null), 3000);
+
+    return () => clearTimeout(timer);
+  }, [friendsRevision]);
 
   // Load friendship data from Django and refresh it after realtime invalidation
   const {
@@ -68,11 +82,8 @@ export function SocialSidebar() {
           </button>
         </div>
 
-
         {actionErrorMessage && (
-          <p className="px-2 text-xs text-red-400">
-            {actionErrorMessage}
-          </p>
+          <p className="px-2 text-xs text-red-400">{actionErrorMessage}</p>
         )}
 
         {activeSocialTab === "friends" && (
@@ -101,17 +112,16 @@ export function SocialSidebar() {
               friends.map((friend) => {
                 // Presence changes only the status and never filters the friends list
                 const isOnline = onlineUsers.some(
-                  (onlineUser) =>
-                    onlineUser.id === friend.id,
+                  (onlineUser) => onlineUser.id === friend.id,
                 );
 
                 return (
                   <UserHoverCard
-                      key={friend.id}
-                      userId={friend.id}
-                      isOnline={isOnline}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-900/50 cursor-pointer transition-colors group"
-                    >
+                    key={friend.id}
+                    userId={friend.id}
+                    isOnline={isOnline}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-900/50 cursor-pointer transition-colors group"
+                  >
                     <div className="relative">
                       <div className="w-8 h-8 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-xs font-bold text-neutral-500">
                         {friend.username.charAt(0)}
@@ -120,9 +130,7 @@ export function SocialSidebar() {
                       <div
                         className={clsx(
                           "absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#050505]",
-                          isOnline
-                            ? "bg-green-500"
-                            : "bg-neutral-600",
+                          isOnline ? "bg-green-500" : "bg-neutral-600",
                         )}
                       />
                     </div>
@@ -144,23 +152,18 @@ export function SocialSidebar() {
                       }}
                       className="shrink-0 rounded-md border border-neutral-800 px-2 py-1 text-[10px] font-medium text-neutral-500 transition-colors hover:border-red-900 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {pendingFriendId === friend.id
-                        ? "Removing..."
-                        : "Remove"}
+                      {pendingFriendId === friend.id ? "Removing..." : "Remove"}
                     </button>
                   </UserHoverCard>
                 );
               })}
           </div>
         )}
-        
 
         {activeSocialTab === "logged" && (
-          <LoggedUsersPanel 
+          <LoggedUsersPanel
             friends={friends}
-            friendActionsAvailable={
-              !areFriendsLoading && !friendsErrorMessage
-            }
+            friendActionsAvailable={!areFriendsLoading && !friendsErrorMessage}
             pendingFriendId={pendingFriendId}
             onAddFriend={addFriend}
           />
@@ -185,16 +188,31 @@ export function SocialSidebar() {
           )}
         </button>
 
-        <div
-          className={clsx(
-            "h-72 flex-col",
-            isChatOpen ? "flex" : "hidden",
-          )}
-        >
+        <div className={clsx("h-72 flex-col", isChatOpen ? "flex" : "hidden")}>
           {/*Keep the panel mounted so collapsing the sidebar does not close the socket */}
           <GlobalChatPanel />
         </div>
       </div>
+      {/* ... Chat Section ... */}
+      <div className="bg-black border-t border-neutral-900 flex flex-col">
+        {/* ... chat buttons and panel ... */}
+      </div>
+
+      {/* THE CUSTOM TOAST NOTIFICATION  */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className="bg-blue-950/90 border border-blue-500/50 text-blue-200 px-6 py-4 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.3)] flex items-center gap-3 backdrop-blur-md">
+            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-ping absolute top-3 right-3"></span>
+            <div className="w-8 h-8 bg-blue-900/50 rounded-lg flex items-center justify-center border border-blue-700/50 text-lg">
+              🔔
+            </div>
+            <div>
+              <h4 className="font-bold text-white text-sm">Social Update</h4>
+              <p className="text-sm font-medium opacity-80">{toastMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

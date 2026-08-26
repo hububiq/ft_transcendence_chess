@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import User, Profile
+from django.contrib.auth.password_validation import validate_password
 
 # 1. THE PROFILE TRANSLATOR
 class ProfileSerializer(serializers.ModelSerializer):
@@ -28,7 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     # write_only=True ensures the password is never sent back to the browser in a response!
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, validators=[validate_password])
 
     class Meta:
         model = User

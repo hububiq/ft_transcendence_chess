@@ -5,19 +5,19 @@ all: up
 up:
 	@echo "Building and starting containers..."
 	$(DOCKER_COMPOSE) up -d --build
+# migrate:
+	@sleep 3
+	@echo "Checking for model changes and creating migration files..."
+	docker exec django_backend python manage.py makemigrations
+	@echo "Applying migrations to PostgreSQL..."
+	docker exec django_backend python manage.py migrate
+	@echo "Database is fully synced"
+	@echo "Now configuring Github Oauth"
+	docker exec django_backend python setup_oauth.py
 
 down:
 	@echo "Stopping containers..."
 	$(DOCKER_COMPOSE) down
-
-migrate:
-	@echo "Waiting 3 seconds for database to be fully ready..."
-	@sleep 3
-	@echo "Checking for model changes and creating migration files..."
-	docker exec -it django_backend python manage.py makemigrations
-	@echo "Applying migrations to PostgreSQL..."
-	docker exec -it django_backend python manage.py migrate
-	@echo "Database is fully synced!"
 
 clean: down
 	@echo "Cleaned up containers."

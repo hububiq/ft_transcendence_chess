@@ -38,16 +38,17 @@ async def advance_tournament(game_id: int, winner_id: int, session):
     result = await session.execute(query)
     round_matches = result.scalars().all()
 
-    # If ANY match has no winner → round not finished
-    if any(m.winner is None for m in round_matches):
-        return
+    for m in round_matches:
+        if m.winner is None and (m.player1 is not None or m.player2 is not None):
+            return # Still waiting for a real game to finish!
+
 
     # 4. Collect winners from this round
-    winners = [m.winner for m in round_matches if m.winner is not None]
+    winners = [m.winner for m in round_matches]
 
-    # If only 1 winner → tournament is finished
-    if len(winners) == 1:
-        await _finish_tournament(tournament_id, winners[0], session)
+    actual_winners = [w for w in winners if w is not None]
+    if len(actual_winners) == 1:
+        await _finish_tournament(tournament_id, actual_winners[0], session)
         return
 
     # 5. Advance winners to next round
@@ -115,12 +116,13 @@ async def _create_game_for_match(match: TournamentMatch, session):
     session.add(match)
     await session.commit()
 
-    # FIX 3: Notify players in their Lobby socket!
+    # FIX 3: Notify players in their Lobby socket
     for pid, color in [(match.player1, "white"), (match.player2, "black")]:
         await manager.send_to_user(pid, {
             "type": "match_start",
             "game_id": new_game.id,
-            "color": color
+            "color": color,
+            "round_number": match.round_number
         })
 
 
@@ -143,5 +145,9 @@ async def _finish_tournament(tournament_id: int, winner_id: int, session):
     await manager.send_to_user(winner_id, {
         "type": "tournament_won",
         "tournament_id": tournament_id
+    })
+
+    await manager.broadcast_to_all({
+        "type": "tournament_updated"
     })
 

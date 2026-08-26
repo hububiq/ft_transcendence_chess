@@ -7,6 +7,8 @@ import { createPortal } from "react-dom";
 import { MapPin } from "lucide-react";
 import { usePublicUserProfile } from "../hooks/usePublicUserProfile";
 import { resolveMediaUrl } from "../../../utils/utils";
+import playerAvatar from "../../../assets/avatar_1.png";
+
 
 
 interface UserHoverCardProps {
@@ -86,7 +88,7 @@ function UserHoverCardContent({
   const avatarUrl =
     resolveMediaUrl(profile.profile.avatar) ||
     profile.profile.oauth_avatar_url ||
-    "";
+    playerAvatar;
 
 
   return (

@@ -3,6 +3,7 @@ from sqlmodel import select
 from database import async_session
 from auth import get_current_user
 from tournament_progression_service import _create_game_for_match
+from server import manager
 
 from models import (
     Tournament,
@@ -81,6 +82,10 @@ async def create_tournament(creator_id: int, size: int = 8):
         await session.commit()
         await session.refresh(tournament)
 
+        await manager.broadcast_to_all({
+            "type": "tournament_updated"
+        })
+
         return {"id": tournament.id, "status": "waiting"}
 
 
@@ -111,6 +116,10 @@ async def delete_tournament(tournament_id: int, user = Depends(get_current_user)
         # 4. Delete the Tournament itself
         await session.delete(tournament)
         await session.commit()
+
+        await manager.broadcast_to_all({
+            "type": "tournament_updated"
+        })
 
         return {"message": f"Tournament {tournament_id} has been securely deleted."}
 
@@ -148,10 +157,13 @@ async def join_tournament(tournament_id: int, player_id: int):
         session.add(tp)
         await session.commit()
 
-        # Auto-start when minimum 4 players joined
-        # !!! DUE TO CORRECTION - tournament can be started by creator when at least 4 players within !!!
-        if len(participants_list) + 1 >= 4:
+        if len(participants_list) + 1 == tournament.size:
             await _start_tournament(tournament, session)
+        
+        await manager.broadcast_to_all({
+            "type": "tournament_updated",
+            "tournament_id": tournament_id
+        })
 
         return {"joined": True, "position": bracket_position}
 
@@ -183,6 +195,11 @@ async def leave_tournament(tournament_id: int, user = Depends(get_current_user))
         await session.delete(participant)
         await session.commit()
 
+        await manager.broadcast_to_all({
+            "type": "tournament_updated",
+            "tournament_id": tournament_id
+        })
+
         return {"message": "Successfully left the tournament."}
 
 
@@ -197,16 +214,18 @@ async def get_player_tournament(player_id: int):
                 TournamentParticipant.player_id == player_id
             )
         )
-        tp = result.scalars().first()
-        if not tp:
-            return {"active": False}
+        participants = result.scalars().all()
 
-        tournament = await session.get(Tournament, tp.tournament_id)
-        return {
-            "active": True,
-            "tournament": tournament
-        }
+        for tp in participants:
+            tournament = await session.get(Tournament, tp.tournament_id)
 
+            if tournament and tournament.status in ["waiting", "ongoing"]:
+                return {
+                    "active": True,
+                    "tournament": tournament
+                }
+
+        return {"active": False}
 
 # ------------------------------------------------------------
 # GET NEXT MATCH FOR PLAYER
@@ -266,7 +285,6 @@ async def get_tournament_history(tournament_id: int):
 # INTERNAL: START TOURNAMENT
 # ------------------------------------------------------------
 
-
 async def _start_tournament(tournament: Tournament, session):
     tournament.status = "ongoing"
     session.add(tournament)
@@ -288,6 +306,10 @@ async def _start_tournament(tournament: Tournament, session):
     # Import bracket into DB
     await import_bracket(tournament.id, rounds, session)
 
+    await manager.broadcast_to_all({
+        "type": "tournament_updated"
+    })
+
     # Find all matches for Round 1 in the database
     matches_result = await session.execute(
         select(TournamentMatch).where(
@@ -303,3 +325,33 @@ async def _start_tournament(tournament: Tournament, session):
         await _create_game_for_match(match, session) 
 
     return True
+
+
+# ------------------------------------------------------------
+# MANUAL START TOURNAMENT (Creator Only)
+# ------------------------------------------------------------
+@router.post("/{tournament_id}/start")
+async def manual_start_tournament(
+    tournament_id: int, 
+    user = Depends(get_current_user) # Bouncer: Identifies who clicked the button
+):
+    async with async_session() as session:
+        tournament = await session.get(Tournament, tournament_id)
+        if not tournament:
+            raise HTTPException(status_code=404, detail="Tournament not found")
+        if tournament.creator_id != user.id:
+            raise HTTPException(status_code=403, detail="Forbidden: Only the tournament creator can start it early.")
+        if tournament.status != "waiting":
+            raise HTTPException(status_code=400, detail="Tournament has already started or finished.")
+        # Check if there are enough players (Minimum 4)
+        result = await session.execute(
+            select(TournamentParticipant).where(TournamentParticipant.tournament_id == tournament_id)
+        )
+        participants_list = result.scalars().all()
+
+        if len(participants_list) < 4:
+            raise HTTPException(status_code=400, detail=f"Cannot start yet. Minimum 4 players required. Currently have {len(participants_list)}.")
+
+        await _start_tournament(tournament, session)
+
+        return {"message": "Tournament started successfully!"}

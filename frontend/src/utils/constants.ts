@@ -1,6 +1,6 @@
 import { Zap, Trophy, Shield, Star, Award } from "lucide-react";
 
-export const USER_REGEX = /^[A-Za-z][A-Za-z0-9_-]{3,23}$/;
+export const USER_REGEX = /^(?=.*[A-Za-z])[A-Za-z0-9][A-Za-z0-9_-]{3,23}$/;
 export const PWD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[a-zA-Z0-9]{8,24}$/;
 
 export type GameOutcome = "win" | "loss" | "draw";

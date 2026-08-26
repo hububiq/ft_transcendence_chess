@@ -125,6 +125,17 @@ export function Login() {
               New here? Create an account
             </Link>
           </div>
+		  <div className="mt-6 text-xs text-neutral-500 text-center">
+		    By signing in you agree to our{" "}
+		    <Link to="/terms" className="text-blue-500 hover:underline">
+		      Terms of Service
+		    </Link>{" "}
+		    and{" "}
+		    <Link to="/privacy" className="text-blue-500 hover:underline">
+		      Privacy Policy
+		    </Link>
+		    .
+		  </div>
         </div>
       </div>
     </div>
