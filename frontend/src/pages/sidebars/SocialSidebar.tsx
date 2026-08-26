@@ -15,7 +15,11 @@ export function SocialSidebar() {
     "friends",
   );
 
-  const { onlineUsers, friendsRevision } = useGlobalChat();
+  const {
+    onlineUsers,
+    friendsRevision,
+    friendshipChangeRevision,
+  } = useGlobalChat();
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const isFirstRender = useRef(true); // Prevents the toast from popping up on initial page load
@@ -26,12 +30,16 @@ export function SocialSidebar() {
       return;
     }
 
-    // If friendsRevision changes, it means the WebSocket heard a change! Pop the toast!
+    if (friendshipChangeRevision === 0) {
+      return;
+    }
+
+    // Show the banner only after a confirmed friendship change
     setToastMessage("Your friends list has been updated!");
     const timer = setTimeout(() => setToastMessage(null), 3000);
 
     return () => clearTimeout(timer);
-  }, [friendsRevision]);
+  }, [friendshipChangeRevision]);
 
   // Load friendship data from Django and refresh it after realtime invalidation
   const {
