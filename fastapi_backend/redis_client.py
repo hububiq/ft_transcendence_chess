@@ -15,7 +15,7 @@ async def get_redis():
     global redis_pool
 
     if redis_pool is None:
-        redis_pool = await redis.from_url(
+        redis_pool = redis.from_url(
             f"redis://{settings.redis_host}:{settings.redis_port}",
             decode_responses=True
         )
@@ -30,7 +30,7 @@ async def get_pubsub(channel: str) -> AsyncGenerator:
     Used by matchmaking and game update listeners.
     """
     redis_conn = await get_redis()
-    pubsub = redis.pubsub()
+    pubsub = redis_conn.pubsub()
     await pubsub.subscribe(channel)
 
     try:
@@ -40,3 +40,7 @@ async def get_pubsub(channel: str) -> AsyncGenerator:
     finally:
         await pubsub.unsubscribe(channel)
         await pubsub.close()
+
+async def publish(channel: str, payload: dict) -> None:
+	redis_conn = await get_redis()
+	await redis_conn.publish(channel, json.dumps(payload))

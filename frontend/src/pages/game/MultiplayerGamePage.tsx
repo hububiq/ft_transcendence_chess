@@ -32,6 +32,9 @@ export function Game() {
   const [isWaitingForRematch, setIsWaitingForRematch] = useState(false);
   const [receivedRematchOffer, setReceivedRematchOffer] = useState(false);
   const [receivedDrawOffer, setReceivedDrawOffer] = useState(false);
+  const [isTournamentGame, setIsTournamentGame] = useState(false);
+  const [boardKey, setBoardKey] = useState(0);
+  const [isTournamentChampion, setIsTournamentChampion] = useState(false);
 
   // Clocks & Turns
   const [playerTime, setPlayerTime] = useState(15);
@@ -45,7 +48,7 @@ export function Game() {
 
   const handleHomeClick = () => {
     if (gameOver) {
-      navigate("/");
+      navigate(isTournamentGame ? "/tournament" : "/");
     } else {
       setShowLeaveConfirm(true);
     }
@@ -55,7 +58,7 @@ export function Game() {
       type: "surrender",
       player_id: user?.id,
     });
-    navigate("/");
+    navigate(isTournamentGame ? "/tournament" : "/");
   };
 
   const [opponent, setOpponent] = useState({
@@ -74,6 +77,16 @@ export function Game() {
       case "board_state":
         setCurrentFen(data.fen);
         if (data.color) setPlayerColor(data.color);
+        if (data.tournament_id) setIsTournamentGame(true);
+        if (data.white_time !== undefined && data.black_time !== undefined) {
+          if (data.color === "w") {
+            setPlayerTime(data.white_time);
+            setOpponentTime(data.black_time);
+          } else {
+            setPlayerTime(data.black_time);
+            setOpponentTime(data.white_time);
+          }
+        }
         if (data.opponent_id) {
           setOpponentId(data.opponent_id);
           setOpponent((prev) => ({
@@ -83,6 +96,15 @@ export function Game() {
         }
         if (data.history) {
           setMoveHistory(parseHistory(data.history));
+        }
+        if (data.white_time !== undefined && data.black_time !== undefined) {
+          if (data.color === "w") {
+            setPlayerTime(data.white_time);
+            setOpponentTime(data.black_time);
+          } else {
+            setPlayerTime(data.black_time);
+            setOpponentTime(data.white_time);
+          }
         }
         break;
 
@@ -138,9 +160,19 @@ export function Game() {
         setIsWaitingForRematch(false);
         alert("Opponent declined the rematch.");
         break;
+      
+      case "tournament_won":
+        setIsTournamentChampion(true);
+        break;
 
       case "error":
         console.error("Server Error:", data.message);
+        alert(data.message); // Tells the user why it failed
+        // If the server provides the true FEN, snap the board back to reality
+        if (data.fen) {
+          setCurrentFen(data.fen);
+          setBoardKey(prev => prev + 1);
+        }
         break;
     }
   };
@@ -277,7 +309,7 @@ export function Game() {
     <div className="min-h-screen bg-black flex flex-col text-neutral-200 relative">
       {/*Rematch Offer Modal*/}
       {receivedRematchOffer && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[200]">
           <div className="bg-[#080808] border border-neutral-800 rounded-2xl p-8 w-full max-w-sm text-center flex flex-col items-center gap-6 shadow-2xl">
             <div>
               <h2 className="text-xl font-bold text-white mb-2">Rematch?</h2>
@@ -363,9 +395,37 @@ export function Game() {
       )}
 
       {/*Game Over Modal*/}
-      {gameOver && (
-        <div className="relative z-70">
-          <GameOverModal outcome={gameOver} onRestart={handleRematchRequest} />
+      {gameOver && !isTournamentChampion && (
+        <div className="relative z-[100]">
+          <GameOverModal outcome={gameOver} onRestart={handleRematchRequest} onHome={handleHomeClick} isTournament={isTournamentGame} />
+        </div>
+      )}
+
+      {/* 2. THE CHAMPION FIRECRACKER MODAL (Replaces the normal win screen!) */}
+      {isTournamentChampion && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[200] animate-in fade-in duration-500 backdrop-blur-sm">
+          <div className="bg-[#0a0a0a] border-2 border-yellow-500/50 p-12 rounded-3xl flex flex-col items-center gap-6 shadow-[0_0_150px_rgba(234,179,8,0.3)] transform animate-in zoom-in-95">
+            
+            <div className="text-8xl animate-bounce drop-shadow-[0_0_20px_rgba(234,179,8,0.8)]">
+              🏆
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-600 uppercase tracking-widest drop-shadow-lg">
+                Champion!
+              </h2>
+              <p className="text-yellow-100/80 text-lg font-medium">
+                🎇 🎆 Congratulations, you won the tournament! 🎆 🎇
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigate("/tournament")} // Drops them back to the bracket to see the final results!
+              className="mt-6 bg-gradient-to-r from-yellow-600 to-yellow-500 text-black px-12 py-4 rounded-full font-black uppercase tracking-widest hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.5)] transition-all duration-300"
+            >
+              Back to Bracket
+            </button>
+          </div>
         </div>
       )}
 
@@ -432,7 +492,7 @@ export function Game() {
                   </span>
                 </h3>
                 {/* THE NEW "WAITING" BADGE */}
-                {moveHistory.length === 0 && (
+                {moveHistory.length === 0 && !isPlayerTurn && (
                   <div className="flex items-center gap-2 mt-1">
                     <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
                     <span className="text-xs text-yellow-500 font-medium tracking-wide">
@@ -453,6 +513,7 @@ export function Game() {
           {/* Board */}
           <div className="w-full aspect-square max-w-[600px] mx-auto rounded-sm relative z-50 border-4 sm:border-8 border-[#0a0a0a] shadow-2xl bg-neutral-800 pointer-events-auto">
             <ChessBoard
+              key={boardKey}
               fen={currentFen}
               onMove={handlePlayerMove}
               onGameEnd={setGameOver as any}
@@ -490,14 +551,16 @@ export function Game() {
             </div>
           </div>
 
-          {/* Mobile Buttons Bar */}
+        {/* Mobile Buttons Bar */}
           <div className="flex lg:hidden gap-3 w-full mt-2">
+            {(!isTournamentGame || gameOver) && (
             <button
               onClick={gameOver ? () => window.location.reload() : handleDrawOffer}
               className="flex-1 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-medium py-3 rounded-lg transition-colors text-sm"
             >
               {gameOver ? "New Game" : "Offer Draw"}
             </button>
+            )}
             <button
               onClick={() => setIsResignModalOpen(true)}
               disabled={!!gameOver}
@@ -519,7 +582,7 @@ export function Game() {
               gameOver ? () => window.location.reload() : handleDrawOffer
             }
             onResign={() => setIsResignModalOpen(true)}
-            onDraw={handleDrawOffer}
+            onDraw={isTournamentGame ? undefined : handleDrawOffer}
           />
         </div>
       </main>

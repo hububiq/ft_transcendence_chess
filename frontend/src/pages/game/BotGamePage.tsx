@@ -36,6 +36,8 @@ export function BotGame() {
 
   const handleHomeClick = () => {
     if (gameOver || !gameStarted) {
+      sessionStorage.removeItem("activeBotGameId");
+      setGameId(null);
       navigate("/");
     } else {
       setShowLeaveConfirm(true);
@@ -162,7 +164,6 @@ export function BotGame() {
       player_id: currentPlayerId,
       opponent_id: SYSTEM_BOT_ID,
     });
-    setGameOver("loss");
   };
 
   const handleRestart = () => {
@@ -229,8 +230,8 @@ export function BotGame() {
 
       {/* Game Over Modal */}
       {gameOver && (
-        <div className="relative z-70">
-          <GameOverModal outcome={gameOver} onRestart={handleRestart} />
+        <div className="relative z-[100]">
+          <GameOverModal outcome={gameOver} onRestart={handleRestart} onHome={handleHomeClick} />
         </div>
       )}
 

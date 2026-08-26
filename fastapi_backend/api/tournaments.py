@@ -219,11 +219,11 @@ async def get_player_tournament(player_id: int):
         for tp in participants:
             tournament = await session.get(Tournament, tp.tournament_id)
 
-        if tournament and tournament.status in ["waiting", "ongoing"]:
-            return {
-                "active": True,
-                "tournament": tournament
-            }
+            if tournament and tournament.status in ["waiting", "ongoing"]:
+                return {
+                    "active": True,
+                    "tournament": tournament
+                }
 
         return {"active": False}
 
@@ -305,6 +305,10 @@ async def _start_tournament(tournament: Tournament, session):
 
     # Import bracket into DB
     await import_bracket(tournament.id, rounds, session)
+
+    await manager.broadcast_to_all({
+        "type": "tournament_updated"
+    })
 
     # Find all matches for Round 1 in the database
     matches_result = await session.execute(

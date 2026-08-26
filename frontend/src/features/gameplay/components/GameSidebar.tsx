@@ -9,6 +9,7 @@ interface GameSidebarProps {
   onLeftAction: () => void;
   onResign: () => void;
   moveHistory: MoveRecord[];
+  onDraw?: () => void; 
 }
 
 export function GameSidebar({
@@ -18,6 +19,7 @@ export function GameSidebar({
   onLeftAction,
   onResign,
   moveHistory,
+  onDraw,
 }: GameSidebarProps) {
 
   return (
@@ -47,7 +49,7 @@ export function GameSidebar({
         </div>
       </div>
 
-      {/* Bottom Controls */}
+    {/* Bottom Controls */}
       <div className="pt-4 mt-4 border-t border-neutral-900 flex gap-2">
         {isGameOver ? (
           <button
@@ -67,20 +69,25 @@ export function GameSidebar({
           </button>
         ) : (
           <>
-            <button
-              onClick={onLeftAction}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg transition-colors text-sm font-medium"
-            >
-              {mode === "bot" ? (
-                <>
-                  <RotateCcw className="w-4 h-4" /> Restart
-                </>
-              ) : (
-                <>
-                  <Handshake className="w-4 h-4" /> Draw
-                </>
-              )}
-            </button>
+        {/*  Only show this button if it's a Bot game, OR if onDraw exists! */}
+            {(mode === "bot" || onDraw) && (
+              <button
+                onClick={mode === "bot" ? onLeftAction : onDraw}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg transition-colors text-sm font-medium"
+              >
+                {mode === "bot" ? (
+                  <>
+                    <RotateCcw className="w-4 h-4" /> Restart
+                  </>
+                ) : (
+                  <>
+                    <Handshake className="w-4 h-4" /> Draw
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* The Resign button is always visible during gameplay */}
             <button
               onClick={onResign}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-950/30 hover:bg-red-900/40 text-red-500 border border-red-900/30 rounded-lg transition-colors text-sm font-medium"

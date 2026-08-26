@@ -23,6 +23,11 @@ async def matchmaking_loop():
         player_data = json.loads(player_data)
         joined_id = player_data["user_id"]
         joined_elo = player_data["elo_rating"]
+
+        if await redis.sismember("cancelled_users", joined_id):
+            await redis.srem("cancelled_users", joined_id)
+            continue
+
         if waiting_player_id == joined_id:
                 continue
 

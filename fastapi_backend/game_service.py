@@ -128,10 +128,17 @@ async def handle_player_move(data: dict, game_id: str, websocket):
     current_fen = await redis.get(redis_key)
     board = chess.Board(current_fen) if current_fen else chess.Board()
 
+    if len(board.move_stack) == 0 and data.get("is_vs_bot") != True:
+    # Check how many WebSockets are in this Game Room
+        room_connections = manager.rooms.get(int(game_id), [])
+        if len(room_connections) < 2:
+            await websocket.send_json({"type": "error", "message": "Waiting for opponent to connect...", "fen": board.fen()})
+            return
+
     try:
         move = chess.Move.from_uci(data["move"])
     except ValueError:
-        await websocket.send_json({"type": "error", "message": "Invalid move format!"})
+        await websocket.send_json({"type": "error", "message": "Invalid move format!", "fen": board.fen()})
         return
 
     human_san = board.san(move)
@@ -178,7 +185,7 @@ async def handle_player_move(data: dict, game_id: str, websocket):
                     return
 
     else:
-        await websocket.send_json({"type": "error", "message": "Illegal move"})
+        await websocket.send_json({"type": "error", "message": "Illegal move", "fen": board.fen()})
 
 
 async def update_clock(game_id: str, is_white_turn: bool):

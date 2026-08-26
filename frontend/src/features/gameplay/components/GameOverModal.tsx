@@ -6,9 +6,11 @@ import { type GameOutcome } from "../../../utils/constants";
 interface GameOverModalProps {
   outcome: GameOutcome;
   onRestart: () => void;
+  onHome: () => void;
+  isTournament?: boolean;
 }
 
-export function GameOverModal({ outcome, onRestart }: GameOverModalProps) {
+export function GameOverModal({ outcome, onRestart, onHome, isTournament  }: GameOverModalProps) {
   const OUTCOMES: Record<
     GameOutcome,
     { icon: string; title: string; desc: string }
@@ -53,18 +55,21 @@ export function GameOverModal({ outcome, onRestart }: GameOverModalProps) {
           <p className="text-neutral-500 text-sm">{desc}</p>
         </div>
         <div className="flex gap-3 w-full">
+          {!isTournament && (
+            <button
+              onClick={onRestart}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <RotateCcw className="w-4 h-4" /> Rematch
+            </button>
+          )}
+
           <button
-            onClick={onRestart}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            <RotateCcw className="w-4 h-4" /> Rematch
-          </button>
-          <Link
-            to="/"
+            onClick={onHome}
             className="flex-1 flex items-center justify-center py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 rounded-lg text-sm font-medium transition-colors"
           >
-            Home
-          </Link>
+            {isTournament ? "Back to Bracket" : "Home"}
+          </button>
         </div>
       </div>
     </div>
