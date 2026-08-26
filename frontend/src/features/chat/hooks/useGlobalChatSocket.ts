@@ -36,6 +36,7 @@ interface UseGlobalChatSocketResult {
   messages: ChatMessageServerEvent[];
   onlineUsers: ChatAuthor[];
   friendsRevision: number;
+  friendshipChangeRevision: number;
   connectionState: ChatConnectionState;
   authenticatedUser: ChatAuthor | null;
   errorMessage: string | null;
@@ -59,6 +60,10 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
   >([]);
   const [friendsRevision, setFriendsRevision] =
     useState(0);
+  const [
+    friendshipChangeRevision,
+    setFriendshipChangeRevision,
+  ] = useState(0);
   const [connectionState, setConnectionState] =
     useState<ChatConnectionState>("disconnected");
   const [authenticatedUser, setAuthenticatedUser] =
@@ -100,6 +105,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
       setMessages([]);
       setOnlineUsers([]);
       setFriendsRevision(0);
+      setFriendshipChangeRevision(0);
       setAuthenticatedUser(null);
       setConnectionState("disconnected");
       setErrorMessage(null);
@@ -120,6 +126,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     // Start every authenticated user session with fresh local chat state
     setMessages([]);
     setOnlineUsers([]);
+    setFriendshipChangeRevision(0);
     authRefreshAttemptedRef.current = false;
     hasAuthenticatedConnectionRef.current = false;
 
@@ -351,8 +358,14 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         }
 
         if (event.type === "friends_changed") {
-          // Trigger friendship refresh without storing friendship data in the chat hook
+          // Refresh friendship data after a confirmed friendship change
           setFriendsRevision(
+            (currentRevision) =>
+              currentRevision + 1,
+          );
+
+          // Notify the UI only about actual friendship changes
+          setFriendshipChangeRevision(
             (currentRevision) =>
               currentRevision + 1,
           );
@@ -526,6 +539,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     messages,
     onlineUsers,
     friendsRevision,
+    friendshipChangeRevision,
     connectionState,
     authenticatedUser,
     errorMessage,
