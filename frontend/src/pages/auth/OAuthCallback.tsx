@@ -30,7 +30,7 @@ export function OAuthCallback() {
         const response = await exchangeGithubCode(code);
         const data = response.data;
 
-        console.log("DJANGO RESPONSE:", data);
+        // DEBUG: console.log("DJANGO RESPONSE:", data);
 
         const realToken = data.access || data.access_token || data.token;
         const refreshToken = data.refresh || data.refresh_token;

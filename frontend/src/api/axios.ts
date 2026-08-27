@@ -40,6 +40,11 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      //If this is the login route, DO NOT try to refresh the token!
+      // Just instantly reject the promise so the Login component gets the real error.
+      if (originalRequest.url?.includes("/login/")) {
+        return Promise.reject(error);
+      }
       originalRequest._retry = true;
       try {
         const refreshToken = localStorage.getItem("refresh_token");

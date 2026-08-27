@@ -16,6 +16,7 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 from .friendship_events import publish_friendship_change
+import re 
 
 def _is_allowed_avatar(file_obj):
     """Validate that the uploaded file is a JPG or PNG image."""
@@ -158,13 +159,16 @@ def update_my_profile(request):
 
     if 'username' in request.data:
         new_username = request.data['username'].strip() # Remove accidental spaces
-        # Validation 1: Length
-        if len(new_username) < 4 or len(new_username) > 24:
-            return Response({"error": "Username must be between 3 and 15 characters."}, status=status.HTTP_400_BAD_REQUEST)
-        # Validation 2: Characters (Only letters and numbers, no weird symbols!)
-        if not new_username.isalnum():
-            return Response({"error": "Username can only contain letters and numbers."}, status=status.HTTP_400_BAD_REQUEST)
-        if User.objects.filter(username=new_username).exclude(id=profile.id).exists():
+        # Validation 1: Regex :
+        # ^[a-zA-Z]        = MUST start with a letter
+        # [a-zA-Z0-9_-]    = Followed by letters, numbers, underscores, or hyphens
+        # {3,23}$          = For 3 to 23 more characters (making it 4 to 24 total)
+        if not re.match(r"^[a-zA-Z][a-zA-Z0-9_-]{3,23}$", new_username):
+            return Response(
+                {"error": "Username must start with a letter, be 4-24 characters, and contain only letters, numbers, _, or -."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if User.objects.filter(username=new_username).exclude(id=user.id).exists():
             return Response({"error": "This username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
         user.username = new_username
         user.save()
