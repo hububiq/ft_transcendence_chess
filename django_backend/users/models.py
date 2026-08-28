@@ -13,7 +13,6 @@ class User(AbstractUser):
     oauth_id = models.CharField(max_length=100, null=True, blank=True)
 
     is_bot = models.BooleanField(default=False)
-    bot_difficulty = models.IntegerField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
