@@ -36,7 +36,7 @@ class TournamentParticipant(SQLModel, table=True):
 
 
 # ------------------------------------------------------------
-# 3. TOURNAMENT MATCHES (NEW)
+# 3. TOURNAMENT MATCHES 
 # ------------------------------------------------------------
 class TournamentMatch(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -67,8 +67,6 @@ class Game(SQLModel, table=True):
     tournament_id: Optional[int] = Field(default=None, foreign_key="tournament.id")
     tournament_match_id: Optional[int] = Field(default=None, foreign_key="tournamentmatch.id")
 
-    round_number: Optional[int] = None  # tournament round
-
     is_local_1v1: bool = Field(default=False)
 
     status: str = Field(default="ongoing")  # ongoing / finished / aborted
@@ -92,5 +90,4 @@ class GameInvitation(SQLModel, table=True):
     is_recommendation: bool = Field(default=False)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    moves_pgn: str = Field(default="")
 
