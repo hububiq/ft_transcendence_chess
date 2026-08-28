@@ -35,6 +35,7 @@ export function Game() {
   const [isTournamentGame, setIsTournamentGame] = useState(false);
   const [boardKey, setBoardKey] = useState(0);
   const [isTournamentChampion, setIsTournamentChampion] = useState(false);
+  const [rematchStatus, setRematchStatus] = useState("idle"); // "idle", "pending", "gone"
 
   // Clocks & Turns
   const [playerTime, setPlayerTime] = useState(15);
@@ -136,6 +137,11 @@ export function Game() {
         } else {
           setGameOver("draw");
         }
+          if (data.rematch_state === "received") {
+            setReceivedRematchOffer(true);
+        } else if (data.rematch_state === "sent") {
+          setRematchStatus("pending");
+        }
         setIsResignModalOpen(false);
         break;
 
@@ -156,8 +162,18 @@ export function Game() {
         break;
 
       case "rematch_declined":
+        setRematchStatus("declined");
         setIsWaitingForRematch(false);
-        alert("Opponent declined the rematch.");
+        break;
+      
+      case "rematch_request_sent":
+        setRematchStatus("pending");
+        break;
+      
+      case "opponent_gone":
+        setRematchStatus("gone");
+        setReceivedRematchOffer(false); 
+        //alert("Your opponent left the room.");
         break;
       
       case "tournament_won":
@@ -282,8 +298,9 @@ export function Game() {
   };
 
   const handleRematchRequest = () => {
+    setRematchStatus("pending");
     setIsWaitingForRematch(true);
-    sendMessage({ type: "rematch_request", player_id: user?.id });
+    sendMessage({ type: "rematch_request", player_id: user?.id, opponent_id: opponentId });
   };
 
   const handleAcceptRematch = () => {
@@ -395,7 +412,7 @@ export function Game() {
       {/*Game Over Modal*/}
       {gameOver && !isTournamentChampion && (
         <div className="relative z-[100]">
-          <GameOverModal outcome={gameOver} onRestart={handleRematchRequest} onHome={handleHomeClick} isTournament={isTournamentGame} />
+          <GameOverModal outcome={gameOver} onRestart={handleRematchRequest} onHome={handleHomeClick} isTournament={isTournamentGame} rematchStatus={rematchStatus}/>
         </div>
       )}
 

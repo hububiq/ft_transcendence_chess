@@ -8,9 +8,10 @@ interface GameOverModalProps {
   onRestart: () => void;
   onHome: () => void;
   isTournament?: boolean;
+  rematchStatus?: string;
 }
 
-export function GameOverModal({ outcome, onRestart, onHome, isTournament  }: GameOverModalProps) {
+export function GameOverModal({ outcome, onRestart, onHome, isTournament, rematchStatus = "idle"  }: GameOverModalProps) {
   const OUTCOMES: Record<
     GameOutcome,
     { icon: string; title: string; desc: string }
@@ -55,12 +56,25 @@ export function GameOverModal({ outcome, onRestart, onHome, isTournament  }: Gam
           <p className="text-neutral-500 text-sm">{desc}</p>
         </div>
         <div className="flex gap-3 w-full">
-          {!isTournament && (
+            {!isTournament && (
             <button
               onClick={onRestart}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-sm font-medium transition-colors"
+              disabled={rematchStatus !== "idle"} // Disable if pending or opponent left
+              className={clsx(
+                "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                rematchStatus === "idle" 
+                  ? "bg-neutral-900 hover:bg-neutral-800 text-white" 
+                  : "bg-neutral-900/50 text-neutral-500 cursor-not-allowed"
+              )}
             >
-              <RotateCcw className="w-4 h-4" /> Rematch
+              <RotateCcw className={clsx("w-4 h-4", rematchStatus === "pending" && "animate-spin")} /> 
+              {rematchStatus === "idle" 
+                ? "Rematch" 
+                : rematchStatus === "pending" 
+                ? "Request Pending..." 
+                  : rematchStatus === "declined"
+                    ? "Opponent Declined"
+                    : "Opponent Left"}
             </button>
           )}
 

@@ -231,7 +231,7 @@ export function BotGame() {
       {/* Game Over Modal */}
       {gameOver && (
         <div className="relative z-[100]">
-          <GameOverModal outcome={gameOver} onRestart={handleRestart} onHome={handleHomeClick} />
+          <GameOverModal outcome={gameOver} onRestart={handleRestart} onHome={handleHomeClick}/>
         </div>
       )}
 
