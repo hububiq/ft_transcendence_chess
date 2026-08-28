@@ -318,8 +318,10 @@ async def game_socket(websocket: WebSocket, game_id: int):
             if proposed_by:
                 if int(proposed_by) == opponent_id:
                     rematch_state = "received"
+                    await manager.send_to_user(opponent_id, {"type": "rematch_request_sent"})
                 elif int(proposed_by) == user_id:
                     rematch_state = "sent"
+                    await manager.send_to_user(opponent_id, {"type": "rematch_request"})
             print(f"🚨 DEBUG SEND: Telling React that rematch_state is: {rematch_state}")
             
             await websocket.send_json({
