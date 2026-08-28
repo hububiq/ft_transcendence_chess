@@ -5,6 +5,7 @@ import {
   exchangeGithubCode,
   fetchCurrentUser,
 } from "../../features/auth/api/authService";
+import { Loader2 } from "lucide-react";
 
 export function OAuthCallback() {
   const navigate = useNavigate();
@@ -56,8 +57,13 @@ export function OAuthCallback() {
   }, [navigate, searchParams, setUser]);
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <p>Authenticating securely with GitHub...</p>
+    <div className="flex justify-center items-center h-screen bg-black text-white">
+      <div className="flex items-center gap-3">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <p className="text-lg font-medium tracking-wide">
+          Authenticating securely with GitHub...
+        </p>
+      </div>
     </div>
   );
 }
