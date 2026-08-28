@@ -56,7 +56,7 @@ asyncio.create_task(friendship_notifications_loop())
 async def process_rematch_request(game_id: int, user_id: int, opponent_id: int):
     """Handles logic when a player asks for a rematch."""
     if opponent_id is None:
-        await manager.send_to_user(opponent_id, {"type": "rematch_request"})
+        pass
     else:
         room_connections = manager.rooms.get(game_id, [])
         
