@@ -53,14 +53,35 @@ asyncio.create_task(friendship_notifications_loop())
 # ---------------------------------------------------------
 # HELPER FUNCTIONS FOR REMATCHES
 # ---------------------------------------------------------
-async def process_rematch_request(user_id: int, opponent_id: int):
+async def process_rematch_request(game_id: int, user_id: int, opponent_id: int):
     """Handles logic when a player asks for a rematch."""
-    if opponent_id is not None:
+    if opponent_id is None:
         await manager.send_to_user(opponent_id, {"type": "rematch_request"})
+    else:
+        room_connections = manager.rooms.get(game_id, [])
+        
+        if len(room_connections) < 2:
+            # The opponent left the room
+            await manager.send_to_user(user_id, {"type": "opponent_gone"})
+        else:
+            redis = await get_redis()
+            #  SAVE THE OFFER TO REDIS (Expires in 120 seconds!)
+            await redis.set(f"game:{game_id}:rematch_proposed_by", user_id, ex=120)
+            print(f"🚨 DEBUG SAVE: Wrote rematch offer to Redis for game {game_id} by user {user_id}")
+            # They are still here
+            await manager.send_to_user(opponent_id, {"type": "rematch_request"})
+            # Tell the sender that the request is successfully pending
+            await manager.send_to_user(user_id, {"type": "rematch_request_sent"})
 
 
 async def process_rematch_accepted(game_id: int):
     """Creates a new game with swapped colors and broadcasts the new ID."""
+    room_connections = manager.rooms.get(int(game_id), [])
+    if len(room_connections) < 2:
+        # The original requester ran away! Abort!
+        await manager.broadcast_to_game(game_id, {"type": "opponent_gone"})
+        return
+
     async with async_session() as session:
         old_game = await session.get(Game, game_id)
         if old_game:
@@ -289,12 +310,25 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 "opponent_id": opponent_id,
                 "history": []
             })        
+
+            rematch_state = "idle"
+            proposed_by = await redis.get(f"game:{game_id}:rematch_proposed_by")
+            print(f"🚨 DEBUG LOAD: Refresh triggered! Redis says proposed_by is: {proposed_by}")
+
+            if proposed_by:
+                if int(proposed_by) == opponent_id:
+                    rematch_state = "received"
+                elif int(proposed_by) == user_id:
+                    rematch_state = "sent"
+            print(f"🚨 DEBUG SEND: Telling React that rematch_state is: {rematch_state}")
+            
             await websocket.send_json({
                 "type": "game_over",
                 "winner_id": winner_id,
                 "loser_id": loser_id,
                 "result": result,
-                "pgn": saved_pgn
+                "pgn": saved_pgn,
+                "rematch_state": rematch_state
             })
         else:
             redis_key = f"game:{game_id}:fen"
@@ -388,9 +422,12 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 await handle_timeout_claim(data, str(game_id), websocket)
 
             elif msg_type == "rematch_request":
-                await process_rematch_request(user_id, opponent_id)
+                print(f"🚨 DEBUG WS: React sent rematch_request for Game {game_id}")
+                await process_rematch_request(game_id, user_id, opponent_id)
 
             elif msg_type == "rematch_declined":
+                print(f"🚨 DEBUG WS: React sent rematch_declined for Game {game_id}")
+                await redis.delete(f"game:{game_id}:rematch_proposed_by")
                 if opponent_id is not None:
                     await manager.send_to_user(
                         opponent_id,
@@ -398,6 +435,8 @@ async def game_socket(websocket: WebSocket, game_id: int):
                     )
 
             elif msg_type == "rematch_accepted":
+                print(f"🚨 DEBUG WS: React sent rematch_accepted for Game {game_id}")
+                await redis.delete(f"game:{game_id}:rematch_proposed_by")
                 await process_rematch_accepted(game_id)
 
             elif msg_type == "offer_draw":
@@ -431,8 +470,16 @@ async def game_socket(websocket: WebSocket, game_id: int):
 
     except WebSocketDisconnect:
         await manager.disconnect(game_id, websocket, user_id)
+        await asyncio.sleep(2) 
+        room_connections = manager.rooms.get(game_id, [])
+        if len(room_connections) < 2:
+            await manager.broadcast_to_game(game_id, {"type": "opponent_gone"})
 
     except Exception as e:
         await manager.disconnect(game_id, websocket, user_id)
+        await asyncio.sleep(2)
+        room_connections = manager.rooms.get(game_id, [])
+        if len(room_connections) < 2:
+            await manager.broadcast_to_game(game_id, {"type": "opponent_gone"})
         print(f"WebSocket error for game {game_id}: {e}")
 
