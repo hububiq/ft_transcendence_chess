@@ -9,7 +9,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = [
-            'avatar',  'oauth_avatar_url', 'location', 'bio', 'theme_color', 
+            'avatar',  'oauth_avatar_url', 'location', 'bio', 
             'elo_rating', 'peak_rating', 'total_games', 
             'wins', 'losses', 'draws', 'current_streak'
         ]
@@ -25,7 +25,7 @@ class UserSerializer(serializers.ModelSerializer):
         # We only send safe data, not include 'password' here
         # If we did, we would be sending hashed passwords to the React frontend.
         fields = [
-            'id', 'username', 'email', 'is_bot', 'bot_difficulty', 
+            'id', 'username', 'email', 'is_bot', 
             'oauth_provider', 'oauth_id', 'date_joined', 'profile'
         ]
 
