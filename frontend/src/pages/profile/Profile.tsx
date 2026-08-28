@@ -62,15 +62,15 @@ export function Profile() {
             <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-400 mb-4">
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
-                {user?.email}
+                {user?.email || "No email provided"}
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
-                *Warsaw, Poland
+                {user?.profile?.location || "No location set"}
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                *Joined January 2024
+                 Joined {user?.date_joined ? new Date(user.date_joined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "Recently"}
               </div>
             </div>
 

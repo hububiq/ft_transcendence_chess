@@ -42,8 +42,8 @@ export function EditProfileForm({
   // Form Submission Handler
   const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
-    if (draftData.username.length < 3) {
-      setLocalError("Cannot submit the form.");
+    if (draftData.username.length < 4 || localError !== "") {
+      setLocalError("Cannot submit the form with invalid data.");
     } else {
       onSave(draftData, avatarFile);
     }
@@ -114,18 +114,17 @@ export function EditProfileForm({
                 const val = e.target.value.slice(0, 24);
                 setDraftData({
                   ...draftData,
-                  username: e.target.value,
+                  username: val,
                 });
-                if (e.target.value.length < 3) {
-                  setLocalError(
-                    "Username must be at least 3 characters long.",
-                  );
-                } else if (val.length > 24) {
-                  setLocalError("Username cannot exceed 24 characters.");
+                const isAlphanumeric = /^[a-zA-Z0-9]+$/.test(val);
+                if (val.length < 4) {
+                  setLocalError("Username must be at least 4 characters long.");
+                } else if (!isAlphanumeric) {
+                  setLocalError("Username can only contain letters and numbers.");
                 } else {
-                  setLocalError("");
-              }
-            }}
+                  setLocalError(""); // All good
+                }
+              }}
             maxLength={24}
               className={clsx(
                 "w-full bg-black border rounded-lg py-2.5 px-3.5 text-sm text-neutral-200 placeholder:text-neutral-700 focus:outline-none transition-all",
@@ -147,6 +146,34 @@ export function EditProfileForm({
                 <AlertCircle className="w-3 h-3" /> {localError}
               </p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-neutral-400 mb-1.5">Location</label>
+            <textarea
+              maxLength={30}
+              rows={1}
+              value={draftData.profile.location || ""}
+              onChange={(e) =>
+                setDraftData({
+                  ...draftData,
+                  profile: {
+                    ...draftData.profile,
+                    location: e.target.value,
+                  },
+                })
+              }
+              className="w-full bg-black border border-neutral-800 rounded-lg py-2.5 px-3.5 text-sm text-neutral-200 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition-all resize-none"
+              placeholder="Enter where you are based"
+            />
+                        <div className="flex items-center justify-between mt-1.5">
+              <p className="text-xs text-neutral-500">
+                Up to 30 characters.
+              </p>
+              <p className="text-xs text-neutral-500">
+                {draftData.profile.location?.length ?? 0}/100
+              </p>
+            </div>
           </div>
 
           {/* Bio */}
@@ -177,7 +204,7 @@ export function EditProfileForm({
               <p className="text-xs text-neutral-500">
                 {draftData.profile.bio?.length ?? 0}/100
               </p>
-</div>
+            </div>
           </div>
         </div>
         {/* Footer */}
