@@ -27,8 +27,6 @@ class Profile(models.Model):
     oauth_avatar_url = models.URLField(null=True, blank=True)
     location = models.CharField(max_length=100, blank=True, default="Warschau")
     bio = models.TextField(default="", blank=True)
-    theme_color = models.CharField(max_length=20, default='dark')
-    is_online = models.BooleanField(default=False)
     elo_rating = models.IntegerField(default=1200)
     peak_rating = models.IntegerField(default=1200)
     total_games = models.IntegerField(default=0)

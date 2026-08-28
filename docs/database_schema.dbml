@@ -17,7 +17,6 @@ Table Users {
   oauth_provider varchar [note: 'e.g., github']
   oauth_id varchar
   is_bot boolean [default: false]
-  bot_difficulty integer [null]
   date_joined timestamp
 }
 
@@ -28,8 +27,6 @@ Table Profiles {
   oauth_avatar_url varchar [note: 'External GitHub URL']
   location varchar [default: "Warschau"]
   bio text
-  theme_color varchar [default: 'dark']
-  is_online boolean [default: false]
   
   // Stats
   elo_rating integer [default: 1200]
