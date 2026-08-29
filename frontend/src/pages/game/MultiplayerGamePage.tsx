@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
 import { useUser } from "../../hooks/useUser";
-import { useWebSocket } from "../../hooks/useWebSocket";
+import { useGameReconnectSocket } from "../../features/gameplay/hooks/useGameReconnectSocket";
 import avatar_1 from "../../assets/avatar_1.png";
 import avatar_2 from "../../assets/avatar_2.png";
 import { resolveMediaUrl } from "../../utils/utils";
@@ -176,7 +176,8 @@ export function Game() {
     }
   };
 
-  const { sendMessage } = useWebSocket({
+  // Use reconnect-aware WebSocket lifecycle only for remote multiplayer games
+  const { sendMessage } = useGameReconnectSocket({
     url:
       gameId && user?.id
         ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}`
