@@ -225,6 +225,27 @@ async def get_tournament_wins(
         }
 
 # ------------------------------------------------------------
+# GET PLAYER'S TOURNAMENT WINS
+# ------------------------------------------------------------
+@router.get("/player/{player_id}/wins")
+async def get_player_tournament_wins(
+    player_id: int,
+    _user = Depends(get_current_user),
+):
+    async with async_session() as session:
+        # Count only completed tournaments won by the requested player
+        result = await session.execute(
+            select(func.count(Tournament.id)).where(
+                Tournament.status == "finished",
+                Tournament.winner_id == player_id,
+            )
+        )
+
+        return {
+            "tournaments_won": result.scalar_one(),
+        }
+
+# ------------------------------------------------------------
 # GET PLAYER'S ACTIVE TOURNAMENT
 # ------------------------------------------------------------
 @router.get("/player/{player_id}")

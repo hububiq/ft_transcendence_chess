@@ -83,6 +83,18 @@ export async function getTournamentWins(): Promise<TournamentWinsResponse> {
   return response.data;
 }
 
+// GET /api/tournaments/player/{player_id}/wins
+export async function getPlayerTournamentWins(
+  playerId: number,
+): Promise<TournamentWinsResponse> {
+  const response = await api.get<TournamentWinsResponse>(
+    `/api/tournaments/player/${playerId}/wins`,
+    config,
+  );
+
+  return response.data;
+}
+
 // GET /api/tournaments/player/{player_id}
 export async function getPlayerTournament(
   playerId: number,
