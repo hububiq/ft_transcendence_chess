@@ -65,6 +65,33 @@ export interface ActiveGameChangedServerEvent {
   type: "active_game_changed";
 }
 
+// Reconnect status always uses backend-controlled game and user identifiers
+export interface GameReconnectPendingServerEvent {
+  type: "game_reconnect_pending";
+  game_id: number;
+  disconnected_user_id: number;
+  reconnect_deadline: string;
+}
+
+export interface GameReconnectedServerEvent {
+  type: "game_reconnected";
+  game_id: number;
+  reconnected_user_id: number;
+}
+
+export interface GameReconnectResultServerEvent {
+  type: "game_reconnect_result";
+  game_id: number;
+  winner_id: number;
+  loser_id: number;
+  reason: "disconnect_timeout";
+}
+
+export type GameReconnectServerEvent =
+  | GameReconnectPendingServerEvent
+  | GameReconnectedServerEvent
+  | GameReconnectResultServerEvent;
+
 // Public error codes shared between the backend protocol and frontend UI
 export type ChatErrorCode =
   | "AUTH_REQUIRED"
@@ -90,6 +117,7 @@ export type ChatServerEvent =
   | PresenceServerEvent
   | FriendsChangedServerEvent
   | ActiveGameChangedServerEvent
+  | GameReconnectServerEvent
   | ErrorServerEvent;
 
 // Return a predictable result to the UI without throwing for expected send failures
