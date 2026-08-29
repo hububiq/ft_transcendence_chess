@@ -29,6 +29,10 @@ export interface PlayerTournamentResponse {
   tournament: Tournament;
 }
 
+export interface TournamentWinsResponse {
+  tournaments_won: number;
+}
+
 // --- API Functions ---
 
 // GET /api/tournaments/
@@ -66,6 +70,16 @@ export async function joinTournament(
     null,
     { ...config, params: payload }, // payload as query parameter
   );
+  return response.data;
+}
+
+// GET /api/tournaments/me/wins
+export async function getTournamentWins(): Promise<TournamentWinsResponse> {
+  const response = await api.get<TournamentWinsResponse>(
+    "/api/tournaments/me/wins",
+    config,
+  );
+
   return response.data;
 }
 

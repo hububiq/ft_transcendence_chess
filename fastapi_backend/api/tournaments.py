@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import func
 from sqlmodel import select
 from database import async_session
 from auth import get_current_user
@@ -202,6 +203,26 @@ async def leave_tournament(tournament_id: int, user = Depends(get_current_user))
 
         return {"message": "Successfully left the tournament."}
 
+
+# ------------------------------------------------------------
+# GET CURRENT PLAYER'S TOURNAMENT WINS
+# ------------------------------------------------------------
+@router.get("/me/wins")
+async def get_tournament_wins(
+    user = Depends(get_current_user),
+):
+    async with async_session() as session:
+        # Count completed tournaments from the existing winner records instead of duplicating profile data
+        result = await session.execute(
+            select(func.count(Tournament.id)).where(
+                Tournament.status == "finished",
+                Tournament.winner_id == user.id,
+            )
+        )
+
+        return {
+            "tournaments_won": result.scalar_one(),
+        }
 
 # ------------------------------------------------------------
 # GET PLAYER'S ACTIVE TOURNAMENT
