@@ -142,6 +142,32 @@ class ActiveGameChangedServerEvent(ServerEventModel):
 
     type: Literal["active_game_changed"] = "active_game_changed"
 
+class GameReconnectPendingServerEvent(ServerEventModel):
+    """Notify game participants about an active reconnect grace period"""
+
+    type: Literal["game_reconnect_pending"] = "game_reconnect_pending"
+    game_id: int = Field(gt=0)
+    disconnected_user_id: int = Field(gt=0)
+    reconnect_deadline: datetime
+
+
+class GameReconnectedServerEvent(ServerEventModel):
+    """Notify game participants that a disconnected player returned"""
+
+    type: Literal["game_reconnected"] = "game_reconnected"
+    game_id: int = Field(gt=0)
+    reconnected_user_id: int = Field(gt=0)
+
+
+class GameReconnectResultServerEvent(ServerEventModel):
+    """Notify game participants about a disconnect timeout result"""
+
+    type: Literal["game_reconnect_result"] = "game_reconnect_result"
+    game_id: int = Field(gt=0)
+    winner_id: int = Field(gt=0)
+    loser_id: int = Field(gt=0)
+    reason: Literal["disconnect_timeout"] = "disconnect_timeout"
+
 class ChatMessageServerEvent(ServerEventModel):
     """Server confirmed message prepared for broadcasting"""
 
@@ -200,6 +226,9 @@ ServerEvent = (
     | PresenceServerEvent
     | FriendsChangedServerEvent
     | ActiveGameChangedServerEvent
+    | GameReconnectPendingServerEvent
+    | GameReconnectedServerEvent
+    | GameReconnectResultServerEvent
     | ChatMessageServerEvent
     | ErrorServerEvent
 )
