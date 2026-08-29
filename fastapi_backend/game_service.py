@@ -131,7 +131,13 @@ async def handle_game_over(
         try:
             await client.post(
                 "http://django_backend:8000/api/update-elo/",
-                json={"winner_id": winner_id, "loser_id": loser_id},
+                # Include participant IDs because draws have no winner or loser
+                json={
+                    "winner_id": winner_id,
+                    "loser_id": loser_id,
+                    "is_draw": result == "1/2-1/2",
+                    "player_ids": sorted(affected_user_ids),
+                },
                 headers={"Host": "localhost"}
             )
             print(f"[GAME OVER] ELO updated for Game {game_id}")
