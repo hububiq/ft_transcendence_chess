@@ -122,6 +122,43 @@ export function parseChatServerEvent(
     };
   }
 
+  if (value.type === "chat_user_joined") {
+    const user = parseAuthor(value.user);
+
+    if (
+      !user ||
+      typeof value.event_id !== "string" ||
+      value.event_id.length === 0
+    ) {
+      return null;
+    }
+
+    return {
+      type: "chat_user_joined",
+      event_id: value.event_id,
+      user,
+    };
+  }
+
+  if (value.type === "chat_user_left") {
+    const user = parseAuthor(value.user);
+
+    if (
+      !user ||
+      typeof value.event_id !== "string" ||
+      value.event_id.length === 0
+    ) {
+      return null;
+    }
+
+    return {
+      type: "chat_user_left",
+      event_id: value.event_id,
+      user,
+    };
+  }
+
+
   if (value.type === "presence") {
     if (!Array.isArray(value.users)) {
       return null;

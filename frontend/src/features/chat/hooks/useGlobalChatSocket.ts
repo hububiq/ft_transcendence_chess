@@ -17,7 +17,7 @@ import {
   type ChatAuthor,
   type ChatConnectionState,
   type ChatErrorCode,
-  type ChatMessageServerEvent,
+  type ChatFeedItem,
   type SendChatMessageResult,
   type SendMessageClientEvent,
 } from "../types";
@@ -33,7 +33,7 @@ const RECONNECT_DELAYS_MS = [
 
 
 interface UseGlobalChatSocketResult {
-  messages: ChatMessageServerEvent[];
+  messages: ChatFeedItem[];
   onlineUsers: ChatAuthor[];
   friendsRevision: number;
   activeGameRevision: number;
@@ -52,9 +52,9 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
   const { user, setUser } = useAuth();
   const userId = user?.id ?? null;
 
-  // Keep chat messages and presence as separate pieces of client state
+  // Keep visible chat feed items and presence as separate pieces of client state
   const [messages, setMessages] = useState<
-    ChatMessageServerEvent[]
+    ChatFeedItem[]
   >([]);
   const [onlineUsers, setOnlineUsers] = useState<
     ChatAuthor[]
@@ -139,6 +139,39 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         window.clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
       }
+    };
+
+    const appendChatFeedItem = (
+      item: ChatFeedItem,
+    ) => {
+      setMessages((currentMessages) => {
+        const itemId =
+          item.type === "chat_message"
+            ? item.message_id
+            : item.event_id;
+
+        // Ignore duplicate feed items that may arrive during connection recovery
+        const alreadyExists = currentMessages.some(
+          (existingItem) => {
+            const existingItemId =
+              existingItem.type === "chat_message"
+                ? existingItem.message_id
+                : existingItem.event_id;
+
+            return existingItemId === itemId;
+          },
+        );
+
+        if (alreadyExists) {
+          return currentMessages;
+        }
+
+        // Keep only a bounded number of ephemeral chat items in browser memory
+        return [
+          ...currentMessages,
+          item,
+        ].slice(-MAX_VISIBLE_CHAT_MESSAGES);
+      });
     };
 
     const scheduleReconnect = (
@@ -341,23 +374,19 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
         }
 
         if (event.type === "chat_message") {
-          setMessages((currentMessages) => {
-            // Ignore duplicate messages that may arrive during connection recovery
-            const alreadyExists = currentMessages.some(
-              (message) =>
-                message.message_id === event.message_id,
-            );
+          appendChatFeedItem(event);
+          return;
+        }
 
-            if (alreadyExists) {
-              return currentMessages;
-            }
+        if (
+          event.type === "chat_user_joined" ||
+          event.type === "chat_user_left"
+        ) {
+          // Do not show the current user a notification about their own presence
+          if (event.user.id !== userId) {
+            appendChatFeedItem(event);
+          }
 
-            // Keep only a bounded number of messages in browser memory
-            return [
-              ...currentMessages,
-              event,
-            ].slice(-MAX_VISIBLE_CHAT_MESSAGES);
-          });
           return;
         }
 

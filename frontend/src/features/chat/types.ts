@@ -55,6 +55,26 @@ export interface PresenceServerEvent {
   users: ChatAuthor[];
 }
 
+// Notify the chat feed that a user became present
+export interface ChatUserJoinedServerEvent {
+  type: "chat_user_joined";
+  event_id: string;
+  user: ChatAuthor;
+}
+
+// Notify the chat feed that a user stopped being present
+export interface ChatUserLeftServerEvent {
+  type: "chat_user_left";
+  event_id: string;
+  user: ChatAuthor;
+}
+
+// Items that may appear chronologically inside the visible chat feed
+export type ChatFeedItem =
+  | ChatMessageServerEvent
+  | ChatUserJoinedServerEvent
+  | ChatUserLeftServerEvent;
+
 // Notify the client that its friendship data must be refreshed
 export interface FriendsChangedServerEvent {
   type: "friends_changed";
@@ -88,6 +108,8 @@ export type ChatServerEvent =
   | AuthenticatedServerEvent
   | ChatMessageServerEvent
   | PresenceServerEvent
+  | ChatUserJoinedServerEvent
+  | ChatUserLeftServerEvent
   | FriendsChangedServerEvent
   | ActiveGameChangedServerEvent
   | ErrorServerEvent;
