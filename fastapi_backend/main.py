@@ -21,6 +21,11 @@ from garbage_games_collector import clean_dead_games
 from database import async_session
 from chat.router import router as chat_router
 from chat.friendship_events import listen_for_friendship_events
+from reconnect_service import (
+    reconnect_deadline_worker,
+    register_game_connection,
+    unregister_game_connection,
+)
 from auth import get_current_user
 import time
 from notifications import friendship_notifications_loop
@@ -90,6 +95,9 @@ async def startup_event():
     asyncio.create_task(matchmaking_loop())
     asyncio.create_task(clean_dead_games())
     asyncio.create_task(listen_for_friendship_events())
+
+    # Resume processing Redis reconnect deadlines whenever FastAPI starts
+    asyncio.create_task(reconnect_deadline_worker())
 
 
 # ------------------------------------------------------------
@@ -262,12 +270,27 @@ async def game_socket(websocket: WebSocket, game_id: int):
             )
             return
 
-    # Register only an authenticated player belonging to the game
-    await manager.connect(
-        game_id,
-        websocket,
-        user_id,
-    )
+    if is_completed:
+        # Keep completed games on the existing connection path without reconnect grace
+        await manager.connect(
+            game_id,
+            websocket,
+            user_id,
+        )
+    else:
+        # Register ongoing games through reconnect lifecycle so a valid return cancels the deadline
+        is_registered = await register_game_connection(
+            game_id,
+            websocket,
+            user_id,
+        )
+
+        if not is_registered:
+            await websocket.close(
+                code=1008,
+                reason="Game is not active",
+            )
+            return
 
     redis = await get_redis()
     
@@ -354,7 +377,12 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 })
             except Exception as e:
                 print(f"[WS] Browser disconnected before receiving board state: {e}")
-                await manager.disconnect(game_id, websocket, user_id)
+                # Treat connection loss during initial state delivery as a reconnectable disconnect
+                await unregister_game_connection(
+                    game_id,
+                    websocket,
+                    user_id,
+                )
                 return
 
     except Exception as e:
@@ -430,7 +458,12 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 })
 
     except WebSocketDisconnect:
-        await manager.disconnect(game_id, websocket, user_id)
+        # Start reconnect handling only after an authenticated game socket actually disconnects
+        await unregister_game_connection(
+            game_id,
+            websocket,
+            user_id,
+        )
 
     except Exception as e:
         await manager.disconnect(game_id, websocket, user_id)

@@ -9,7 +9,10 @@ from database import async_session
 from models import Game, TournamentMatch
 from server import manager
 from chat.manager import global_chat_manager
-from chat.schemas import ActiveGameChangedServerEvent
+from chat.schemas import (
+    ActiveGameChangedServerEvent,
+    GameReconnectResultServerEvent,
+)
 
 from tournament_progression_service import advance_tournament
 
@@ -22,6 +25,7 @@ async def handle_game_over(
     surrender_loser_id: int = None,
     is_timeout: bool = False,
     timeout_loser_id: int = None,
+    is_disconnect_timeout: bool = False,
     is_agreed_draw: bool = False
 ):
     """Generates the game history, cleans RAM, updates ELO, and advances tournaments."""
@@ -111,6 +115,22 @@ async def handle_game_over(
         affected_user_ids,
         ActiveGameChangedServerEvent(),
     )
+
+    # Report disconnect timeout only after the completed game state is committed
+    if (
+        is_timeout
+        and is_disconnect_timeout
+        and winner_id is not None
+        and loser_id is not None
+    ):
+        await global_chat_manager.send_to_users(
+            affected_user_ids,
+            GameReconnectResultServerEvent(
+                game_id=int(game_id),
+                winner_id=winner_id,
+                loser_id=loser_id,
+            ),
+        )
 
     # Notify players
     await manager.broadcast_to_game(int(game_id), {
