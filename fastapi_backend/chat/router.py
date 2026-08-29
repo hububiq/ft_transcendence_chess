@@ -26,6 +26,9 @@ from chat.schemas import (
     ServerEvent,
     parse_client_event,
 )
+from reconnect_service import (
+    get_reconnect_pending_events_for_user,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -316,6 +319,22 @@ async def global_chat_socket(
 
         # Tell all clients that the logged user list changed
         await global_chat_manager.broadcast_presence()
+
+        # Restore an active reconnect countdown after the application socket reconnects
+        pending_reconnect_events = (
+            await get_reconnect_pending_events_for_user(
+                user.id,
+            )
+        )
+
+        for pending_event in pending_reconnect_events:
+            was_sent = await global_chat_manager.send_to(
+                websocket,
+                pending_event,
+            )
+
+            if not was_sent:
+                return
 
         while True:
             # Limit the connection lifetime to the lifetime of the access token
