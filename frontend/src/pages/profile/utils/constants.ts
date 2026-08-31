@@ -1,4 +1,9 @@
-import { Swords, TrendingUp, Crown } from "lucide-react";
+import {
+  Swords,
+  TrendingUp,
+  Crown,
+  Trophy,
+} from "lucide-react";
 
 export const stats = [
   {
@@ -19,6 +24,12 @@ export const stats = [
     label: "Peak Rating",
     icon: Crown,
     color: "text-yellow-500",
+  },
+  {
+    id: 3,
+    label: "Tournaments Won",
+    icon: Trophy,
+    color: "text-orange-500",
   },
 ];
 
