@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from uuid import uuid4
 
 from fastapi import WebSocket
 
 from chat.schemas import (
     ChatAuthor,
+    ChatUserJoinedServerEvent,
+    ChatUserLeftServerEvent,
     PresenceServerEvent,
     ServerEvent,
 )
@@ -15,7 +18,7 @@ from chat.schemas import (
 logger = logging.getLogger(__name__)
 
 CHAT_SEND_TIMEOUT_SECONDS = 2.0
-
+CHAT_PRESENCE_LEAVE_GRACE_SECONDS = 5.0
 
 class GlobalChatConnectionManager:
     """Manage authenticated sockets in the current FastAPI worker"""
@@ -27,6 +30,15 @@ class GlobalChatConnectionManager:
             ChatAuthor,
         ] = {}
         self._state_lock = asyncio.Lock()
+
+        # Serialize join and delayed leave transitions so reconnect cannot reorder them
+        self._presence_transition_lock = asyncio.Lock()
+
+        # Keep one delayed leave task per authenticated user
+        self._pending_leave_tasks: dict[
+            int,
+            asyncio.Task[None],
+        ] = {}
 
         # One send lock prevents concurrent writes to the same socket
         self._send_lock = asyncio.Lock()
@@ -40,24 +52,58 @@ class GlobalChatConnectionManager:
         """Confirm authentication and register the socket atomically"""
 
         payload = ready_event.model_dump(mode="json")
+        pending_leave_task: asyncio.Task[None] | None = None
+        should_announce_join = False
 
-        async with self._send_lock:
-            # Confirm authentication before exposing the socket as active
-            was_sent = await self._send_payload(
-                websocket,
-                payload,
-            )
-
-            if not was_sent:
-                raise ConnectionError(
-                    "WebSocket closed during activation"
+        # Serialize presence transitions with delayed leave completion
+        async with self._presence_transition_lock:
+            async with self._send_lock:
+                # Confirm authentication before exposing the socket as active
+                was_sent = await self._send_payload(
+                    websocket,
+                    payload,
                 )
 
-            # Register only sockets that successfully received the auth response
-            async with self._state_lock:
-                self._users_by_socket[websocket] = user
-                connection_count = len(
-                    self._users_by_socket
+                if not was_sent:
+                    raise ConnectionError(
+                        "WebSocket closed during activation"
+                    )
+
+                # Register only sockets that successfully received the auth response
+                async with self._state_lock:
+                    had_active_connection = any(
+                        active_user.id == user.id
+                        for active_user
+                        in self._users_by_socket.values()
+                    )
+
+                    pending_leave_task = (
+                        self._pending_leave_tasks.pop(
+                            user.id,
+                            None,
+                        )
+                    )
+
+                    self._users_by_socket[websocket] = user
+                    connection_count = len(
+                        self._users_by_socket
+                    )
+
+                    # A reconnect during the grace period continues the same presence session
+                    should_announce_join = (
+                        not had_active_connection
+                        and pending_leave_task is None
+                    )
+
+            if pending_leave_task is not None:
+                pending_leave_task.cancel()
+
+            if should_announce_join:
+                await self.broadcast(
+                    ChatUserJoinedServerEvent(
+                        event_id=uuid4(),
+                        user=user,
+                    )
                 )
 
         logger.info(
@@ -81,11 +127,88 @@ class GlobalChatConnectionManager:
                 self._users_by_socket
             )
 
+            if removed_user is not None:
+                has_other_connection = any(
+                    active_user.id == removed_user.id
+                    for active_user
+                    in self._users_by_socket.values()
+                )
+
+                # Start the grace period only after the user's last socket disappears
+                if (
+                    not has_other_connection
+                    and removed_user.id
+                    not in self._pending_leave_tasks
+                ):
+                    self._pending_leave_tasks[
+                        removed_user.id
+                    ] = asyncio.create_task(
+                        self._announce_leave_after_grace(
+                            removed_user
+                        )
+                    )
+
         if removed_user is not None:
             logger.info(
                 "Global chat connection removed, active connections=%s",
                 connection_count,
             )
+
+    async def _announce_leave_after_grace(
+        self,
+        user: ChatAuthor,
+    ) -> None:
+        """Announce leave only if the user stays disconnected through the grace period"""
+
+        current_task = asyncio.current_task()
+
+        if current_task is None:
+            return
+
+        try:
+            await asyncio.sleep(
+                CHAT_PRESENCE_LEAVE_GRACE_SECONDS
+            )
+
+            # Serialize the final leave decision with any concurrent reconnect
+            async with self._presence_transition_lock:
+                async with self._state_lock:
+                    if (
+                        self._pending_leave_tasks.get(
+                            user.id
+                        )
+                        is not current_task
+                    ):
+                        return
+
+                    has_active_connection = any(
+                        active_user.id == user.id
+                        for active_user
+                        in self._users_by_socket.values()
+                    )
+
+                    if has_active_connection:
+                        self._pending_leave_tasks.pop(
+                            user.id,
+                            None,
+                        )
+                        return
+
+                    self._pending_leave_tasks.pop(
+                        user.id,
+                        None,
+                    )
+
+                await self.broadcast(
+                    ChatUserLeftServerEvent(
+                        event_id=uuid4(),
+                        user=user,
+                    )
+                )
+
+        except asyncio.CancelledError:
+            # Reconnect during the grace period intentionally cancels the leave
+            return
 
     async def connection_count(self) -> int:
         """Return the number of active sockets"""
