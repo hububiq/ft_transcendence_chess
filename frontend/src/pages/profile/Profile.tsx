@@ -39,7 +39,11 @@ export function Profile() {
       <div className="bg-[#0a0a0a] border border-neutral-900 rounded-xl p-8">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
           <img
-            src={resolveMediaUrl(user?.profile.avatar) || playerAvatar}
+            src={
+              user?.profile.oauth_avatar_url ||
+              resolveMediaUrl(user?.profile.avatar) ||
+              playerAvatar
+            }
             alt="Profile Avatar"
             className="w-24 h-24 rounded-full border-4 border-blue-600/20 object-cover"
           />
