@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageSquare, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { GlobalChatPanel } from "../../features/chat/components/GlobalChatPanel";
-// import { GlobalChatProvider } from "../../features/chat/context/GlobalChatProvider";
 import { useGlobalChat } from "../../features/chat/context/GlobalChatProvider";
 import { LoggedUsersPanel } from "../../features/social/components/LoggedUsersPanel";
 import { UserHoverCard } from "../../features/social/components/UserHoverCard";
@@ -22,23 +21,38 @@ export function SocialSidebar() {
   } = useGlobalChat();
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const isFirstRender = useRef(true); // Prevents the toast from popping up on initial page load
+  //const isFirstRender = useRef(true); // Prevents the toast from popping up on initial page load
+  const lastFriendshipChangeRevisionRef =
+    useRef(friendshipChangeRevision);
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
+    if (
+      friendshipChangeRevision ===
+      lastFriendshipChangeRevisionRef.current
+    ) {
       return;
     }
+
+    lastFriendshipChangeRevisionRef.current =
+      friendshipChangeRevision;
 
     if (friendshipChangeRevision === 0) {
       return;
     }
 
-    // Show the banner only after a confirmed friendship change
-    setToastMessage("Your friends list has been updated!");
-    const timer = setTimeout(() => setToastMessage(null), 3000);
+    // Show the banner only for a friendship revision received after this sidebar mounted
+    setToastMessage(
+      "Your friends list has been updated!",
+    );
 
-    return () => clearTimeout(timer);
+    const timer = window.setTimeout(
+      () => setToastMessage(null),
+      3000,
+    );
+
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [friendshipChangeRevision]);
 
   // Load friendship data from Django and refresh it after realtime invalidation

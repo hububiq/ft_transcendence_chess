@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from allauth.account.signals import user_signed_up
+from allauth.socialaccount.signals import social_account_added, social_account_updated
 
 
 class User(AbstractUser):
@@ -13,7 +14,6 @@ class User(AbstractUser):
     oauth_id = models.CharField(max_length=100, null=True, blank=True)
 
     is_bot = models.BooleanField(default=False)
-    bot_difficulty = models.IntegerField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -28,8 +28,6 @@ class Profile(models.Model):
     oauth_avatar_url = models.URLField(null=True, blank=True)
     location = models.CharField(max_length=100, blank=True, default="Warschau")
     bio = models.TextField(default="", blank=True)
-    theme_color = models.CharField(max_length=20, default='dark')
-    is_online = models.BooleanField(default=False)
     elo_rating = models.IntegerField(default=1200)
     peak_rating = models.IntegerField(default=1200)
     total_games = models.IntegerField(default=0)
@@ -49,13 +47,40 @@ def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
 
+def _populate_oauth_data(user, sociallogin):
+    if not sociallogin:
+        return
+
+    user.oauth_provider = sociallogin.account.provider
+    user.oauth_id = sociallogin.account.uid
+
+    profile = getattr(user, "profile", None)
+    if profile is not None:
+        extra_data = getattr(sociallogin.account, "extra_data", {}) or {}
+        avatar_url = (
+            extra_data.get("avatar_url")
+            or extra_data.get("avatar")
+            or sociallogin.account.get_avatar_url()
+        )
+        if avatar_url:
+            profile.oauth_avatar_url = avatar_url
+            profile.save(update_fields=["oauth_avatar_url"])
+
+    user.save(update_fields=["oauth_provider", "oauth_id"])
+
+
 #to update ouath_provider in database
 @receiver(user_signed_up)
 def populate_oauth_data(request, user, **kwargs):
     # kwargs will contain 'sociallogin' if sb used GitHub
     sociallogin = kwargs.get('sociallogin')
+    _populate_oauth_data(user, sociallogin)
 
-    if sociallogin:
-        user.oauth_provider = sociallogin.account.provider
-        user.oauth_id = sociallogin.account.uid
-        user.save()
+   # if sociallogin:
+   #     user.oauth_provider = sociallogin.account.provider
+   #    user.oauth_id = sociallogin.account.uid
+   #    user.save()
+
+@receiver(social_account_added)
+def update_oauth_profile_on_update(request, sociallogin, **kwargs):
+    _populate_oauth_data(sociallogin.user, sociallogin)

@@ -23,8 +23,8 @@ export function EditProfileForm({
   const [draftData, setDraftData] = useState<UserData>(initialData);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState(
-    resolveMediaUrl(initialData.profile.avatar) ||
-      initialData.profile.oauth_avatar_url ||
+    initialData.profile.oauth_avatar_url ||
+      resolveMediaUrl(initialData.profile.avatar) ||
       defaultAvatar,
   );
   const [localError, setLocalError] = useState("");

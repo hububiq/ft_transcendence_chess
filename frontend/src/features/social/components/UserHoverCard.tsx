@@ -6,6 +6,7 @@ import {
 import { createPortal } from "react-dom";
 import { MapPin } from "lucide-react";
 import { usePublicUserProfile } from "../hooks/usePublicUserProfile";
+import { useTournamentWins } from "../hooks/useTournamentWins";
 import { resolveMediaUrl } from "../../../utils/utils";
 import playerAvatar from "../../../assets/avatar_1.png";
 
@@ -27,8 +28,8 @@ interface UserHoverCardContentProps {
 }
 
 
-const CARD_WIDTH = 256;
-const CARD_MAX_HEIGHT = 280;
+const CARD_WIDTH = 336;
+const CARD_MAX_HEIGHT = 300;
 const CARD_GAP = 8;
 const VIEWPORT_PADDING = 8;
 
@@ -44,6 +45,10 @@ function UserHoverCardContent({
     isLoading,
     errorMessage,
   } = usePublicUserProfile(userId);
+
+  const {
+    tournamentsWon,
+  } = useTournamentWins(userId);
 
 
   if (isLoading) {
@@ -86,8 +91,8 @@ function UserHoverCardContent({
 
   // Prefer an uploaded avatar and fall back to the OAuth avatar when available
   const avatarUrl =
-    resolveMediaUrl(profile.profile.avatar) ||
     profile.profile.oauth_avatar_url ||
+    resolveMediaUrl(profile.profile.avatar) ||
     playerAvatar;
 
 
@@ -144,9 +149,9 @@ function UserHoverCardContent({
       </div>
 
 
-      <div className="mt-4 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-[1fr_1fr_1fr_1.35fr] gap-2">
         <div className="rounded-lg bg-neutral-900/70 p-2 text-center">
-          <p className="text-[10px] uppercase text-neutral-600">
+          <p className="flex min-h-6 items-center justify-center text-[10px] uppercase leading-3 text-neutral-600">
             ELO
           </p>
           <p className="text-xs font-medium text-neutral-300">
@@ -155,7 +160,7 @@ function UserHoverCardContent({
         </div>
 
         <div className="rounded-lg bg-neutral-900/70 p-2 text-center">
-          <p className="text-[10px] uppercase text-neutral-600">
+          <p className="flex min-h-6 items-center justify-center text-[10px] uppercase leading-3 text-neutral-600">
             Peak
           </p>
           <p className="text-xs font-medium text-neutral-300">
@@ -164,11 +169,26 @@ function UserHoverCardContent({
         </div>
 
         <div className="rounded-lg bg-neutral-900/70 p-2 text-center">
-          <p className="text-[10px] uppercase text-neutral-600">
+          <p className="flex min-h-6 items-center justify-center text-[10px] uppercase leading-3 text-neutral-600">
             Games
           </p>
           <p className="text-xs font-medium text-neutral-300">
             {profile.profile.total_games}
+          </p>
+        </div>
+
+        <div className="rounded-lg bg-neutral-900/70 px-1 py-2 text-center">
+          <p className="min-h-6 text-[9px] uppercase leading-3 tracking-tight text-neutral-600">
+            <span className="block">
+              Tournament
+            </span>
+            <span className="block">
+              Wins
+            </span>
+          </p>
+
+          <p className="text-xs font-medium text-neutral-300">
+            {tournamentsWon ?? "—"}
           </p>
         </div>
       </div>

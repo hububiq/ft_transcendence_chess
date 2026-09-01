@@ -194,6 +194,31 @@ export function GlobalChatPanel() {
           </p>
         ) : (
           messages.map((message) => {
+            if (
+              message.type === "chat_user_joined" ||
+              message.type === "chat_user_left"
+            ) {
+              const didJoin =
+                message.type === "chat_user_joined";
+
+              return (
+                <p
+                  key={message.event_id}
+                  className={clsx(
+                    "text-right text-[10px] italic break-words",
+                    didJoin
+                      ? "text-emerald-400/70"
+                      : "text-rose-400/60",
+                  )}
+                >
+                  {message.user.username}{" "}
+                  {didJoin
+                    ? "joined the chat"
+                    : "left the chat"}
+                </p>
+              );
+            }
+
             // Use a different label and style for the current user's messages
             const isOwnMessage =
               message.author.id === authenticatedUser?.id;

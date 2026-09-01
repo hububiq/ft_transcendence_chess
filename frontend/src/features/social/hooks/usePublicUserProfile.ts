@@ -96,14 +96,6 @@ function isPublicUserProfile(
 async function loadPublicUserProfile(
   userId: number,
 ): Promise<PublicUserProfile> {
-  // Return cached data when this profile was already loaded
-  const cachedProfile =
-    publicProfileCache.get(userId);
-
-  if (cachedProfile) {
-    return cachedProfile;
-  }
-
   // Avoid duplicate requests for the same user while one is still pending
   const pendingRequest =
     publicProfileRequests.get(userId);
@@ -171,11 +163,6 @@ export function usePublicUserProfile(
 
 
   useEffect(() => {
-    // Skip the request when the profile is already available in cache
-    if (publicProfileCache.has(userId)) {
-      return;
-    }
-
     let isDisposed = false;
 
 
@@ -193,16 +180,23 @@ export function usePublicUserProfile(
           profile: loadedProfile,
           errorMessage: null,
         });
+
       } catch {
         if (isDisposed) {
           return;
         }
 
+        const cachedProfile =
+          publicProfileCache.get(userId) ?? null;
+
+        // Keep previously validated data visible if only the refresh request fails
         setRequestState({
           userId,
-          profile: null,
+          profile: cachedProfile,
           errorMessage:
-            "User profile could not be loaded",
+            cachedProfile === null
+              ? "User profile could not be loaded"
+              : null,
         });
       }
     };

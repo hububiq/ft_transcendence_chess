@@ -54,8 +54,57 @@ def register_user(request):
 def update_elo(request):
     winner_id = request.data.get('winner_id')
     loser_id = request.data.get('loser_id')
+    is_draw = request.data.get('is_draw', False)
+    player_ids = request.data.get('player_ids', [])
 
     print(f"DEBUG: FastAPI sent winner_id={winner_id}, loser_id={loser_id}")
+
+    if is_draw:
+        if (
+            not isinstance(player_ids, list)
+            or not player_ids
+            or any(
+                type(player_id) is not int
+                or player_id <= 0
+                for player_id in player_ids
+            )
+        ):
+            return Response(
+                {"error": "Provide valid player IDs for a draw"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        unique_player_ids = list(
+            dict.fromkeys(player_ids)
+        )
+
+        profiles = list(
+            Profile.objects.filter(
+                user__id__in=unique_player_ids
+            )
+        )
+
+        if len(profiles) != len(unique_player_ids):
+            return Response(
+                {"error": "User profile not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Draws count as completed games without changing the existing ELO rules
+        for profile in profiles:
+            profile.draws += 1
+            profile.total_games += 1
+            profile.save(
+                update_fields=[
+                    "draws",
+                    "total_games",
+                ]
+            )
+
+        return Response(
+            {"message": "Draw statistics updated!"},
+            status=status.HTTP_200_OK,
+        )
     
     if winner_id is None and loser_id is None:
         return Response({"error": "Provide at least one ID"}, status=status.HTTP_400_BAD_REQUEST)
