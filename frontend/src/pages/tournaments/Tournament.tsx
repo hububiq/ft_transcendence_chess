@@ -130,7 +130,7 @@ export function Tournament() {
     };
 
     fetchTournamentState();
-  }, [user?.id, refreshTrigger, activeTournament, lobbyTournaments.length]);
+  }, [user?.id, refreshTrigger]);
 
   useEffect(() => {
     if (!activeTournament?.id) return;

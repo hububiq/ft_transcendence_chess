@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Set, Tuple
 from fastapi import WebSocket
 
 
@@ -13,6 +13,12 @@ class ConnectionManager:
         # NEW: user_id -> WebSocket
         self.user_sockets: Dict[int, WebSocket] = {}
 
+        # Track game sockets separately from lobby connections
+        self.game_user_sockets: Dict[
+            Tuple[int, int],
+            Set[WebSocket],
+        ] = {}
+
     async def connect(self, game_id: int, websocket: WebSocket, user_id: int):
         """
         Registers an accepted WebSocket under a game_id and authenticated user_id.
@@ -21,6 +27,14 @@ class ConnectionManager:
         if game_id not in self.rooms:
             self.rooms[game_id] = []
         self.rooms[game_id].append(websocket)
+
+        # Keep every game socket so closing one tab does not mark the player as disconnected
+        game_user_key = (game_id, user_id)
+
+        if game_user_key not in self.game_user_sockets:
+            self.game_user_sockets[game_user_key] = set()
+
+        self.game_user_sockets[game_user_key].add(websocket)
 
         # Register user socket
         self.user_sockets[user_id] = websocket
@@ -38,12 +52,34 @@ class ConnectionManager:
             if len(self.rooms[game_id]) == 0:
                 del self.rooms[game_id]
 
+        # Remove only this game socket while preserving any other active tab for the same player
+        game_user_key = (game_id, user_id)
+        game_user_connections = self.game_user_sockets.get(game_user_key)
+
+        if game_user_connections is not None:
+            game_user_connections.discard(websocket)
+
+            if not game_user_connections:
+                del self.game_user_sockets[game_user_key]
+
         # Remove user socket
         if user_id in self.user_sockets:
             if self.user_sockets[user_id] == websocket:
                 del self.user_sockets[user_id]
 
         print(f"[WS] User {user_id} disconnected from Game {game_id}")
+
+    def has_game_connection(
+        self,
+        game_id: int,
+        user_id: int,
+    ) -> bool:
+        # Reconnect grace may start only after the player's last game socket is gone
+        return bool(
+            self.game_user_sockets.get(
+                (game_id, user_id)
+            )
+        )
 
     async def broadcast_to_game(self, game_id: int, message: dict):
         """

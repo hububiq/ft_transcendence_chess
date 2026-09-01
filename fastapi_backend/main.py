@@ -14,6 +14,7 @@ from database import init_db
 from models import Game, Tournament
 from game_service import handle_game_over, handle_timeout_claim, handle_player_move
 from game_service import handle_player_move
+from game_service import MULTIPLAYER_CLOCK_SECONDS
 from api.history import router as history_router
 from api.tournaments import router as tournaments_router
 from api.games import router as games_router
@@ -21,6 +22,11 @@ from garbage_games_collector import clean_dead_games
 from database import async_session
 from chat.router import router as chat_router
 from chat.friendship_events import listen_for_friendship_events
+from reconnect_service import (
+    reconnect_deadline_worker,
+    register_game_connection,
+    unregister_game_connection,
+)
 from auth import get_current_user
 import time
 from notifications import friendship_notifications_loop
@@ -111,6 +117,9 @@ async def startup_event():
     asyncio.create_task(matchmaking_loop())
     asyncio.create_task(clean_dead_games())
     asyncio.create_task(listen_for_friendship_events())
+
+    # Resume processing Redis reconnect deadlines whenever FastAPI starts
+    asyncio.create_task(reconnect_deadline_worker())
 
 
 # ------------------------------------------------------------
@@ -283,12 +292,27 @@ async def game_socket(websocket: WebSocket, game_id: int):
             )
             return
 
-    # Register only an authenticated player belonging to the game
-    await manager.connect(
-        game_id,
-        websocket,
-        user_id,
-    )
+    if is_completed:
+        # Keep completed games on the existing connection path without reconnect grace
+        await manager.connect(
+            game_id,
+            websocket,
+            user_id,
+        )
+    else:
+        # Register ongoing games through reconnect lifecycle so a valid return cancels the deadline
+        is_registered = await register_game_connection(
+            game_id,
+            websocket,
+            user_id,
+        )
+
+        if not is_registered:
+            await websocket.close(
+                code=1008,
+                reason="Game is not active",
+            )
+            return
 
     redis = await get_redis()
     
@@ -341,9 +365,9 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 current_fen = starting_fen
 
                 time_data = {
-                    "white_time": 15, 
-                    "black_time": 15, 
-                    "last_move_at": int(time.time())
+                    "white_time": MULTIPLAYER_CLOCK_SECONDS,
+                    "black_time": MULTIPLAYER_CLOCK_SECONDS,
+                    "last_move_at": None,
                 }
                 await redis.set(f"game:{game_id}:time", json.dumps(time_data))
 
@@ -359,19 +383,28 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 san_history.append(temp_board.san(move_obj))
                 temp_board.push(move_obj)
 
-            white_time = 15
-            black_time = 15
+            white_time = MULTIPLAYER_CLOCK_SECONDS
+            black_time = MULTIPLAYER_CLOCK_SECONDS
     
             time_data_str = await redis.get(f"game:{game_id}:time")
             if time_data_str:
                 td = json.loads(time_data_str)
                 white_time = td["white_time"]
                 black_time = td["black_time"]
-                
-                # Deduct the time spent on the current turn
-                if len(raw_moves_uci) > 0:
-                    time_spent = int(time.time()) - td["last_move_at"]
-                    board_for_time = chess.Board(current_fen)
+
+                # Deduct elapsed time only after White has made the first move
+                if (
+                    len(raw_moves_uci) > 0
+                    and td.get("last_move_at") is not None
+                ):
+                    time_spent = (
+                        int(time.time())
+                        - td["last_move_at"]
+                    )
+                    board_for_time = chess.Board(
+                        current_fen
+                    )
+
                     if board_for_time.turn == chess.WHITE:
                         white_time -= time_spent
                     else:
@@ -390,7 +423,12 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 })
             except Exception as e:
                 print(f"[WS] Browser disconnected before receiving board state: {e}")
-                await manager.disconnect(game_id, websocket, user_id)
+                # Treat connection loss during initial state delivery as a reconnectable disconnect
+                await unregister_game_connection(
+                    game_id,
+                    websocket,
+                    user_id,
+                )
                 return
 
     except Exception as e:
@@ -471,11 +509,28 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 })
 
     except WebSocketDisconnect:
-        await manager.disconnect(game_id, websocket, user_id)
-        await asyncio.sleep(2) 
-        room_connections = manager.rooms.get(game_id, [])
+
+        # Start reconnect handling only after an authenticated game socket actually disconnects
+        await unregister_game_connection(
+            game_id,
+            websocket,
+            user_id,
+        )
+
+        await asyncio.sleep(2)
+
+        room_connections = manager.rooms.get(
+            game_id,
+            [],
+        )
+
         if len(room_connections) < 2:
-            await manager.broadcast_to_game(game_id, {"type": "opponent_gone"})
+            await manager.broadcast_to_game(
+                game_id,
+                {
+                    "type": "opponent_gone",
+                },
+            )
 
     except Exception as e:
         await manager.disconnect(game_id, websocket, user_id)
