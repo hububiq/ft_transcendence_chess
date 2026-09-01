@@ -91,8 +91,8 @@ function UserHoverCardContent({
 
   // Prefer an uploaded avatar and fall back to the OAuth avatar when available
   const avatarUrl =
-    resolveMediaUrl(profile.profile.avatar) ||
     profile.profile.oauth_avatar_url ||
+    resolveMediaUrl(profile.profile.avatar) ||
     playerAvatar;
 
 
