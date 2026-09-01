@@ -16,6 +16,7 @@ from chat.schemas import (
 
 from tournament_progression_service import advance_tournament
 
+MULTIPLAYER_CLOCK_SECONDS = 15 * 60
 
 async def handle_game_over(
     board: chess.Board,
@@ -265,21 +266,36 @@ async def update_clock(game_id: str, is_white_turn: bool):
     redis = await get_redis()
     time_key = f"game:{game_id}:time"
     time_data_str = await redis.get(time_key)
-    
+
     if not time_data_str:
-        return # Game is over, ignore
+        return  # Game is over, ignore
 
     time_data = json.loads(time_data_str)
     current_time = int(time.time())
-    time_spent = current_time - time_data["last_move_at"]
-    
+    last_move_at = time_data.get("last_move_at")
+
+    if last_move_at is None:
+        # Start the chess clock only after White's first legal move is accepted
+        time_data["last_move_at"] = current_time
+        await redis.set(
+            time_key,
+            json.dumps(time_data),
+        )
+        return
+
+    time_spent = current_time - last_move_at
+
     if is_white_turn:
         time_data["white_time"] -= time_spent
     else:
         time_data["black_time"] -= time_spent
-        
+
     time_data["last_move_at"] = current_time
-    await redis.set(time_key, json.dumps(time_data))
+
+    await redis.set(
+        time_key,
+        json.dumps(time_data),
+    )
 
 
 async def handle_timeout_claim(data: dict, game_id: str, websocket):
@@ -299,10 +315,22 @@ async def handle_timeout_claim(data: dict, game_id: str, websocket):
     
     active_color = "white" if board.turn == chess.WHITE else "black"
     
-    # Do the math: Time left minus time since last move
-    seconds_passed = int(time.time()) - time_data["last_move_at"]
-    time_left = time_data[f"{active_color}_time"] - seconds_passed
-    
+    last_move_at = time_data.get("last_move_at")
+
+    if last_move_at is None:
+        await websocket.send_json({
+            "type": "error",
+            "message": "Game clock has not started",
+        })
+        return
+
+    # Recalculate the authoritative remaining time on the backend
+    seconds_passed = int(time.time()) - last_move_at
+    time_left = (
+        time_data[f"{active_color}_time"]
+        - seconds_passed
+    )
+
     # 3-second grace period for network lag
     if time_left <= 3:
         # THE ARBITER DECIDES THE WINNER (Ignore React's payload)

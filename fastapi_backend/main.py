@@ -14,6 +14,7 @@ from database import init_db
 from models import Game, Tournament
 from game_service import handle_game_over, handle_timeout_claim, handle_player_move
 from game_service import handle_player_move
+from game_service import MULTIPLAYER_CLOCK_SECONDS
 from api.history import router as history_router
 from api.tournaments import router as tournaments_router
 from api.games import router as games_router
@@ -364,9 +365,9 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 current_fen = starting_fen
 
                 time_data = {
-                    "white_time": 15, 
-                    "black_time": 15, 
-                    "last_move_at": int(time.time())
+                    "white_time": MULTIPLAYER_CLOCK_SECONDS,
+                    "black_time": MULTIPLAYER_CLOCK_SECONDS,
+                    "last_move_at": None,
                 }
                 await redis.set(f"game:{game_id}:time", json.dumps(time_data))
 
@@ -382,19 +383,28 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 san_history.append(temp_board.san(move_obj))
                 temp_board.push(move_obj)
 
-            white_time = 15
-            black_time = 15
+            white_time = MULTIPLAYER_CLOCK_SECONDS
+            black_time = MULTIPLAYER_CLOCK_SECONDS
     
             time_data_str = await redis.get(f"game:{game_id}:time")
             if time_data_str:
                 td = json.loads(time_data_str)
                 white_time = td["white_time"]
                 black_time = td["black_time"]
-                
-                # Deduct the time spent on the current turn
-                if len(raw_moves_uci) > 0:
-                    time_spent = int(time.time()) - td["last_move_at"]
-                    board_for_time = chess.Board(current_fen)
+
+                # Deduct elapsed time only after White has made the first move
+                if (
+                    len(raw_moves_uci) > 0
+                    and td.get("last_move_at") is not None
+                ):
+                    time_spent = (
+                        int(time.time())
+                        - td["last_move_at"]
+                    )
+                    board_for_time = chess.Board(
+                        current_fen
+                    )
+
                     if board_for_time.turn == chess.WHITE:
                         white_time -= time_spent
                     else:
