@@ -19,20 +19,20 @@ import {
 
 import { useWebSocket } from "../../hooks/useWebSocket";
 
-const rounds = [
-  {
-    title: "Quarterfinals",
-    matches: [],
-  },
-  {
-    title: "Semifinals",
-    matches: [],
-  },
-  {
-    title: "Finals",
-    matches: [],
-  },
-];
+// const rounds = [
+//   {
+//     title: "Quarterfinals",
+//     matches: [],
+//   },
+//   {
+//     title: "Semifinals",
+//     matches: [],
+//   },
+//   {
+//     title: "Finals",
+//     matches: [],
+//   },
+// ];
 
 export function Tournament() {
   const navigate = useNavigate();
@@ -77,11 +77,12 @@ export function Tournament() {
   };
 
   useWebSocket({
-    url: user?.id ? `${import.meta.env.VITE_WS_BASE_URL}/ws/lobby/${user.id}` : "",
+    url: user?.id
+      ? `${import.meta.env.VITE_WS_BASE_URL}/ws/lobby/${user.id}`
+      : "",
     enabled: !!user?.id, // Keep the lobby socket open as long as they are logged in
     onMessage: handleLobbyMessage,
   });
-
 
   // Fetch participats usernames
   useEffect(() => {
@@ -129,7 +130,7 @@ export function Tournament() {
     };
 
     fetchTournamentState();
-  }, [user?.id, refreshTrigger]);
+  }, [user?.id, refreshTrigger, activeTournament, lobbyTournaments.length]);
 
   useEffect(() => {
     if (!activeTournament?.id) return;
@@ -142,7 +143,7 @@ export function Tournament() {
         console.log("RAW TOURNAMENT DETAILS:", details);
         if (details) {
           if (details.participants) setParticipants(details.participants);
-          
+
           //  Update the tournament state so React knows it is finished!
           if (details.tournament) setActiveTournament(details.tournament);
         }
@@ -174,7 +175,7 @@ export function Tournament() {
                   id: match.id,
                   p1: p1Name,
                   p2: p2Name,
-                  p1Id: match.player1, 
+                  p1Id: match.player1,
                   p2Id: match.player2,
                   isUserP1,
                   isUserP2,
@@ -215,15 +216,18 @@ export function Tournament() {
     }
   }, [activeTournament?.id, user?.id, userNames, refreshTrigger]);
 
-      // The Fireworks  
+  // The Fireworks
   useEffect(() => {
-    if (activeTournament?.status === "finished" && activeTournament?.winner_id === user?.id) {
+    if (
+      activeTournament?.status === "finished" &&
+      activeTournament?.winner_id === user?.id
+    ) {
       // Small 500ms delay to let the page finish loading before dropping the fireworks!
       const timer = setTimeout(() => setShowWinnerModal(true), 500);
       return () => clearTimeout(timer);
     }
   }, [activeTournament?.status, activeTournament?.winner_id, user?.id]);
-  
+
   // CREATE
   const handleCreate = async () => {
     if (!user?.id) return;
@@ -319,10 +323,10 @@ export function Tournament() {
   if (!activeTournament) {
     return (
       <div className="p-8 h-full flex flex-col max-w-7xl mx-auto">
-        <div className="mb-10 flex items-center justify-between pt-4">
+        <div className="mb-10 flex flex-col items-start gap-4 pt-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-purple-500" />
+              <Trophy className="w-8 h-8 text-purple-500 shrink-0" />
               Tournament Lobby
             </h2>
             <p className="text-neutral-500 mt-2 text-sm">
@@ -331,14 +335,14 @@ export function Tournament() {
           </div>
           <button
             onClick={handleCreate}
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-5 py-2.5 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0"
           >
             <Plus className="w-5 h-5" />
             Create Tournament
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
           {lobbyTournaments.length === 0 ? (
             <div className="col-span-full text-center py-16 border border-neutral-900 border-dashed rounded-xl text-neutral-500">
               No open tournaments found. Be the first to create one!
@@ -350,18 +354,18 @@ export function Tournament() {
                 className="bg-[#0a0a0a] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 hover:border-neutral-700 transition-colors"
               >
                 {/* Top Row: Title and Status Badge */}
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start gap-3">
                   <h3 className="text-lg font-bold text-white">
                     Tournament #{tourney.id}
                   </h3>
-                  <span className="bg-neutral-900 text-neutral-400 text-xs px-2 py-1 rounded capitalize">
+                  <span className="shrink-0 bg-neutral-900 text-neutral-400 text-xs px-2 py-1 rounded capitalize">
                     {tourney.status || "Waiting"}
                   </span>
                 </div>
-                
+
                 {/* Middle Row: Capacity */}
-                <div className="flex items-center gap-2 text-neutral-500 text-sm">
-                  <Users className="w-4 h-4" />
+                <div className="flex items-center gap-2 text-neutral-500 text-sm whitespace-nowrap">
+                  <Users className="w-4 h-4 shrink-0" />
                   <span>Capacity: {tourney.size || 4} Players</span>
                 </div>
 
@@ -374,19 +378,19 @@ export function Tournament() {
                     Join Tournament
                   </button>
                 ) : (
-                  <div className="mt-2 flex gap-2 w-full">
+                  <div className="mt-2 flex flex-wrap gap-2 w-full">
                     {/* 👇 The Disabled 'Too Late' Badge 👇 */}
                     <button
                       disabled
-                      className="flex-1 py-2 bg-neutral-900/50 border border-neutral-800 text-neutral-500 rounded-lg text-xs font-medium cursor-not-allowed"
+                      className="flex-1 min-w-[120px] py-2 bg-neutral-900/50 border border-neutral-800 text-neutral-500 rounded-lg text-xs font-medium cursor-not-allowed"
                     >
                       Too late to join
                     </button>
-                    
+
                     {/* 👇 The Spectate Button (Keeps the original 'Enter' logic!) 👇 */}
                     <button
                       onClick={() => setActiveTournament(tourney)}
-                      className="flex-1 py-2 bg-purple-950/30 hover:bg-purple-900/40 text-purple-500 border border-purple-900/30 rounded-lg text-xs font-medium transition-colors"
+                      className="flex-1 min-w-[120px] py-2 bg-purple-950/30 hover:bg-purple-900/40 text-purple-500 border border-purple-900/30 rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
                     >
                       View Bracket
                     </button>
@@ -405,25 +409,29 @@ export function Tournament() {
   const isEliminated = bracketData.some((round) =>
     round.matches.some(
       (m: any) =>
-        (m.isUserP1 || m.isUserP2) && m.winnerId !== null && m.winnerId !== user?.id
-    )
+        (m.isUserP1 || m.isUserP2) &&
+        m.winnerId !== null &&
+        m.winnerId !== user?.id,
+    ),
   );
 
-  const isSpectator = participants.length > 0 && !participants.some(p => p.player_id === user?.id);
+  const isSpectator =
+    participants.length > 0 &&
+    !participants.some((p) => p.player_id === user?.id);
 
   return (
     <div className="p-8 h-full flex flex-col max-w-7xl mx-auto">
       <div className="mb-10 flex items-center justify-between pt-4">
-                <div>
+        <div>
           <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
             <Trophy className="w-8 h-8 text-purple-500" />
             Tournament #{activeTournament.id}
           </h2>
           <p className="text-neutral-500 mt-2 text-sm">
-            {activeTournament.status === "finished" 
-              ? "This tournament has concluded." 
-              : nextMatch 
-                ? "Your opponent is ready. Join the match now!" 
+            {activeTournament.status === "finished"
+              ? "This tournament has concluded."
+              : nextMatch
+                ? "Your opponent is ready. Join the match now!"
                 : "Watch the live bracket updates below."}
           </p>
         </div>
@@ -446,7 +454,9 @@ export function Tournament() {
             >
               Play Next Match
             </button>
-          ) : !isEliminated && !isRefreshing && activeTournament.status === "ongoing" ? (
+          ) : !isEliminated &&
+            !isRefreshing &&
+            activeTournament.status === "ongoing" ? (
             <button
               disabled
               className="flex items-center gap-3 bg-yellow-950/30 border border-yellow-900/50 text-yellow-500 px-8 py-3 rounded-xl font-bold cursor-not-allowed animate-pulse shadow-[0_0_15px_rgba(234,179,8,0.2)]"
@@ -457,28 +467,31 @@ export function Tournament() {
           ) : null}
         </div>
         {/*  END OF TOP-RIGHT STATUS AREA  */}
-
       </div>
 
       {/* The Eliminated Banner */}
-      {activeTournament?.status === "ongoing" && !isRefreshing && isEliminated && (
-        <div className="bg-red-950/40 border border-red-900 text-red-500 p-4 rounded-xl text-center font-bold animate-pulse mt-6 shadow-lg">
-          You have been eliminated! Watch the live bracket to see who wins the championship.
-        </div>
-      )}
+      {activeTournament?.status === "ongoing" &&
+        !isRefreshing &&
+        isEliminated && (
+          <div className="bg-red-950/40 border border-red-900 text-red-500 p-4 rounded-xl text-center font-bold animate-pulse mt-6 shadow-lg">
+            You have been eliminated! Watch the live bracket to see who wins the
+            championship.
+          </div>
+        )}
 
       {/* The Finished Banner */}
       {activeTournament?.status === "finished" && (
         <div className="bg-green-950/40 border border-green-900 text-green-400 p-6 rounded-xl text-center mt-6 shadow-lg flex flex-col items-center gap-4">
           <p className="text-xl font-bold">
-            🏆 Tournament Finished! Winner: {userNames[activeTournament.winner_id] || "Unknown"}
+            🏆 Tournament Finished! Winner:{" "}
+            {userNames[activeTournament.winner_id] || "Unknown"}
           </p>
-          <button 
+          <button
             onClick={() => {
               setActiveTournament(null); // Clears the UI
-              setBracketData([]);        // Empties the bracket
-              setNextMatch(null);        // Resets the button
-            }} 
+              setBracketData([]); // Empties the bracket
+              setNextMatch(null); // Resets the button
+            }}
             className="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded-lg font-bold transition-colors"
           >
             Return to Lobby
@@ -590,25 +603,47 @@ export function Tournament() {
         /* --- CLEAN VERTICAL TOURNAMENT LIST --- */
         <div className="flex-1 w-full max-w-3xl mx-auto py-8 px-4">
           {bracketData.map((round) => (
-            <div key={round.title} className="mb-8 bg-[#0a0a0a] border border-neutral-900 rounded-xl overflow-hidden shadow-lg">
-              
+            <div
+              key={round.title}
+              className="mb-8 bg-[#0a0a0a] border border-neutral-900 rounded-xl overflow-hidden shadow-lg"
+            >
               {/* Round Header */}
               <div className="bg-neutral-900/50 px-6 py-3 border-b border-neutral-900">
-                <h3 className="text-sm font-bold text-purple-500 uppercase tracking-widest">{round.title}</h3>
+                <h3 className="text-sm font-bold text-purple-500 uppercase tracking-widest">
+                  {round.title}
+                </h3>
               </div>
 
               {/* Match List */}
               <div className="divide-y divide-neutral-900/50">
                 {round.matches.map((match: any) => (
-                  <div key={match.id} className="p-6 flex items-center justify-between hover:bg-neutral-900/20 transition-colors">
-                    
+                  <div
+                    key={match.id}
+                    className="p-6 flex items-center justify-between hover:bg-neutral-900/20 transition-colors"
+                  >
                     {/* The Players */}
                     <div className="flex items-center gap-6 text-lg">
-                      <span className={clsx("font-medium", match.winnerId === match.p1Id ? "text-green-500 font-bold" : "text-neutral-300")}>
+                      <span
+                        className={clsx(
+                          "font-medium",
+                          match.winnerId === match.p1Id
+                            ? "text-green-500 font-bold"
+                            : "text-neutral-300",
+                        )}
+                      >
                         {match.p1}
                       </span>
-                      <span className="text-neutral-700 text-xs font-bold px-2">VS</span>
-                      <span className={clsx("font-medium", match.winnerId === match.p2Id ? "text-green-500 font-bold" : "text-neutral-300")}>
+                      <span className="text-neutral-700 text-xs font-bold px-2">
+                        VS
+                      </span>
+                      <span
+                        className={clsx(
+                          "font-medium",
+                          match.winnerId === match.p2Id
+                            ? "text-green-500 font-bold"
+                            : "text-neutral-300",
+                        )}
+                      >
                         {match.p2}
                       </span>
                     </div>
@@ -629,7 +664,6 @@ export function Tournament() {
                         </span>
                       )}
                     </div>
-                  
                   </div>
                 ))}
               </div>

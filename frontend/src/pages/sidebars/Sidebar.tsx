@@ -62,7 +62,7 @@ export function Sidebar() {
         </nav>
       </div>
 
-      <div className="p-3 lg:p-4 border-t border-neutral-900 flex flex-col items-center lg:items-stretch">
+      <div className="p-2 lg:p-4 border-t border-neutral-900 flex flex-col items-center lg:items-stretch">
         <Link
           to="/profile"
           className="flex items-center justify-center lg:justify-start gap-3 mb-4 p-2 lg:p-3 rounded-lg bg-black border border-neutral-900 hover:border-neutral-700 transition-colors cursor-pointer w-full"
