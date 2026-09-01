@@ -51,11 +51,20 @@ async def get_active_game(
 
         if game is None:
             return None
-        
+
         current_fen = None
 
         try:
             redis = await get_redis()
+
+            if game.tournament_id is not None:
+                tournament_game_started = await redis.exists(
+                    f"game:{game.id}:started"
+                )
+
+                if not tournament_game_started:
+                    return None
+
             current_fen = await redis.get(
                 f"game:{game.id}:fen"
             )
@@ -63,8 +72,13 @@ async def get_active_game(
             if current_fen is None:
                 current_fen = chess.Board().fen()
         except RedisError:
-            # Keep active game recovery available even if the preview cannot be loaded
+            # A tournament game cannot be considered active if its started state cannot be verified
+            if game.tournament_id is not None:
+                return None
+
+            # Keep normal active game recovery available even if the preview cannot be loaded
             current_fen = None
+
 
         if game.white_player_id == current_user.id:
             return ActiveGameResponse(

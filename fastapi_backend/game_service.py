@@ -145,6 +145,7 @@ async def handle_game_over(
     await redis.delete(f"game:{game_id}:fen")
     await redis.delete(f"game:{game_id}:moves")
     await redis.delete(f"game:{game_id}:time")
+    await redis.delete(f"game:{game_id}:started")
 
     # Update ELO in Django
     async with httpx.AsyncClient() as client:
@@ -174,12 +175,38 @@ async def handle_player_move(data: dict, game_id: str, websocket):
     current_fen = await redis.get(redis_key)
     board = chess.Board(current_fen) if current_fen else chess.Board()
 
-    if len(board.move_stack) == 0 and data.get("is_vs_bot") != True:
-    # Check how many WebSockets are in this Game Room
-        room_connections = manager.rooms.get(int(game_id), [])
-        if len(room_connections) < 2:
-            await websocket.send_json({"type": "error", "message": "Waiting for opponent to connect...", "fen": board.fen()})
+    if len(board.move_stack) == 0:
+        async with async_session() as session:
+            game = await session.get(
+                Game,
+                int(game_id),
+            )
+
+        if not game:
+            await websocket.send_json({
+                "type": "error",
+                "message": "Game not found",
+                "fen": board.fen(),
+            })
             return
+
+        is_remote_multiplayer = (
+            game.black_player_id is not None
+            and not game.is_local_1v1
+        )
+
+        if is_remote_multiplayer:
+            game_started = await redis.exists(
+                f"game:{game_id}:started"
+            )
+
+            if not game_started:
+                await websocket.send_json({
+                    "type": "error",
+                    "message": "Waiting for opponent to connect...",
+                    "fen": board.fen(),
+                })
+                return
 
     try:
         move = chess.Move.from_uci(data["move"])

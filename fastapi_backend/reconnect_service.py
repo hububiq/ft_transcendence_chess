@@ -9,6 +9,7 @@ from sqlmodel import or_, select
 
 from chat.manager import global_chat_manager
 from chat.schemas import (
+    ActiveGameChangedServerEvent,
     GameReconnectPendingServerEvent,
     GameReconnectedServerEvent,
 )
@@ -43,12 +44,12 @@ def _player_lock(game_id: int, user_id: int) -> asyncio.Lock:
     return lock
 
 
-def _is_reconnect_eligible_game(game: Game, user_id: int) -> bool:
-    # Keep reconnect grace limited to normal remote PvP in this implementation
+async def _is_reconnect_eligible_game(
+    game: Game,
+    user_id: int,
+    redis,
+) -> bool:
     if game.status != "ongoing":
-        return False
-
-    if game.tournament_id is not None:
         return False
 
     if game.is_local_1v1:
@@ -57,10 +58,21 @@ def _is_reconnect_eligible_game(game: Game, user_id: int) -> bool:
     if game.black_player_id is None:
         return False
 
-    return user_id in {
+    if user_id not in {
         game.white_player_id,
         game.black_player_id,
-    }
+    }:
+        return False
+
+    if game.tournament_id is None:
+        return True
+
+    # Tournament reconnect starts only after both authenticated players entered the game
+    return bool(
+        await redis.exists(
+            f"game:{game.id}:started"
+        )
+    )
 
 
 async def register_game_connection(
@@ -106,6 +118,29 @@ async def register_game_connection(
         # )
         redis = await get_redis()
 
+        started_now = False
+
+        if (
+            not game.is_local_1v1
+            and game.black_player_id is not None
+            and manager.has_game_connection(
+                game_id,
+                game.white_player_id,
+            )
+            and manager.has_game_connection(
+                game_id,
+                game.black_player_id,
+            )
+        ):
+            # Persist that both authenticated players have entered this remote game
+            started_now = bool(
+                await redis.set(
+                    f"game:{game_id}:started",
+                    "1",
+                    nx=True,
+                )
+            )
+
         removed_deadline = await redis.zrem(
             RECONNECT_DEADLINES_KEY,
             _deadline_member(game_id, user_id),
@@ -119,6 +154,13 @@ async def register_game_connection(
                     game_id=game_id,
                     reconnected_user_id=user_id,
                 ),
+            )
+
+        if started_now and game.tournament_id is not None:
+            # Refresh active-game UI only when a prepared tournament match actually starts
+            await global_chat_manager.send_to_users(
+                player_ids,
+                ActiveGameChangedServerEvent(),
             )
 
     return True
@@ -153,7 +195,14 @@ async def unregister_game_connection(
         async with async_session() as session:
             game = await session.get(Game, game_id)
 
-            if not game or not _is_reconnect_eligible_game(game, user_id):
+            if (
+                not game
+                or not await _is_reconnect_eligible_game(
+                    game,
+                    user_id,
+                    redis,
+                )
+            ):
                 await redis.zrem(
                     RECONNECT_DEADLINES_KEY,
                     member,
@@ -224,7 +273,14 @@ async def _resolve_expired_deadline(
         async with async_session() as session:
             game = await session.get(Game, game_id)
 
-            if not game or not _is_reconnect_eligible_game(game, user_id):
+            if (
+                not game
+                or not await _is_reconnect_eligible_game(
+                    game,
+                    user_id,
+                    redis,
+                )
+            ):
                 await redis.zrem(
                     RECONNECT_DEADLINES_KEY,
                     member,
@@ -284,11 +340,15 @@ async def get_reconnect_pending_events_for_user(
         result = await session.execute(query)
         game = result.scalars().first()
 
+        redis = await get_redis()
+
+
         if (
             game is None
-            or not _is_reconnect_eligible_game(
+            or not await _is_reconnect_eligible_game(
                 game,
                 user_id,
+                redis,
             )
         ):
             return []
@@ -302,7 +362,6 @@ async def get_reconnect_pending_events_for_user(
             if player_id is not None
         ]
 
-    redis = await get_redis()
     events: list[GameReconnectPendingServerEvent] = []
 
     # Send the user's own deadline last so it takes priority when both players disconnected
