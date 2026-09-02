@@ -116,11 +116,10 @@ async def delete_tournament(tournament_id: int, user = Depends(get_current_user)
 
         # 4. Delete the Tournament itself
         await session.delete(tournament)
-        await session.commit()
-
+        await session.commit()	
         await manager.broadcast_to_all({
-            "type": "tournament_updated"
-        })
+		    "type": "tournament_deleted", "tournament_id": tournament_id
+		})
 
         return {"message": f"Tournament {tournament_id} has been securely deleted."}
 
