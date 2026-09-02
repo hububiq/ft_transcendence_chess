@@ -16,6 +16,7 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 from .friendship_events import publish_friendship_change
+from .user_identity_events import publish_user_identity_change
 import re 
 
 def _is_allowed_avatar(file_obj):
@@ -219,8 +220,12 @@ def update_my_profile(request):
             )
         if User.objects.filter(username=new_username).exclude(id=user.id).exists():
             return Response({"error": "This username is already taken."}, status=status.HTTP_400_BAD_REQUEST)
+        username_changed = new_username != user.username
         user.username = new_username
         user.save()
+
+        if username_changed:
+            publish_user_identity_change(user)
 
     if 'bio' in request.data:
         new_bio = request.data['bio'].strip()

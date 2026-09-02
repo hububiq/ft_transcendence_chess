@@ -22,6 +22,7 @@ from garbage_games_collector import clean_dead_games
 from database import async_session
 from chat.router import router as chat_router
 from chat.friendship_events import listen_for_friendship_events
+from chat.user_identity_events import listen_for_user_identity_events
 from reconnect_service import (
     reconnect_deadline_worker,
     register_game_connection,
@@ -117,6 +118,7 @@ async def startup_event():
     asyncio.create_task(matchmaking_loop())
     asyncio.create_task(clean_dead_games())
     asyncio.create_task(listen_for_friendship_events())
+    asyncio.create_task(listen_for_user_identity_events())
 
     # Resume processing Redis reconnect deadlines whenever FastAPI starts
     asyncio.create_task(reconnect_deadline_worker())

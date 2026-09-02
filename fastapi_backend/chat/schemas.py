@@ -160,6 +160,16 @@ class FriendsChangedServerEvent(ServerEventModel):
 
     type: Literal["friends_changed"] = "friends_changed"
 
+class UserIdentityChangedServerEvent(ServerEventModel):
+    """Notify clients that one public user identity changed"""
+
+    type: Literal["user_identity_changed"] = (
+        "user_identity_changed"
+    )
+
+    # Identity originates from Django after the profile update is persisted
+    user: ChatAuthor
+
 class ActiveGameChangedServerEvent(ServerEventModel):
     """Notify an authenticated client that its active game data changed"""
 

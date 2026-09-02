@@ -200,6 +200,17 @@ export function parseChatServerEvent(
     };
   }
 
+  if (value.type === "user_identity_changed") {
+  const user = parseAuthor(value.user);
+
+  return user
+    ? {
+        type: "user_identity_changed",
+        user,
+      }
+    : null;
+}
+
   if (value.type === "active_game_changed") {
     return {
       type: "active_game_changed",
