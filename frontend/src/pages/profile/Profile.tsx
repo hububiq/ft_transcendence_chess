@@ -13,6 +13,7 @@ import { resolveMediaUrl } from "../../utils/utils";
 // import { Achievements } from "./ProfileAchievements";
 // import { MatchHistory } from "./MatchHistory";
 // import { RatingProgress } from "./RatingProgress";
+import { Link } from "react-router";
 
 export function Profile() {
   const { user, setUser, loading, error } = useUser();
@@ -37,7 +38,7 @@ export function Profile() {
   if (error) return <p>{error}</p>;
 
   return (
-    <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen p-4 sm:p-8 max-w-6xl mx-auto flex flex-col">
       {/* Profile Header */}
       <div className="bg-[#0a0a0a] border border-neutral-900 rounded-xl p-6 md:p-8">
         
@@ -130,8 +131,27 @@ export function Profile() {
          <RatingProgress />
       </div> */}
 
-      {/* Achievements (Ready for future use) */}
+       {/* Achievements */}
       {/* <Achievements /> */}
+
+      {/* Footer Links */}
+      <div className="mt-auto flex justify-center items-center gap-4 pt-8 pb-2 text-sm text-neutral-700">
+        <Link
+          to="/terms"
+          className="hover:text-white transition-colors"
+        >
+          Terms of Service
+        </Link>
+
+        <span className="text-neutral-700">•</span>
+
+        <Link
+          to="/privacy"
+          className="hover:text-white transition-colors"
+        >
+          Privacy Policy
+        </Link>
+      </div>
     </div>
   );
 }
