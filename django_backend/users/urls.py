@@ -7,6 +7,7 @@ from .views import (
     list_friends, add_friend, remove_friend,
     GithubLogin 
 )
+from .leaderboard import get_leaderboard
 
 
 # The Router automatically creates all the URL paths for our ViewSet
@@ -30,6 +31,11 @@ urlpatterns = [
     path('friends/add/<int:user_id>/', add_friend, name='add_friend'),
     path('friends/remove/<int:user_id>/', remove_friend, name='remove_friend'),
     path('', include(router.urls)),
+    path(
+    "leaderboard/",
+    get_leaderboard,
+    name="leaderboard",
+),
 
     path('github/login/', GithubLogin.as_view(), name='github_login'),
 ]

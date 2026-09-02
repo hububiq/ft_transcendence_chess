@@ -19,3 +19,20 @@ export interface StatisticsMatchHistoryItem
   extends MatchHistoryApiItem {
   opponentName: string;
 }
+
+export interface LeaderboardPlayer {
+  rank: number;
+  user_id: number;
+  username: string;
+  elo_rating: number;
+  total_games: number;
+  wins: number;
+  win_rate: number;
+  is_current_user: boolean;
+}
+
+
+export interface LeaderboardResponse {
+  top_players: LeaderboardPlayer[];
+  current_user: LeaderboardPlayer | null;
+}
