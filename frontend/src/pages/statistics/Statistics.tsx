@@ -1,4 +1,5 @@
 import { MatchHistory } from "../../features/statistics/MatchHistory";
+import { StatisticsAchievements } from "../../features/statistics/StatisticsAchievements";
 import { StatisticsSummary } from "../../features/statistics/StatisticsSummary";
 import { useStatisticsHistory } from "../../features/statistics/hooks/useStatisticsHistory";
 import { useStatisticsSummary } from "../../features/statistics/hooks/useStatisticsSummary";
@@ -54,13 +55,20 @@ export function Statistics() {
         user={user}
         tournamentsWon={tournamentsWon}
       />
+      
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <MatchHistory
+            username={user.username}
+            matches={matches}
+            isLoading={isHistoryLoading}
+            errorMessage={historyError}
+        />
 
-      <MatchHistory
-        username={user.username}
-        matches={matches}
-        isLoading={isHistoryLoading}
-        errorMessage={historyError}
-      />
+        <StatisticsAchievements
+            user={user}
+            tournamentsWon={tournamentsWon}
+        />
+        </div>
     </div>
   );
 }
