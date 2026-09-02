@@ -12,6 +12,9 @@ export interface UserData {
     location: string;
     peak_rating: number;
     total_games: number;
+    wins: number;
+    losses: number;
+    draws: number;
   };
 }
 
