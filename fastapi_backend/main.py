@@ -16,6 +16,7 @@ from game_service import handle_game_over, handle_timeout_claim, handle_player_m
 from game_service import handle_player_move
 from game_service import MULTIPLAYER_CLOCK_SECONDS
 from api.history import router as history_router
+from api.statistics_history import router as statistics_history_router
 from api.tournaments import router as tournaments_router
 from api.games import router as games_router
 from garbage_games_collector import clean_dead_games
@@ -51,6 +52,7 @@ app.add_middleware(
 )
 
 app.include_router(history_router)
+app.include_router(statistics_history_router)
 app.include_router(tournaments_router)
 app.include_router(games_router)
 app.include_router(chat_router)  # Expose the /ws/chat endpoint
