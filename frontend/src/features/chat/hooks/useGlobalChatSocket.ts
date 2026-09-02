@@ -18,6 +18,7 @@ import {
   type ChatConnectionState,
   type ChatErrorCode,
   type ChatFeedItem,
+  type GameReconnectServerEvent,
   type SendChatMessageResult,
   type SendMessageClientEvent,
 } from "../types";
@@ -38,6 +39,7 @@ interface UseGlobalChatSocketResult {
   friendsRevision: number;
   activeGameRevision: number;
   friendshipChangeRevision: number;
+  gameReconnectEvent: GameReconnectServerEvent | null;
   connectionState: ChatConnectionState;
   authenticatedUser: ChatAuthor | null;
   errorMessage: string | null;
@@ -67,6 +69,12 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     friendshipChangeRevision,
     setFriendshipChangeRevision,
   ] = useState(0);
+  const [
+    gameReconnectEvent,
+    setGameReconnectEvent,
+  ] = useState<GameReconnectServerEvent | null>(
+    null,
+  );
   const [connectionState, setConnectionState] =
     useState<ChatConnectionState>("disconnected");
   const [authenticatedUser, setAuthenticatedUser] =
@@ -110,6 +118,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
       setFriendsRevision(0);
       setActiveGameRevision(0);
       setFriendshipChangeRevision(0);
+      setGameReconnectEvent(null);
       setAuthenticatedUser(null);
       setConnectionState("disconnected");
       setErrorMessage(null);
@@ -131,6 +140,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     setMessages([]);
     setOnlineUsers([]);
     setFriendshipChangeRevision(0);
+    setGameReconnectEvent(null);
     authRefreshAttemptedRef.current = false;
     hasAuthenticatedConnectionRef.current = false;
 
@@ -411,12 +421,79 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
           return;
         }
 
+        if (event.type === "user_identity_changed") {
+          if (event.user.id === userId) {
+            // Keep the chat header aligned with the refreshed backend identity
+            setAuthenticatedUser(event.user);
+            return;
+          }
+
+          // Refresh friends without presenting a friendship-change notification
+          setFriendsRevision(
+            (currentRevision) =>
+              currentRevision + 1,
+          );
+
+          return;
+        }
+
         if (event.type === "active_game_changed") {
           // Trigger active game refresh without storing game data in the chat hook
           setActiveGameRevision(
             (currentRevision) =>
               currentRevision + 1,
           );
+
+           // Normal game completion must not leave a stale reconnect countdown
+          setGameReconnectEvent((currentEvent) =>
+            currentEvent?.type ===
+            "game_reconnect_pending"
+              ? null
+              : currentEvent,
+          );
+          return;
+        }
+
+        if (event.type === "game_reconnect_pending") {
+          // Keep the current user's own deadline visible when both players disconnect
+          setGameReconnectEvent((currentEvent) => {
+            if (
+              currentEvent?.type ===
+                "game_reconnect_pending" &&
+              currentEvent.game_id === event.game_id &&
+              currentEvent.disconnected_user_id ===
+                userId &&
+              event.disconnected_user_id !== userId
+            ) {
+              return currentEvent;
+            }
+
+            return event;
+          });
+          return;
+        }
+
+        if (event.type === "game_reconnected") {
+          // Do not hide the user's own active deadline when only the opponent reconnects
+          setGameReconnectEvent((currentEvent) => {
+            if (
+              currentEvent?.type ===
+                "game_reconnect_pending" &&
+              currentEvent.game_id === event.game_id &&
+              currentEvent.disconnected_user_id ===
+                userId &&
+              event.reconnected_user_id !== userId
+            ) {
+              return currentEvent;
+            }
+
+            return event;
+          });
+          return;
+        }
+
+        if (event.type === "game_reconnect_result") {
+          setGameReconnectEvent(event);
           return;
         }
 
@@ -588,6 +665,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     onlineUsers,
     friendsRevision,
     friendshipChangeRevision,
+    gameReconnectEvent,
     connectionState,
     activeGameRevision,
     authenticatedUser,

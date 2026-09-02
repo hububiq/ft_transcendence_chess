@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
 import { useUser } from "../../hooks/useUser";
-import { useWebSocket } from "../../hooks/useWebSocket";
+import { useGameReconnectSocket } from "../../features/gameplay/hooks/useGameReconnectSocket";
 import avatar_1 from "../../assets/avatar_1.png";
 import avatar_2 from "../../assets/avatar_2.png";
 import { resolveMediaUrl } from "../../utils/utils";
@@ -38,8 +38,8 @@ export function Game() {
   const [rematchStatus, setRematchStatus] = useState("idle"); // "idle", "pending", "gone"
 
   // Clocks & Turns
-  const [playerTime, setPlayerTime] = useState(15);
-  const [opponentTime, setOpponentTime] = useState(15);
+  const [playerTime, setPlayerTime] = useState(15 * 60);
+  const [opponentTime, setOpponentTime] = useState(15 * 60);
 
   // Derive active turn safely
   const activeColor = currentFen === "start" ? "w" : currentFen.split(" ")[1];
@@ -192,7 +192,8 @@ export function Game() {
     }
   };
 
-  const { sendMessage } = useWebSocket({
+  // Use reconnect-aware WebSocket lifecycle only for remote multiplayer games
+  const { sendMessage } = useGameReconnectSocket({
     url:
       gameId && user?.id
         ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}`
@@ -265,7 +266,7 @@ export function Game() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isPlayerTurn, gameOver, user?.id, opponentId, sendMessage]); // Hubert: addeed dependencies
+  }, [isPlayerTurn, gameOver, user?.id, opponentId, sendMessage, moveHistory.length,]); // Hubert: addeed dependencies
 
   // ACTIONS
   const handlePlayerMove = (move: string) => {
@@ -482,7 +483,7 @@ export function Game() {
           Back to Home
         </button>
         <div className="text-xs font-bold tracking-widest text-neutral-600 uppercase">
-          Rapid 10|0 • Ranked
+          Rapid 15|0 • Ranked
         </div>
         <div className="w-24" />
       </header>

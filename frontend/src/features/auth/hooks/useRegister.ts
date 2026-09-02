@@ -14,6 +14,79 @@ interface RegisterPayload {
   password: string;
 }
 
+function getErrorText(
+  value: unknown,
+): string | null {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    const message = value.find(
+      (item) => typeof item === "string",
+    );
+
+    return typeof message === "string"
+      ? message
+      : null;
+  }
+
+  return null;
+}
+
+function capitalizeErrorMessage(
+  message: string,
+): string {
+  if (!message) {
+    return message;
+  }
+
+  return (
+    message.charAt(0).toUpperCase() +
+    message.slice(1)
+  );
+}
+
+function getRegistrationErrorMessage(
+  data: unknown,
+): string | null {
+  if (
+    !data ||
+    typeof data !== "object" ||
+    Array.isArray(data)
+  ) {
+    return null;
+  }
+
+  const errors = data as Record<
+    string,
+    unknown
+  >;
+
+  // Prefer registration fields so duplicate account errors stay clear
+  const fieldMessage =
+    getErrorText(errors.username) ??
+    getErrorText(errors.email) ??
+    getErrorText(errors.password) ??
+    getErrorText(errors.detail);
+
+  if (fieldMessage) {
+    return capitalizeErrorMessage(
+      fieldMessage,
+    );
+  }
+
+  for (const value of Object.values(errors)) {
+    const message = getErrorText(value);
+
+    if (message) {
+      return message;
+    }
+  }
+
+  return null;
+}
+
 export function useRegister() {
   const navigate = useNavigate();
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -53,10 +126,21 @@ export function useRegister() {
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        setErrMsg(error.response?.data?.detail || "Registration failed");
+        const errorMessage =
+          getRegistrationErrorMessage(
+            error.response?.data,
+          );
+
+        setErrMsg(
+          errorMessage ??
+            "Registration failed",
+        );
       } else {
-        setErrMsg("An unexpected error occurred.");
+        setErrMsg(
+          "An unexpected error occurred.",
+        );
       }
+
       setSuccess(false);
     }
   };

@@ -73,6 +73,21 @@ export function Tournament() {
         // Instantly trigger a database re-fetch when someone joins/leaves!
         setRefreshTrigger((prev) => prev + 1);
         break;
+	
+	  case "tournament_deleted":
+        // 1. Tell the lobby list to refresh (so the tournament disappears from the grid)
+        setRefreshTrigger((prev) => prev + 1);
+        
+        // 2. If the user is currently INSIDE the deleted tournament, kick them out cleanly!
+        setActiveTournament((currentActive) => {
+          if (currentActive?.id === data.tournament_id) {
+            setBracketData([]);
+            setNextMatch(null);
+            return null; // This drops them back to the Lobby UI
+          }
+          return currentActive;
+        });
+        break;
     }
   };
 
@@ -130,7 +145,7 @@ export function Tournament() {
     };
 
     fetchTournamentState();
-  }, [user?.id, refreshTrigger, activeTournament, lobbyTournaments.length]);
+  }, [user?.id, refreshTrigger]);
 
   useEffect(() => {
     if (!activeTournament?.id) return;

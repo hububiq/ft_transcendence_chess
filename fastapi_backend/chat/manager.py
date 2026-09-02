@@ -29,6 +29,13 @@ class GlobalChatConnectionManager:
             WebSocket,
             ChatAuthor,
         ] = {}
+
+        # Keep the newest trusted identity while the user is active or waiting for leave grace
+        self._latest_users_by_id: dict[
+            int,
+            ChatAuthor,
+        ] = {}
+
         self._state_lock = asyncio.Lock()
 
         # Serialize join and delayed leave transitions so reconnect cannot reorder them
@@ -85,6 +92,7 @@ class GlobalChatConnectionManager:
                     )
 
                     self._users_by_socket[websocket] = user
+                    self._latest_users_by_id[user.id] = user
                     connection_count = len(
                         self._users_by_socket
                     )
@@ -110,6 +118,41 @@ class GlobalChatConnectionManager:
             "Global chat connection registered, active connections=%s",
             connection_count,
         )
+
+    async def update_user_identity(
+        self,
+        user: ChatAuthor,
+    ) -> bool:
+        """Update one trusted identity across active or pending chat presence"""
+
+        async with self._presence_transition_lock:
+            async with self._state_lock:
+                matching_sockets = [
+                    websocket
+                    for websocket, active_user
+                    in self._users_by_socket.items()
+                    if active_user.id == user.id
+                ]
+
+                has_pending_leave = (
+                    user.id in self._pending_leave_tasks
+                )
+
+                if (
+                    not matching_sockets
+                    and not has_pending_leave
+                ):
+                    return False
+
+                self._latest_users_by_id[user.id] = user
+
+                # Replace every active tab so presence and future disconnects use one identity
+                for websocket in matching_sockets:
+                    self._users_by_socket[
+                        websocket
+                    ] = user
+
+        return bool(matching_sockets)
 
     async def disconnect(
         self,
@@ -144,7 +187,7 @@ class GlobalChatConnectionManager:
                         removed_user.id
                     ] = asyncio.create_task(
                         self._announce_leave_after_grace(
-                            removed_user
+                            removed_user.id
                         )
                     )
 
@@ -156,7 +199,7 @@ class GlobalChatConnectionManager:
 
     async def _announce_leave_after_grace(
         self,
-        user: ChatAuthor,
+        user_id: int,
     ) -> None:
         """Announce leave only if the user stays disconnected through the grace period"""
 
@@ -170,34 +213,43 @@ class GlobalChatConnectionManager:
                 CHAT_PRESENCE_LEAVE_GRACE_SECONDS
             )
 
-            # Serialize the final leave decision with any concurrent reconnect
+            # Serialize final leave with reconnect and identity refresh
             async with self._presence_transition_lock:
                 async with self._state_lock:
                     if (
                         self._pending_leave_tasks.get(
-                            user.id
+                            user_id
                         )
                         is not current_task
                     ):
                         return
 
                     has_active_connection = any(
-                        active_user.id == user.id
+                        active_user.id == user_id
                         for active_user
                         in self._users_by_socket.values()
                     )
 
                     if has_active_connection:
                         self._pending_leave_tasks.pop(
-                            user.id,
+                            user_id,
                             None,
                         )
                         return
 
                     self._pending_leave_tasks.pop(
-                        user.id,
+                        user_id,
                         None,
                     )
+
+                    # Resolve identity only when the leave notification becomes final
+                    user = self._latest_users_by_id.pop(
+                        user_id,
+                        None,
+                    )
+
+                if user is None:
+                    return
 
                 await self.broadcast(
                     ChatUserLeftServerEvent(

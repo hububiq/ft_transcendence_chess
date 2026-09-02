@@ -74,6 +74,16 @@ function isValidTimestamp(
   );
 }
 
+function isPositiveInteger(
+  value: unknown,
+): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value > 0
+  );
+}
+
 
 export function parseChatServerEvent(
   value: unknown,
@@ -190,9 +200,80 @@ export function parseChatServerEvent(
     };
   }
 
+  if (value.type === "user_identity_changed") {
+  const user = parseAuthor(value.user);
+
+  return user
+    ? {
+        type: "user_identity_changed",
+        user,
+      }
+    : null;
+}
+
   if (value.type === "active_game_changed") {
+    return {
+      type: "active_game_changed",
+    };
+  }
+
+  if (value.type === "game_reconnect_pending") {
+  if (
+    !isPositiveInteger(value.game_id) ||
+    !isPositiveInteger(
+      value.disconnected_user_id,
+    ) ||
+    !isValidTimestamp(
+      value.reconnect_deadline,
+    )
+  ) {
+    return null;
+  }
+
   return {
-    type: "active_game_changed",
+    type: "game_reconnect_pending",
+    game_id: value.game_id,
+    disconnected_user_id:
+      value.disconnected_user_id,
+    reconnect_deadline:
+      value.reconnect_deadline,
+  };
+}
+
+if (value.type === "game_reconnected") {
+  if (
+    !isPositiveInteger(value.game_id) ||
+    !isPositiveInteger(
+      value.reconnected_user_id,
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    type: "game_reconnected",
+    game_id: value.game_id,
+    reconnected_user_id:
+      value.reconnected_user_id,
+  };
+}
+
+if (value.type === "game_reconnect_result") {
+  if (
+    !isPositiveInteger(value.game_id) ||
+    !isPositiveInteger(value.winner_id) ||
+    !isPositiveInteger(value.loser_id) ||
+    value.reason !== "disconnect_timeout"
+  ) {
+    return null;
+  }
+
+  return {
+    type: "game_reconnect_result",
+    game_id: value.game_id,
+    winner_id: value.winner_id,
+    loser_id: value.loser_id,
+    reason: "disconnect_timeout",
   };
 }
 

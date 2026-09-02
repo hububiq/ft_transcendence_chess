@@ -29,6 +29,17 @@ class UserSerializer(serializers.ModelSerializer):
             'oauth_provider', 'oauth_id', 'date_joined', 'profile'
         ]
 
+    def to_representation(self, instance):
+        # 1. Let Django translate the object into JSON normally
+        data = super().to_representation(instance)
+        
+        # 2. Look at the email. Is it our secret fake email?
+        if data.get('email') and data['email'].endswith('@github.dummy.com'):
+            # 3. Scrub it clean. Send an empty string to React.
+            data['email'] = ""
+            
+        return data
+
 class RegisterSerializer(serializers.ModelSerializer):
     # write_only=True ensures the password is never sent back to the browser in a response!
     password = serializers.CharField(write_only=True)
