@@ -5,7 +5,6 @@ import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
 import { useUser } from "../../hooks/useUser";
 import { useGameReconnectSocket } from "../../features/gameplay/hooks/useGameReconnectSocket";
 import avatar_1 from "../../assets/avatar_1.png";
-import avatar_2 from "../../assets/avatar_2.png";
 import { resolveMediaUrl } from "../../utils/utils";
 import { GameSidebar } from "../../features/gameplay/components/GameSidebar";
 import { GameOverModal } from "../../features/gameplay/components/GameOverModal";
@@ -219,7 +218,7 @@ export function Game() {
           avatar:
             resolveMediaUrl(data.profile?.avatar) ||
             data.profile?.oauth_avatar_url ||
-            avatar_2,
+            avatar_1,
         });
       } catch (error) {
         console.error("Error fetching opponent:", error);
@@ -546,7 +545,7 @@ export function Game() {
                 src={
                   resolveMediaUrl(user?.profile?.avatar) ||
                   user?.profile?.oauth_avatar_url ||
-                  avatar_2
+                  avatar_1
                 }
                 alt="Player"
                 className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border border-blue-500 object-cover shadow-[0_0_10px_rgba(37,99,235,0.3)]"
