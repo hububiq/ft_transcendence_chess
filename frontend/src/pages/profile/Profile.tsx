@@ -40,9 +40,9 @@ export function Profile() {
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
           <img
             src={
-              user?.profile.oauth_avatar_url ||
-              resolveMediaUrl(user?.profile.avatar) ||
-              playerAvatar
+            	resolveMediaUrl(user?.profile.avatar) ||
+  				user?.profile.oauth_avatar_url ||
+  				playerAvatar
             }
             alt="Profile Avatar"
             className="w-24 h-24 rounded-full border-4 border-blue-600/20 object-cover"

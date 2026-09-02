@@ -69,9 +69,9 @@ export function Sidebar() {
         >
           <img
             src={
-              user?.profile.oauth_avatar_url ||
-              resolveMediaUrl(user?.profile.avatar) ||
-              playerAvatar
+             	resolveMediaUrl(user?.profile.avatar) ||
+  				user?.profile.oauth_avatar_url ||
+  				playerAvatar
             }
             alt="User Avatar"
             className="w-10 h-10 rounded-full border border-neutral-800 object-cover shrink-0"
