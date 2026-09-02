@@ -8,7 +8,6 @@ import { Tournament } from "./pages/tournaments/Tournament.tsx";
 import { Game } from "./pages/game/MultiplayerGamePage";
 import { DesignSystem } from "./pages/design/DesignSystem";
 import { Profile } from "./pages/profile/Profile";
-import { Settings } from "./pages/settings/Settings";
 import { BotGame } from "./pages/game/BotGamePage";
 import { OAuthCallback } from "./pages/auth/OAuthCallback";
 import { Register } from "./pages/auth/RegisterPage";
@@ -32,7 +31,6 @@ export const router = createBrowserRouter([
           { index: true, Component: Dashboard },
           { path: "tournament", Component: Tournament },
           { path: "profile", Component: Profile },
-          { path: "settings", Component: Settings },
         ],
       },
     ],
