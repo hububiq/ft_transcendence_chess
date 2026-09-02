@@ -39,14 +39,13 @@ export function Profile() {
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
       {/* Profile Header */}
-      {/* Profile Header */}
       <div className="bg-[#0a0a0a] border border-neutral-900 rounded-xl p-6 md:p-8">
         
-        {/* Main Wrapper */}
-        <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 md:gap-8">
+        {/* Main Wrapper: Shifted breakpoints to 'xl' so it stacks vertically in squeezed middle columns */}
+        <div className="flex flex-col xl:flex-row items-center xl:items-start justify-between gap-6 md:gap-8 w-full">
           
-          {/* Avatar & User Info Wrapper: Removed 'w-full' to stop it from pushing the button out */}
-          <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-6 md:gap-8 flex-1">
+          {/* Avatar & User Info Wrapper */}
+          <div className="flex flex-col xl:flex-row items-center xl:items-start text-center xl:text-left gap-6 md:gap-8 flex-1 min-w-0 w-full">
             
             {/* Avatar Area */}
             <img
@@ -55,11 +54,13 @@ export function Profile() {
               className="w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-full border-4 border-blue-600/20 object-cover"
             />
 
-            {/* User Info Area: Added min-w-0 to prevent long text from breaking the layout */}
-            <div className="flex-1 flex flex-col items-center sm:items-start min-w-0 w-full">
-              <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 mb-3 w-full">
+            {/* User Info Area */}
+            <div className="flex-1 flex flex-col items-center xl:items-start min-w-0 w-full">
+              
+              {/* Header Row (Username & ELO) */}
+              <div className="flex flex-col md:flex-row items-center justify-center xl:justify-start gap-3 mb-3 w-full">
                 {!loading && (
-                  <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight truncate">
+                  <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight truncate max-w-full">
                     {user?.username}
                   </h1>
                 )}
@@ -70,7 +71,7 @@ export function Profile() {
               </div>
 
               {/* Metadata (Email, Location, Date) */}
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 text-sm text-neutral-400 mb-4">
+              <div className="flex flex-col md:flex-row flex-wrap items-center justify-center xl:justify-start gap-3 md:gap-4 text-sm text-neutral-400 mb-4">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Mail className="w-4 h-4 shrink-0" />
                   <span className="truncate max-w-[200px]">{user?.email || "No email provided"}</span>
@@ -86,16 +87,16 @@ export function Profile() {
               </div>
 
               {/* Bio Area */}
-              <div className="w-full max-w-2xl">
-                <p className="text-neutral-300 text-sm leading-relaxed">
+              <div className="w-full max-w-2xl flex flex-col items-center xl:items-start">
+                <p className="text-neutral-300 text-sm leading-relaxed text-center xl:text-left">
                   {user?.profile?.bio}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Actions Area (Edit Button) - shrink-0 guarantees it keeps its intended width */}
-          <div className="shrink-0 w-full lg:w-auto flex justify-center sm:justify-start lg:justify-end mt-2 sm:mt-4 lg:mt-0">
+          {/* Actions Area (Edit Button) - Centered at the absolute bottom of the stack until xl screens */}
+          <div className="shrink-0 w-full sm:w-auto flex justify-center xl:justify-end mt-2 md:mt-4 xl:mt-0">
             <button
               onClick={() => setIsEditing(true)}
               className="w-full sm:w-auto bg-neutral-900 hover:bg-neutral-800 text-white font-medium py-2.5 px-6 rounded-lg border border-neutral-800 transition-colors"
