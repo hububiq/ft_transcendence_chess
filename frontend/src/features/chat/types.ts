@@ -80,6 +80,12 @@ export interface FriendsChangedServerEvent {
   type: "friends_changed";
 }
 
+// Notify clients that one public user identity changed
+export interface UserIdentityChangedServerEvent {
+  type: "user_identity_changed";
+  user: ChatAuthor;
+}
+
 // Notify the client that its active game data must be refreshed
 export interface ActiveGameChangedServerEvent {
   type: "active_game_changed";
@@ -138,6 +144,7 @@ export type ChatServerEvent =
   | ChatUserJoinedServerEvent
   | ChatUserLeftServerEvent
   | FriendsChangedServerEvent
+  | UserIdentityChangedServerEvent
   | ActiveGameChangedServerEvent
   | GameReconnectServerEvent
   | ErrorServerEvent;

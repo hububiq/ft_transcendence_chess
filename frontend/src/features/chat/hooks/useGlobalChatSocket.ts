@@ -421,6 +421,22 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
           return;
         }
 
+        if (event.type === "user_identity_changed") {
+          if (event.user.id === userId) {
+            // Keep the chat header aligned with the refreshed backend identity
+            setAuthenticatedUser(event.user);
+            return;
+          }
+
+          // Refresh friends without presenting a friendship-change notification
+          setFriendsRevision(
+            (currentRevision) =>
+              currentRevision + 1,
+          );
+
+          return;
+        }
+
         if (event.type === "active_game_changed") {
           // Trigger active game refresh without storing game data in the chat hook
           setActiveGameRevision(
