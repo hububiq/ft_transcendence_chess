@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router";
-import { Play, Trophy, User, Settings, LogOut, Palette } from "lucide-react";
+import { Play, Trophy, User, LogOut, Palette } from "lucide-react";
 import clsx from "clsx";
 import { useUser } from "../../hooks/useUser";
 import { useAuth } from "../../features/auth/context/AuthProvider";
@@ -19,7 +19,6 @@ export function Sidebar() {
     { name: "Play", path: "/", icon: Play },
     { name: "Tournaments", path: "/tournament", icon: Trophy },
     { name: "Profile", path: "/profile", icon: User },
-    { name: "Settings", path: "/settings", icon: Settings },
     { name: "Design System", path: "/design-system", icon: Palette },
   ];
 

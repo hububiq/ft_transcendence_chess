@@ -6,9 +6,13 @@ import { EditProfileForm } from "./EditProfileFormModal";
 import { StatsGrid } from "./ProfileStatsGrid";
 import { useUpdateUser } from "../../hooks/useUpdateUser";
 import type { UserData } from "../../utils/interfaces";
-import { Achievements } from "./ProfileAchievements";
 import playerAvatar from "../../assets/avatar_1.png";
 import { resolveMediaUrl } from "../../utils/utils";
+
+// Future Components ready to be uncommented
+// import { Achievements } from "./ProfileAchievements";
+// import { MatchHistory } from "./MatchHistory";
+// import { RatingProgress } from "./RatingProgress";
 
 export function Profile() {
   const { user, setUser, loading, error } = useUser();
@@ -30,68 +34,76 @@ export function Profile() {
     }
   };
 
-  if (loading) return <p>Loading...</p>;
   if (error) return <p>{error}</p>;
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-8">
       {/* Profile Header */}
-      <div className="bg-[#0a0a0a] border border-neutral-900 rounded-xl p-8">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-          <img
-            src={
-            	resolveMediaUrl(user?.profile.avatar) ||
-  				user?.profile.oauth_avatar_url ||
-  				playerAvatar
-            }
-            alt="Profile Avatar"
-            className="w-24 h-24 rounded-full border-4 border-blue-600/20 object-cover"
-          />
+      {/* Profile Header */}
+      <div className="bg-[#0a0a0a] border border-neutral-900 rounded-xl p-6 md:p-8">
+        
+        {/* Main Wrapper */}
+        <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 md:gap-8">
+          
+          {/* Avatar & User Info Wrapper: Removed 'w-full' to stop it from pushing the button out */}
+          <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-6 md:gap-8 flex-1">
+            
+            {/* Avatar Area */}
+            <img
+              src={resolveMediaUrl(user?.profile.avatar) || playerAvatar}
+              alt="Profile Avatar"
+              className="w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-full border-4 border-blue-600/20 object-cover"
+            />
 
-          <div className="flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
-              {!loading && (
-                <h1 className="text-3xl font-bold text-white tracking-tight">
-                  {user?.username}
-                </h1>
-              )}
-              <div className="flex items-center gap-2">
-                <div className="bg-blue-600/10 border border-blue-500/30 text-blue-400 px-3 py-1 rounded-lg text-sm font-semibold flex items-center gap-1.5">
+            {/* User Info Area: Added min-w-0 to prevent long text from breaking the layout */}
+            <div className="flex-1 flex flex-col items-center sm:items-start min-w-0 w-full">
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 mb-3 w-full">
+                {!loading && (
+                  <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight truncate">
+                    {user?.username}
+                  </h1>
+                )}
+                <div className="bg-blue-600/10 border border-blue-500/30 text-blue-400 px-3 py-1 rounded-lg text-sm font-semibold flex items-center gap-1.5 shrink-0">
                   <Crown className="w-4 h-4" />
                   ELO: {user?.profile?.elo_rating}
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-4 text-sm text-neutral-400 mb-4">
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                {user?.email || "No email provided"}
+              {/* Metadata (Email, Location, Date) */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 text-sm text-neutral-400 mb-4">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Mail className="w-4 h-4 shrink-0" />
+                  <span className="truncate max-w-[200px]">{user?.email || "No email provided"}</span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <MapPin className="w-4 h-4 shrink-0" />
+                  {user?.profile?.location || "No location set"}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Calendar className="w-4 h-4 shrink-0" />
+                   Joined {user?.date_joined ? new Date(user.date_joined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "Recently"}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                {user?.profile?.location || "No location set"}
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                 Joined {user?.date_joined ? new Date(user.date_joined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "Recently"}
+
+              {/* Bio Area */}
+              <div className="w-full max-w-2xl">
+                <p className="text-neutral-300 text-sm leading-relaxed">
+                  {user?.profile?.bio}
+                </p>
               </div>
             </div>
-
-			<div className="max-w-3xs overflow-hidden">
-				<p className="text-neutral-300 text-sm max-w-2xl">
-				{user?.profile?.bio}
-				</p>
-			</div>
           </div>
 
-          {/* Edit Profile Button & Modal */}
-          <button
-            onClick={() => setIsEditing(true)}
-            className="bg-neutral-900 hover:bg-neutral-800 text-white font-medium py-2.5 px-6 rounded-lg border border-neutral-800 transition-colors"
-          >
-            Edit Profile
-          </button>
+          {/* Actions Area (Edit Button) - shrink-0 guarantees it keeps its intended width */}
+          <div className="shrink-0 w-full lg:w-auto flex justify-center sm:justify-start lg:justify-end mt-2 sm:mt-4 lg:mt-0">
+            <button
+              onClick={() => setIsEditing(true)}
+              className="w-full sm:w-auto bg-neutral-900 hover:bg-neutral-800 text-white font-medium py-2.5 px-6 rounded-lg border border-neutral-800 transition-colors"
+            >
+              Edit Profile
+            </button>
+          </div>
+          
           <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
             {isEditing && (
               <EditProfileForm
@@ -107,167 +119,18 @@ export function Profile() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <StatsGrid user={user} />
       </div>
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Match History - Takes 2 columns */}
-        {/* <div className="lg:col-span-2">
-          <Card className="bg-[#0a0a0a] border-neutral-900">
-            <CardHeader>
-              <CardTitle className="text-white">Match History</CardTitle>
-              <CardDescription className="text-neutral-500">
-                Your recent game results
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {matchHistory.map((match) => (
-                  <div
-                    key={match.id}
-                    className="bg-black border border-neutral-900 rounded-lg p-4 hover:border-neutral-700 transition-colors cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={clsx(
-                            "w-1.5 h-12 rounded-full",
-                            match.result === "Win"
-                              ? "bg-green-500"
-                              : match.result === "Loss"
-                                ? "bg-red-500"
-                                : "bg-neutral-600",
-                          )}
-                        />
-                        <div>
-                          <p className="text-sm font-semibold text-neutral-200">
-                            {match.opponent}
-                          </p>
-                          <p className="text-xs text-neutral-600 mt-1">
-                            {match.type} • {match.date}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p
-                          className={clsx(
-                            "text-sm font-bold mb-1",
-                            match.result === "Win"
-                              ? "text-green-500"
-                              : match.result === "Loss"
-                                ? "text-red-500"
-                                : "text-neutral-400",
-                          )}
-                        >
-                          {match.result}
-                        </p>
-                        <p
-                          className={clsx(
-                            "text-xs font-medium",
-                            match.eloChange.startsWith("+")
-                              ? "text-green-500"
-                              : match.eloChange === "0"
-                                ? "text-neutral-500"
-                                : "text-red-500",
-                          )}
-                        >
-                          {match.eloChange}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 pl-6">
-                      <div className="text-[10px] text-neutral-600 uppercase tracking-wider">
-                        Opening:
-                      </div>
-                      <div className="text-xs text-neutral-400">
-                        {match.opening}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+      {/* Two Column Layout (Ready for future use) */}
+      {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+         <MatchHistory matchHistory={[]} />
+         <RatingProgress />
+      </div> */}
 
-              <button className="w-full mt-4 bg-transparent hover:bg-neutral-900 text-neutral-400 hover:text-white font-medium py-2.5 px-6 rounded-lg border border-neutral-800 transition-colors text-sm">
-                View All Matches
-              </button>
-            </CardContent>
-          </Card>
-        </div> */}
-
-        {/* Rating Progress - Takes 1 column */}
-        {/* <div className="space-y-6">
-          <Card className="bg-[#0a0a0a] border-neutral-900">
-            <CardHeader>
-              <CardTitle className="text-white">Rating Progress</CardTitle>
-              <CardDescription className="text-neutral-500">
-                Last 30 days
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between items-baseline mb-2">
-                    <span className="text-xs text-neutral-500 uppercase tracking-wide">
-                      Bullet
-                    </span>
-                    <span className="text-lg font-bold text-white">1,987</span>
-                  </div>
-                  <div className="w-full bg-black rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-blue-600 to-blue-500 h-full"
-                      style={{ width: "78%" }}
-                    />
-                  </div>
-                  <div className="text-xs text-green-500 mt-1 font-medium">
-                    +45 this month
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-baseline mb-2">
-                    <span className="text-xs text-neutral-500 uppercase tracking-wide">
-                      Blitz
-                    </span>
-                    <span className="text-lg font-bold text-white">2,145</span>
-                  </div>
-                  <div className="w-full bg-black rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-purple-600 to-purple-500 h-full"
-                      style={{ width: "85%" }}
-                    />
-                  </div>
-                  <div className="text-xs text-green-500 mt-1 font-medium">
-                    +28 this month
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-baseline mb-2">
-                    <span className="text-xs text-neutral-500 uppercase tracking-wide">
-                      Rapid
-                    </span>
-                    <span className="text-lg font-bold text-white">2,001</span>
-                  </div>
-                  <div className="w-full bg-black rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-gradient-to-r from-green-600 to-green-500 h-full"
-                      style={{ width: "82%" }}
-                    />
-                  </div>
-                  <div className="text-xs text-red-500 mt-1 font-medium">
-                    -12 this month
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div> */}
-      </div>
-
-      {/* Achievements */}
-      <Achievements />
+      {/* Achievements (Ready for future use) */}
+      {/* <Achievements /> */}
     </div>
   );
 }

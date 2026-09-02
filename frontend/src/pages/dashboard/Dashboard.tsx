@@ -45,26 +45,23 @@ export function Dashboard() {
       <div className="relative overflow-hidden rounded-2xl bg-[#0a0a0a] border border-neutral-800 p-6 sm:p-10 flex flex-col items-center justify-center text-center">
         <Swords className="w-12 h-12 text-blue-500 mb-6 relative z-10" />
         <h3 className="text-2xl font-bold text-white mb-4 relative z-10">
-          {activeGame
-            ? "Game in Progress"
-            : "Find a Match"}
+          {activeGame ? "Game in Progress" : "Find a Match"}
         </h3>
 
         <p
-          className={`text-neutral-400 ${
-            activeGame ? "mb-8" : "mb-2"
-          } max-w-md relative z-10 text-base leading-relaxed`}
+          className={`text-neutral-400 mb-8 max-w-md relative z-10 text-base leading-relaxed`}
         >
           {activeGame
             ? "You already have an active game. Return to continue playing."
-            : "Join our matchmaking queue to tackle random opponent"}
+            : "Join our matchmaking queue to tackle random opponen or try to outsmart AI"}
         </p>
 
-        {!activeGame && (
+        {/* redundant code */}
+        {/* {!activeGame && (
           <p className="text-neutral-400 mb-8 max-w-md relative z-10 text-base leading-relaxed">
             or try to outsmart AI
           </p>
-        )}
+        )} */}
 
         <div className="relative z-10 flex flex-col lg:flex-row w-full max-w-xs lg:max-w-none justify-center gap-3">
           {isActiveGameLoading ? (
