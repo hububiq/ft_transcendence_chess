@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router";
 import {
   BarChart3,
+  Medal,
   Play,
   Trophy,
   User,
@@ -27,7 +28,7 @@ export function Sidebar() {
     { name: "Tournaments", path: "/tournament", icon: Trophy },
     { name: "Profile", path: "/profile", icon: User },
     { name: "Statistics", path: "/statistics", icon: BarChart3 },
-    { name: "Leaderboard", path: "/leaderboard", icon: Trophy },
+    { name: "Leaderboard", path: "/leaderboard", icon: Medal },
     { name: "Design System", path: "/design-system", icon: Palette },
   ];
 

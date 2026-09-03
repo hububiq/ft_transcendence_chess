@@ -1,6 +1,6 @@
 import { LeaderboardTable } from "../../features/statistics/LeaderboardTable";
 import { useLeaderboard } from "../../features/statistics/hooks/useLeaderboard";
-
+import { Medal } from "lucide-react";
 
 export function Leaderboard() {
   const {
@@ -32,7 +32,8 @@ export function Leaderboard() {
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight text-white">
+        <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-white">
+          <Medal className="h-8 w-8 shrink-0 text-purple-500" />
           Leaderboard
         </h1>
 

@@ -3,7 +3,7 @@ import { StatisticsAchievements } from "../../features/statistics/StatisticsAchi
 import { StatisticsSummary } from "../../features/statistics/StatisticsSummary";
 import { useStatisticsHistory } from "../../features/statistics/hooks/useStatisticsHistory";
 import { useStatisticsSummary } from "../../features/statistics/hooks/useStatisticsSummary";
-
+import { BarChart3 } from "lucide-react";
 
 export function Statistics() {
   const {
@@ -42,7 +42,8 @@ export function Statistics() {
   return (
     <div className="mx-auto max-w-7xl space-y-8 p-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight text-white">
+        <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-white">
+          <BarChart3 className="h-8 w-8 shrink-0 text-blue-500" />
           Statistics
         </h1>
 
