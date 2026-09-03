@@ -32,11 +32,8 @@ export function useMatchmaking(
         const data = JSON.parse(event.data);
 
         if (data.type === "info") {
-          console.log("Matchmaking:", data.message);
-          
-          
           if (data.message === "Left matchmaking queue.") {
-             ws.close();
+            ws.close();
           }
         } else if (data.type === "match_start") {
           setIsSearching(false);
@@ -60,10 +57,8 @@ export function useMatchmaking(
         }),
       );
     }
-    console.log("Cancelled matchmaking search");
     setIsSearching(false);
   }, []);
-
 
   useEffect(() => {
     return () => {

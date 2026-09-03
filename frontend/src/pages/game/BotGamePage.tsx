@@ -49,7 +49,7 @@ export function BotGame() {
       type: "surrender",
       opponent_id: SYSTEM_BOT_ID,
     });
-    sessionStorage.removeItem("activeBotGameId"); // Clear it so they don't resume a forfeited game
+    sessionStorage.removeItem("activeBotGameId");
     navigate("/");
   };
 
@@ -63,7 +63,6 @@ export function BotGame() {
     const savedGameId = sessionStorage.getItem("activeBotGameId");
 
     if (savedGameId) {
-      console.log("Resuming existing bot game:", savedGameId);
       setGameId(savedGameId);
       setGameStarted(true);
       return;
@@ -73,8 +72,6 @@ export function BotGame() {
       const data = await createBotGame({
         user_id: user.id,
       });
-
-      console.log("SERVER RESPONSE:", data);
 
       sessionStorage.setItem("activeBotGameId", data.game_id.toString());
       setGameId(data.game_id);
@@ -127,7 +124,7 @@ export function BotGame() {
       case "game_over":
         // Clear the completed game so it cannot be resumed later
         sessionStorage.removeItem("activeBotGameId");
-        
+
         if (data.result === "1/2-1/2") {
           setGameOver("draw");
         } else if (data.loser_id === currentPlayerId) {
@@ -140,9 +137,7 @@ export function BotGame() {
   };
 
   const { sendMessage } = useWebSocket({
-    url: gameId
-      ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}`
-      : "",
+    url: gameId ? `${import.meta.env.VITE_WS_BASE_URL}/ws/game/${gameId}` : "",
     enabled: gameStarted && !!gameId,
     onMessage: handleServerMessage,
   });
@@ -231,7 +226,11 @@ export function BotGame() {
       {/* Game Over Modal */}
       {gameOver && (
         <div className="relative z-[100]">
-          <GameOverModal outcome={gameOver} onRestart={handleRestart} onHome={handleHomeClick}/>
+          <GameOverModal
+            outcome={gameOver}
+            onRestart={handleRestart}
+            onHome={handleHomeClick}
+          />
         </div>
       )}
 

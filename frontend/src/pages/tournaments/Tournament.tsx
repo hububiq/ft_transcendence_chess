@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Trophy, Plus, Users, Loader2, Play } from "lucide-react";
 import clsx from "clsx";
 import { useUser } from "../../hooks/useUser";
@@ -54,15 +54,12 @@ export function Tournament() {
   const [showWinnerModal, setShowWinnerModal] = useState(false);
 
   const handleLobbyMessage = (data: any) => {
-    console.log("Lobby WebSocket Message:", data);
     switch (data.type) {
       case "match_start":
         if (!data.round_number || data.round_number === 1) {
-          console.log("Match starting! Redirecting to Game:", data.game_id);
           navigate(`/game/${data.game_id}`);
         } else {
           // It's Round 2+. Don't teleport them. Just refresh the UI so the Blue Button appears
-          console.log("Next round is ready! Showing the Play button.");
           setRefreshTrigger((prev) => prev + 1);
         }
         break;
@@ -73,11 +70,11 @@ export function Tournament() {
         // Instantly trigger a database re-fetch when someone joins/leaves!
         setRefreshTrigger((prev) => prev + 1);
         break;
-	
-	  case "tournament_deleted":
+
+      case "tournament_deleted":
         // 1. Tell the lobby list to refresh (so the tournament disappears from the grid)
         setRefreshTrigger((prev) => prev + 1);
-        
+
         // 2. If the user is currently INSIDE the deleted tournament, kick them out cleanly!
         setActiveTournament((currentActive) => {
           if (currentActive?.id === data.tournament_id) {
@@ -155,7 +152,6 @@ export function Tournament() {
       try {
         // fetch full tournament details
         const details = await getTournamentDetails(activeTournament.id);
-        console.log("RAW TOURNAMENT DETAILS:", details);
         if (details) {
           if (details.participants) setParticipants(details.participants);
 
@@ -326,7 +322,6 @@ export function Tournament() {
           },
         },
       );
-      console.log("Tournament start endpoint successfully triggered.");
     } catch (error) {
       console.error("Failed to start tournament:", error);
       alert("Error starting tournament. Make sure backend is running.");
@@ -337,7 +332,7 @@ export function Tournament() {
   // --- LOBBY VIEW ---
   if (!activeTournament) {
     return (
-      <div className="p-8 h-full flex flex-col max-w-7xl mx-auto">
+      <div className="p-8 min-h-screen flex flex-col max-w-7xl mx-auto">
         <div className="mb-10 flex flex-col items-start gap-4 pt-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
@@ -415,6 +410,18 @@ export function Tournament() {
             ))
           )}
         </div>
+        {/* Footer Links */}
+        <div className="mt-auto flex justify-center items-center gap-4 pt-8 pb-2 text-sm text-neutral-700">
+          <Link to="/terms" className="hover:text-white transition-colors">
+            Terms of Service
+          </Link>
+
+          <span className="text-neutral-700">•</span>
+
+          <Link to="/privacy" className="hover:text-white transition-colors">
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     );
   }
@@ -435,7 +442,7 @@ export function Tournament() {
     !participants.some((p) => p.player_id === user?.id);
 
   return (
-    <div className="p-8 h-full flex flex-col max-w-7xl mx-auto">
+    <div className="p-8 min-h-screen flex flex-col max-w-7xl mx-auto">
       <div className="mb-10 flex items-center justify-between pt-4">
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
@@ -701,6 +708,18 @@ export function Tournament() {
           )}
         </div>
       )}
+      {/* Footer Links */}
+      <div className="mt-auto flex justify-center items-center gap-4 pt-8 pb-2 text-sm text-neutral-700">
+        <Link to="/terms" className="hover:text-white transition-colors">
+          Terms of Service
+        </Link>
+
+        <span className="text-neutral-700">•</span>
+
+        <Link to="/privacy" className="hover:text-white transition-colors">
+          Privacy Policy
+        </Link>
+      </div>
     </div>
   );
 }

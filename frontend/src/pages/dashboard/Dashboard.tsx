@@ -21,7 +21,7 @@ export function Dashboard() {
   );
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8">
+    <div className="min-h-screen p-8 max-w-5xl mx-auto flex flex-col gap-8">
       {/* Header Area */}
       <div className="flex items-center justify-between pt-4">
         <div>
@@ -219,6 +219,24 @@ export function Dashboard() {
             ))}
           </div>
         </div> */}
+      </div>
+      {/* Footer Links */}
+      <div className="mt-auto flex justify-center items-center gap-4 pt-8 pb-2 text-sm text-neutral-700">
+        <Link
+          to="/terms"
+          className="hover:text-white transition-colors"
+        >
+          Terms of Service
+        </Link>
+
+        <span className="text-neutral-700">•</span>
+
+        <Link
+          to="/privacy"
+          className="hover:text-white transition-colors"
+        >
+          Privacy Policy
+        </Link>
       </div>
     </div>
   );

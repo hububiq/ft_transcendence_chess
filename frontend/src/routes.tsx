@@ -15,8 +15,8 @@ import { OAuthCallback } from "./pages/auth/OAuthCallback";
 import { Register } from "./pages/auth/RegisterPage";
 import { Login } from "./pages/auth/LoginPage";
 import { Dashboard } from "./pages/dashboard/Dashboard";
-import { TermsPage } from "./pages/auth/TermsPage";
-import { PrivacyPage } from "./pages/auth/PrivacyPage";
+import { TermsPage } from "./pages/terms_privacy/TermsPage.tsx";
+import { PrivacyPage } from "./pages/terms_privacy/PrivacyPage.tsx";
 
 export const router = createBrowserRouter([
   {
