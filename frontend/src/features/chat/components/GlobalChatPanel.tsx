@@ -207,8 +207,8 @@ export function GlobalChatPanel() {
                   className={clsx(
                     "text-right text-[10px] italic break-words",
                     didJoin
-                      ? "text-emerald-400/70"
-                      : "text-rose-400/60",
+                      ? "text-emerald-300/50"
+                      : "text-rose-300/45"
                   )}
                 >
                   {message.user.username}{" "}
