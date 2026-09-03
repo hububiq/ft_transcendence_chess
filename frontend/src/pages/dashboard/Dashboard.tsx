@@ -21,7 +21,7 @@ export function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen p-8 max-w-5xl mx-auto flex flex-col">
+    <div className="min-h-screen p-8 max-w-5xl mx-auto flex flex-col gap-8">
       {/* Header Area */}
       <div className="flex items-center justify-between pt-4">
         <div>

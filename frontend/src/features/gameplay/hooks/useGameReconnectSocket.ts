@@ -2,22 +2,13 @@ import { useEffect, useRef } from "react";
 
 import { fetchCurrentUser } from "../../auth/api/authService";
 
-
-const RECONNECT_DELAYS_MS = [
-  1_000,
-  2_000,
-  4_000,
-  8_000,
-  10_000,
-] as const;
-
+const RECONNECT_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 10_000] as const;
 
 interface UseGameReconnectSocketProps {
   url: string;
   enabled: boolean;
   onMessage: (data: any) => void;
 }
-
 
 export function useGameReconnectSocket({
   url,
@@ -66,16 +57,10 @@ export function useGameReconnectSocket({
       socket.onerror = null;
       socket.onclose = null;
 
-      socket.close(
-        1000,
-        reason,
-      );
+      socket.close(1000, reason);
     };
 
-    const scheduleReconnect = (
-      connect: () => void,
-      delayOverride?: number,
-    ) => {
+    const scheduleReconnect = (connect: () => void, delayOverride?: number) => {
       if (isDisposed) {
         return;
       }
@@ -86,24 +71,14 @@ export function useGameReconnectSocket({
       const attempt = reconnectAttemptRef.current;
       const delay =
         delayOverride ??
-        RECONNECT_DELAYS_MS[
-          Math.min(
-            attempt,
-            RECONNECT_DELAYS_MS.length - 1,
-          )
-        ];
+        RECONNECT_DELAYS_MS[Math.min(attempt, RECONNECT_DELAYS_MS.length - 1)];
 
       reconnectAttemptRef.current += 1;
 
-      reconnectTimerRef.current = window.setTimeout(
-        connect,
-        delay,
-      );
+      reconnectTimerRef.current = window.setTimeout(connect, delay);
     };
 
-    const refreshAccessTokenAndReconnect = async (
-      connect: () => void,
-    ) => {
+    const refreshAccessTokenAndReconnect = async (connect: () => void) => {
       try {
         // Reuse the existing Axios refresh flow before retrying an expired game session
         await fetchCurrentUser();
@@ -116,9 +91,7 @@ export function useGameReconnectSocket({
         scheduleReconnect(connect, 0);
       } catch {
         if (!isDisposed) {
-          console.error(
-            "Game WebSocket authentication could not be refreshed",
-          );
+          console.error("Game WebSocket authentication could not be refreshed");
         }
       }
     };
@@ -130,9 +103,7 @@ export function useGameReconnectSocket({
 
       clearReconnectTimer();
 
-      const accessToken = localStorage.getItem(
-        "access_token",
-      );
+      const accessToken = localStorage.getItem("access_token");
 
       if (!accessToken) {
         console.error(
@@ -146,10 +117,7 @@ export function useGameReconnectSocket({
       try {
         socket = new WebSocket(url);
       } catch (error) {
-        console.error(
-          "Failed to open game WebSocket:",
-          error,
-        );
+        console.error("Failed to open game WebSocket:", error);
         scheduleReconnect(connect);
         return;
       }
@@ -159,10 +127,7 @@ export function useGameReconnectSocket({
 
       socket.onopen = () => {
         // Ignore callbacks from a socket replaced by a newer reconnect attempt
-        if (
-          isDisposed ||
-          socketRef.current !== socket
-        ) {
+        if (isDisposed || socketRef.current !== socket) {
           socket.close();
           return;
         }
@@ -174,16 +139,11 @@ export function useGameReconnectSocket({
             access_token: accessToken,
           }),
         );
-
-        console.log("Connected to Chess Backend!");
       };
 
       socket.onmessage = (event) => {
         // Ignore messages from a socket replaced by a newer reconnect attempt
-        if (
-          isDisposed ||
-          socketRef.current !== socket
-        ) {
+        if (isDisposed || socketRef.current !== socket) {
           return;
         }
 
@@ -194,13 +154,9 @@ export function useGameReconnectSocket({
           reconnectAttemptRef.current = 0;
           authRefreshAttemptedRef.current = false;
 
-          console.log("Data: ", data);
           savedOnMessage.current(data);
         } catch (error) {
-          console.error(
-            "Failed to parse WebSocket message:",
-            error,
-          );
+          console.error("Failed to parse WebSocket message:", error);
         }
       };
 
@@ -251,43 +207,26 @@ export function useGameReconnectSocket({
 
     const handlePageHide = () => {
       // Close the game socket before full-page navigation so reconnect grace can start promptly
-      closeCurrentSocket(
-        "Page hidden",
-      );
+      closeCurrentSocket("Page hidden");
     };
 
-    window.addEventListener(
-      "pagehide",
-      handlePageHide,
-    );
+    window.addEventListener("pagehide", handlePageHide);
 
     return () => {
       // Stop all reconnect work before intentionally closing the current socket
       isDisposed = true;
 
-      window.removeEventListener(
-        "pagehide",
-        handlePageHide,
-      );
+      window.removeEventListener("pagehide", handlePageHide);
 
-      closeCurrentSocket(
-        "Component unmounted",
-      );
+      closeCurrentSocket("Component unmounted");
     };
   }, [enabled, url]);
 
   const sendMessage = (payload: object) => {
-    if (
-      socketRef.current?.readyState ===
-      WebSocket.OPEN
-    ) {
-      socketRef.current.send(
-        JSON.stringify(payload),
-      );
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify(payload));
     } else {
-      console.error(
-        "WebSocket is not connected",
-      );
+      console.error("WebSocket is not connected");
     }
   };
 

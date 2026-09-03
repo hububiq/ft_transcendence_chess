@@ -19,7 +19,6 @@ export function useOAuth() {
       `scope=${scope}&` +
       `response_type=code`;
     window.location.href = authUrl;
-    console.log(authUrl);
   };
 
   return { oauthLoading, handleGitHubLogin };
