@@ -92,6 +92,11 @@ export function useRegister() {
 
       if (token) {
         localStorage.setItem("access_token", token);
+
+        if (refreshToken) {
+          localStorage.setItem("refersh_token", refreshToken);
+        }
+
         const userResponse = await fetchCurrentUser();
         setUser(userResponse.data);
         setSuccess(true);
