@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Trophy, Plus, Users, Loader2, Play } from "lucide-react";
 import clsx from "clsx";
 import { useUser } from "../../hooks/useUser";
@@ -337,7 +337,7 @@ export function Tournament() {
   // --- LOBBY VIEW ---
   if (!activeTournament) {
     return (
-      <div className="p-8 h-full flex flex-col max-w-7xl mx-auto">
+      <div className="p-8 min-h-screen flex flex-col max-w-7xl mx-auto">
         <div className="mb-10 flex flex-col items-start gap-4 pt-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
@@ -415,6 +415,24 @@ export function Tournament() {
             ))
           )}
         </div>
+                {/* Footer Links */}
+        <div className="mt-auto flex justify-center items-center gap-4 pt-8 pb-2 text-sm text-neutral-700">
+          <Link
+            to="/terms"
+            className="hover:text-white transition-colors"
+          >
+            Terms of Service
+          </Link>
+
+          <span className="text-neutral-700">•</span>
+
+          <Link
+            to="/privacy"
+            className="hover:text-white transition-colors"
+          >
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     );
   }
@@ -435,7 +453,7 @@ export function Tournament() {
     !participants.some((p) => p.player_id === user?.id);
 
   return (
-    <div className="p-8 h-full flex flex-col max-w-7xl mx-auto">
+    <div className="p-8 min-h-screen flex flex-col max-w-7xl mx-auto">
       <div className="mb-10 flex items-center justify-between pt-4">
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
@@ -701,6 +719,25 @@ export function Tournament() {
           )}
         </div>
       )}
+              {/* Footer Links */}
+        <div className="mt-auto flex justify-center items-center gap-4 pt-8 pb-2 text-sm text-neutral-700">
+          <Link
+            to="/terms"
+            className="hover:text-white transition-colors"
+          >
+            Terms of Service
+          </Link>
+
+          <span className="text-neutral-700">•</span>
+
+          <Link
+            to="/privacy"
+            className="hover:text-white transition-colors"
+          >
+            Privacy Policy
+          </Link>
+        </div>
+
     </div>
   );
 }
