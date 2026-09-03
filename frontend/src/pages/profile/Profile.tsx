@@ -8,12 +8,12 @@ import { useUpdateUser } from "../../hooks/useUpdateUser";
 import type { UserData } from "../../utils/interfaces";
 import playerAvatar from "../../assets/avatar_1.png";
 import { resolveMediaUrl } from "../../utils/utils";
+import { Link } from "react-router";
 
 // Future Components ready to be uncommented
 // import { Achievements } from "./ProfileAchievements";
 // import { MatchHistory } from "./MatchHistory";
 // import { RatingProgress } from "./RatingProgress";
-import { Link } from "react-router";
 
 export function Profile() {
   const { user, setUser, loading, error } = useUser();
@@ -38,16 +38,13 @@ export function Profile() {
   if (error) return <p>{error}</p>;
 
   return (
-    <div className="min-h-screen p-4 sm:p-8 max-w-6xl mx-auto flex flex-col">
+    <div className="min-h-screen p-4 sm:p-8 max-w-6xl mx-auto flex flex-col gap-8">
       {/* Profile Header */}
       <div className="bg-[#0a0a0a] border border-neutral-900 rounded-xl p-6 md:p-8">
-        
         {/* Main Wrapper: Shifted breakpoints to 'xl' so it stacks vertically in squeezed middle columns */}
         <div className="flex flex-col xl:flex-row items-center xl:items-start justify-between gap-6 md:gap-8 w-full">
-          
           {/* Avatar & User Info Wrapper */}
           <div className="flex flex-col xl:flex-row items-center xl:items-start text-center xl:text-left gap-6 md:gap-8 flex-1 min-w-0 w-full">
-            
             {/* Avatar Area */}
             <img
               src={resolveMediaUrl(user?.profile.avatar) || playerAvatar}
@@ -57,7 +54,6 @@ export function Profile() {
 
             {/* User Info Area */}
             <div className="flex-1 flex flex-col items-center xl:items-start min-w-0 w-full">
-              
               {/* Header Row (Username & ELO) */}
               <div className="flex flex-col md:flex-row items-center justify-center xl:justify-start gap-3 mb-3 w-full">
                 {!loading && (
@@ -75,7 +71,9 @@ export function Profile() {
               <div className="flex flex-col md:flex-row flex-wrap items-center justify-center xl:justify-start gap-3 md:gap-4 text-sm text-neutral-400 mb-4">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Mail className="w-4 h-4 shrink-0" />
-                  <span className="truncate max-w-[200px]">{user?.email || "No email provided"}</span>
+                  <span className="truncate max-w-[200px]">
+                    {user?.email || "No email provided"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <MapPin className="w-4 h-4 shrink-0" />
@@ -83,7 +81,13 @@ export function Profile() {
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Calendar className="w-4 h-4 shrink-0" />
-                   Joined {user?.date_joined ? new Date(user.date_joined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "Recently"}
+                  Joined{" "}
+                  {user?.date_joined
+                    ? new Date(user.date_joined).toLocaleDateString("en-US", {
+                        month: "long",
+                        year: "numeric",
+                      })
+                    : "Recently"}
                 </div>
               </div>
 
@@ -105,7 +109,7 @@ export function Profile() {
               Edit Profile
             </button>
           </div>
-          
+
           <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
             {isEditing && (
               <EditProfileForm
@@ -125,30 +129,21 @@ export function Profile() {
         <StatsGrid user={user} />
       </div>
 
-      {/* Two Column Layout (Ready for future use) */}
+      {/* Achievements, Match History and Rating Progress (Future use) */}
       {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
          <MatchHistory matchHistory={[]} />
          <RatingProgress />
       </div> */}
 
-       {/* Achievements */}
-      {/* <Achievements /> */}
-
       {/* Footer Links */}
       <div className="mt-auto flex justify-center items-center gap-4 pt-8 pb-2 text-sm text-neutral-700">
-        <Link
-          to="/terms"
-          className="hover:text-white transition-colors"
-        >
+        <Link to="/terms" className="hover:text-white transition-colors">
           Terms of Service
         </Link>
 
         <span className="text-neutral-700">•</span>
 
-        <Link
-          to="/privacy"
-          className="hover:text-white transition-colors"
-        >
+        <Link to="/privacy" className="hover:text-white transition-colors">
           Privacy Policy
         </Link>
       </div>
