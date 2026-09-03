@@ -138,7 +138,6 @@ export function ChessBoard({
       setOptionSquares({});
 
       const uciMove = `${move.from}${move.to}${move.promotion ? move.promotion : ""}`;
-      console.log("Sending:", uciMove);
       onMove(uciMove);
       checkLocalGameOver();
     } catch {

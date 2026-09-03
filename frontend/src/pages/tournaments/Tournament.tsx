@@ -54,15 +54,12 @@ export function Tournament() {
   const [showWinnerModal, setShowWinnerModal] = useState(false);
 
   const handleLobbyMessage = (data: any) => {
-    console.log("Lobby WebSocket Message:", data);
     switch (data.type) {
       case "match_start":
         if (!data.round_number || data.round_number === 1) {
-          console.log("Match starting! Redirecting to Game:", data.game_id);
           navigate(`/game/${data.game_id}`);
         } else {
           // It's Round 2+. Don't teleport them. Just refresh the UI so the Blue Button appears
-          console.log("Next round is ready! Showing the Play button.");
           setRefreshTrigger((prev) => prev + 1);
         }
         break;
@@ -73,11 +70,11 @@ export function Tournament() {
         // Instantly trigger a database re-fetch when someone joins/leaves!
         setRefreshTrigger((prev) => prev + 1);
         break;
-	
-	  case "tournament_deleted":
+
+      case "tournament_deleted":
         // 1. Tell the lobby list to refresh (so the tournament disappears from the grid)
         setRefreshTrigger((prev) => prev + 1);
-        
+
         // 2. If the user is currently INSIDE the deleted tournament, kick them out cleanly!
         setActiveTournament((currentActive) => {
           if (currentActive?.id === data.tournament_id) {
@@ -155,7 +152,6 @@ export function Tournament() {
       try {
         // fetch full tournament details
         const details = await getTournamentDetails(activeTournament.id);
-        console.log("RAW TOURNAMENT DETAILS:", details);
         if (details) {
           if (details.participants) setParticipants(details.participants);
 
@@ -326,7 +322,6 @@ export function Tournament() {
           },
         },
       );
-      console.log("Tournament start endpoint successfully triggered.");
     } catch (error) {
       console.error("Failed to start tournament:", error);
       alert("Error starting tournament. Make sure backend is running.");
@@ -415,21 +410,15 @@ export function Tournament() {
             ))
           )}
         </div>
-                {/* Footer Links */}
+        {/* Footer Links */}
         <div className="mt-auto flex justify-center items-center gap-4 pt-8 pb-2 text-sm text-neutral-700">
-          <Link
-            to="/terms"
-            className="hover:text-white transition-colors"
-          >
+          <Link to="/terms" className="hover:text-white transition-colors">
             Terms of Service
           </Link>
 
           <span className="text-neutral-700">•</span>
 
-          <Link
-            to="/privacy"
-            className="hover:text-white transition-colors"
-          >
+          <Link to="/privacy" className="hover:text-white transition-colors">
             Privacy Policy
           </Link>
         </div>
@@ -719,25 +708,18 @@ export function Tournament() {
           )}
         </div>
       )}
-              {/* Footer Links */}
-        <div className="mt-auto flex justify-center items-center gap-4 pt-8 pb-2 text-sm text-neutral-700">
-          <Link
-            to="/terms"
-            className="hover:text-white transition-colors"
-          >
-            Terms of Service
-          </Link>
+      {/* Footer Links */}
+      <div className="mt-auto flex justify-center items-center gap-4 pt-8 pb-2 text-sm text-neutral-700">
+        <Link to="/terms" className="hover:text-white transition-colors">
+          Terms of Service
+        </Link>
 
-          <span className="text-neutral-700">•</span>
+        <span className="text-neutral-700">•</span>
 
-          <Link
-            to="/privacy"
-            className="hover:text-white transition-colors"
-          >
-            Privacy Policy
-          </Link>
-        </div>
-
+        <Link to="/privacy" className="hover:text-white transition-colors">
+          Privacy Policy
+        </Link>
+      </div>
     </div>
   );
 }

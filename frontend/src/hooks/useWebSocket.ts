@@ -38,14 +38,11 @@ export function useWebSocket({ url, enabled, onMessage }: UseWebSocketProps) {
           access_token: accessToken,
         }),
       );
-
-      console.log("Connected to Chess Backend!");
     };
 
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log("Data: ", data);
         savedOnMessage.current(data);
       } catch (err) {
         console.error("Failed to parse WebSocket message:", err);

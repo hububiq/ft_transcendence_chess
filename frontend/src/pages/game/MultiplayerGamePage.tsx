@@ -67,7 +67,6 @@ export function Game() {
   });
 
   const handleServerMessage = (data: any) => {
-    console.log("WebSocket Data Received:", data);
     if (data.opponent) {
       setOpponent(data.opponent);
     }
@@ -136,8 +135,8 @@ export function Game() {
         } else {
           setGameOver("draw");
         }
-          if (data.rematch_state === "received") {
-            setReceivedRematchOffer(true);
+        if (data.rematch_state === "received") {
+          setReceivedRematchOffer(true);
         } else if (data.rematch_state === "sent") {
           setRematchStatus("pending");
         }
@@ -164,17 +163,17 @@ export function Game() {
         setRematchStatus("declined");
         setIsWaitingForRematch(false);
         break;
-      
+
       case "rematch_request_sent":
         setRematchStatus("pending");
         break;
-      
+
       case "opponent_gone":
         setRematchStatus("gone");
-        setReceivedRematchOffer(false); 
+        setReceivedRematchOffer(false);
         //alert("Your opponent left the room.");
         break;
-      
+
       case "tournament_won":
         setIsTournamentChampion(true);
         break;
@@ -185,7 +184,7 @@ export function Game() {
         // If the server provides the true FEN, snap the board back to reality
         if (data.fen) {
           setCurrentFen(data.fen);
-          setBoardKey(prev => prev + 1);
+          setBoardKey((prev) => prev + 1);
         }
         break;
     }
@@ -209,8 +208,6 @@ export function Game() {
       try {
         const response = await api.get(`api/users/${opponentId}/`);
         const data = response.data;
-
-        console.log("Opponent Profile Data:", data);
 
         setOpponent({
           username: data.username || "Unknown",
@@ -252,7 +249,6 @@ export function Game() {
           const newTime = t - 1;
           if (newTime <= 0) {
             clearInterval(timer);
-            console.log("CLOCK HIT ZERO! Firing claim_timeout to FastAPI!");
             sendMessage({
               type: "claim_timeout",
               player_id: user?.id,
@@ -265,7 +261,14 @@ export function Game() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isPlayerTurn, gameOver, user?.id, opponentId, sendMessage, moveHistory.length,]); // Hubert: addeed dependencies
+  }, [
+    isPlayerTurn,
+    gameOver,
+    user?.id,
+    opponentId,
+    sendMessage,
+    moveHistory.length,
+  ]); // Hubert: addeed dependencies
 
   // ACTIONS
   const handlePlayerMove = (move: string) => {
@@ -300,7 +303,11 @@ export function Game() {
   const handleRematchRequest = () => {
     setRematchStatus("pending");
     setIsWaitingForRematch(true);
-    sendMessage({ type: "rematch_request", player_id: user?.id, opponent_id: opponentId });
+    sendMessage({
+      type: "rematch_request",
+      player_id: user?.id,
+      opponent_id: opponentId,
+    });
   };
 
   const handleAcceptRematch = () => {
@@ -412,7 +419,13 @@ export function Game() {
       {/*Game Over Modal*/}
       {gameOver && !isTournamentChampion && (
         <div className="relative z-[100]">
-          <GameOverModal outcome={gameOver} onRestart={handleRematchRequest} onHome={handleHomeClick} isTournament={isTournamentGame} rematchStatus={rematchStatus}/>
+          <GameOverModal
+            outcome={gameOver}
+            onRestart={handleRematchRequest}
+            onHome={handleHomeClick}
+            isTournament={isTournamentGame}
+            rematchStatus={rematchStatus}
+          />
         </div>
       )}
 
@@ -420,11 +433,10 @@ export function Game() {
       {isTournamentChampion && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[200] animate-in fade-in duration-500 backdrop-blur-sm">
           <div className="bg-[#0a0a0a] border-2 border-yellow-500/50 p-12 rounded-3xl flex flex-col items-center gap-6 shadow-[0_0_150px_rgba(234,179,8,0.3)] transform animate-in zoom-in-95">
-            
             <div className="text-8xl animate-bounce drop-shadow-[0_0_20px_rgba(234,179,8,0.8)]">
               🏆
             </div>
-            
+
             <div className="text-center space-y-2">
               <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-600 uppercase tracking-widest drop-shadow-lg">
                 Champion!
@@ -566,15 +578,17 @@ export function Game() {
             </div>
           </div>
 
-        {/* Mobile Buttons Bar */}
+          {/* Mobile Buttons Bar */}
           <div className="flex lg:hidden gap-3 w-full mt-2">
             {(!isTournamentGame || gameOver) && (
-            <button
-              onClick={gameOver ? () => window.location.reload() : handleDrawOffer}
-              className="flex-1 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-medium py-3 rounded-lg transition-colors text-sm"
-            >
-              {gameOver ? "New Game" : "Offer Draw"}
-            </button>
+              <button
+                onClick={
+                  gameOver ? () => window.location.reload() : handleDrawOffer
+                }
+                className="flex-1 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 font-medium py-3 rounded-lg transition-colors text-sm"
+              >
+                {gameOver ? "New Game" : "Offer Draw"}
+              </button>
             )}
             <button
               onClick={() => setIsResignModalOpen(true)}
@@ -584,8 +598,6 @@ export function Game() {
               Resign
             </button>
           </div>
-
-
         </div>
         <div className="hidden lg:block">
           <GameSidebar

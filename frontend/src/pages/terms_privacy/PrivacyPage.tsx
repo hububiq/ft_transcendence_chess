@@ -1,9 +1,21 @@
 import { Link } from "react-router";
+import { ArrowLeft } from "lucide-react";
 
 export function PrivacyPage() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
       <div className="max-w-3xl w-full bg-[#050505] border border-neutral-900 rounded-2xl p-8 text-neutral-200">
+        {/* Back Button */}
+        <div className="mb-2">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-blue-500 hover:underline text-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </Link>
+        </div>
+
         <h1 className="text-2xl font-bold mb-2">Privacy Policy</h1>
 
         <p className="text-xs text-neutral-500 mb-8">
@@ -14,9 +26,7 @@ export function PrivacyPage() {
           <section>
             <h3 className="text-lg font-semibold mb-2">1. Introduction</h3>
 
-            <p>
-              Welcome to Chess42 ("Chess42", "we", "us", or "our").
-            </p>
+            <p>Welcome to Chess42 ("Chess42", "we", "us", or "our").</p>
 
             <p className="mt-3">
               Chess42 is an online chess platform that allows users to play
@@ -26,10 +36,10 @@ export function PrivacyPage() {
             </p>
 
             <p className="mt-3">
-              This Privacy Policy explains how we collect, use, store, and
-              share personal information when you use the Chess42 platform,
-              website, mobile application, and related services (collectively,
-              the "Service").
+              This Privacy Policy explains how we collect, use, store, and share
+              personal information when you use the Chess42 platform, website,
+              mobile application, and related services (collectively, the
+              "Service").
             </p>
 
             <p className="mt-3">
@@ -87,8 +97,8 @@ export function PrivacyPage() {
             </h4>
 
             <p>
-              Chess42 allows users to interact with each other. Depending on
-              the features you use, we may collect:
+              Chess42 allows users to interact with each other. Depending on the
+              features you use, we may collect:
             </p>
 
             <ul className="list-disc pl-6 space-y-1 mt-2">
@@ -235,10 +245,10 @@ export function PrivacyPage() {
             </h3>
 
             <p>
-              If you are located in the European Economic Area (EEA), the
-              United Kingdom, or another jurisdiction where similar legal
-              requirements apply, we process personal information on one or
-              more of the following legal bases.
+              If you are located in the European Economic Area (EEA), the United
+              Kingdom, or another jurisdiction where similar legal requirements
+              apply, we process personal information on one or more of the
+              following legal bases.
             </p>
 
             <h4 className="font-semibold text-neutral-300 mt-4 mb-2">
@@ -246,10 +256,10 @@ export function PrivacyPage() {
             </h4>
 
             <p>
-              We process information when it is necessary to provide the
-              Chess42 Service you have requested, such as creating your
-              account, allowing you to play games, participating in
-              tournaments, or communicating with other users.
+              We process information when it is necessary to provide the Chess42
+              Service you have requested, such as creating your account,
+              allowing you to play games, participating in tournaments, or
+              communicating with other users.
             </p>
 
             <h4 className="font-semibold text-neutral-300 mt-4 mb-2">
@@ -324,8 +334,7 @@ export function PrivacyPage() {
               <li>Delivering messages</li>
               <li>Providing the chat functionality</li>
               <li>
-                Detecting spam, harassment, threats, or other prohibited
-                content
+                Detecting spam, harassment, threats, or other prohibited content
               </li>
               <li>Investigating reports</li>
               <li>Enforcing our Terms of Service and Community Guidelines</li>
@@ -403,8 +412,8 @@ export function PrivacyPage() {
             <p>We do not sell your personal information for money.</p>
 
             <p className="mt-3">
-              We may share personal information with selected third parties
-              when necessary to operate Chess42.
+              We may share personal information with selected third parties when
+              necessary to operate Chess42.
             </p>
 
             <p className="mt-3">These third parties may include:</p>
@@ -425,9 +434,7 @@ export function PrivacyPage() {
               Legal and Safety Disclosures
             </h4>
 
-            <p>
-              We may disclose information when reasonably necessary to:
-            </p>
+            <p>We may disclose information when reasonably necessary to:</p>
 
             <ul className="list-disc pl-6 space-y-1 mt-2">
               <li>Comply with applicable law</li>
@@ -445,8 +452,8 @@ export function PrivacyPage() {
             </h3>
 
             <p>
-              Chess42 and our service providers may process personal
-              information in countries other than the country where you live.
+              Chess42 and our service providers may process personal information
+              in countries other than the country where you live.
             </p>
 
             <p className="mt-3">
@@ -466,9 +473,9 @@ export function PrivacyPage() {
             <h3 className="text-lg font-semibold mb-2">10. Data Retention</h3>
 
             <p>
-              We retain personal information for as long as reasonably
-              necessary to provide the Chess42 Service and for legitimate
-              business and legal purposes.
+              We retain personal information for as long as reasonably necessary
+              to provide the Chess42 Service and for legitimate business and
+              legal purposes.
             </p>
 
             <p className="mt-3">
@@ -496,9 +503,9 @@ export function PrivacyPage() {
                 security, and moderation of the platform.
               </li>
               <li>
-                Certain information may be retained after account deletion
-                where necessary to comply with legal obligations, resolve
-                disputes, prevent fraud, or enforce our agreements.
+                Certain information may be retained after account deletion where
+                necessary to comply with legal obligations, resolve disputes,
+                prevent fraud, or enforce our agreements.
               </li>
             </ul>
 
@@ -509,13 +516,9 @@ export function PrivacyPage() {
           </section>
 
           <section>
-            <h3 className="text-lg font-semibold mb-2">
-              11. Account Deletion
-            </h3>
+            <h3 className="text-lg font-semibold mb-2">11. Account Deletion</h3>
 
-            <p>
-              You may request deletion of your Chess42 account.
-            </p>
+            <p>You may request deletion of your Chess42 account.</p>
 
             <p className="mt-3">
               Depending on the circumstances and applicable law, deleting your
@@ -524,9 +527,9 @@ export function PrivacyPage() {
             </p>
 
             <p className="mt-3">
-              Some information may remain available after account deletion
-              where it is necessary for legitimate purposes or where applicable
-              law permits or requires us to retain it.
+              Some information may remain available after account deletion where
+              it is necessary for legitimate purposes or where applicable law
+              permits or requires us to retain it.
             </p>
 
             <p className="mt-3">
@@ -542,8 +545,8 @@ export function PrivacyPage() {
             </h3>
 
             <p>
-              Depending on where you live, you may have certain rights
-              regarding your personal information.
+              Depending on where you live, you may have certain rights regarding
+              your personal information.
             </p>
 
             <p className="mt-3">These may include the right to:</p>
@@ -555,9 +558,7 @@ export function PrivacyPage() {
               <li>Request restriction of certain processing</li>
               <li>Object to certain processing</li>
               <li>Request portability of certain information</li>
-              <li>
-                Withdraw consent where processing is based on consent
-              </li>
+              <li>Withdraw consent where processing is based on consent</li>
               <li>
                 Lodge a complaint with a relevant data protection authority
               </li>
@@ -597,14 +598,12 @@ export function PrivacyPage() {
           </section>
 
           <section>
-            <h3 className="text-lg font-semibold mb-2">
-              14. Data Security
-            </h3>
+            <h3 className="text-lg font-semibold mb-2">14. Data Security</h3>
 
             <p>
               We use reasonable technical and organizational measures designed
-              to protect personal information against unauthorized access,
-              loss, misuse, alteration, or disclosure.
+              to protect personal information against unauthorized access, loss,
+              misuse, alteration, or disclosure.
             </p>
 
             <p className="mt-3">
@@ -633,8 +632,8 @@ export function PrivacyPage() {
             </p>
 
             <p className="mt-3">
-              We encourage you to review the privacy policies of any
-              third-party services you use.
+              We encourage you to review the privacy policies of any third-party
+              services you use.
             </p>
           </section>
 
@@ -643,14 +642,11 @@ export function PrivacyPage() {
               16. Changes to This Privacy Policy
             </h3>
 
-            <p>
-              We may update this Privacy Policy from time to time.
-            </p>
+            <p>We may update this Privacy Policy from time to time.</p>
 
             <p className="mt-3">
               When we make material changes, we may notify you through the
-              Chess42 platform, by email, or through another appropriate
-              method.
+              Chess42 platform, by email, or through another appropriate method.
             </p>
 
             <p className="mt-3">
@@ -692,18 +688,13 @@ export function PrivacyPage() {
           </section>
 
           <div className="pt-4 border-t border-neutral-900">
-            <p className="text-neutral-500 text-xs">
-              End of Privacy Policy
-            </p>
+            <p className="text-neutral-500 text-xs">End of Privacy Policy</p>
           </div>
         </div>
 
         <div className="mt-8">
-          <Link
-            to="/login"
-            className="text-blue-500 hover:underline text-sm"
-          >
-            Back to Login
+          <Link to="/" className="text-gray-500 hover:underline text-sm">
+            Back
           </Link>
         </div>
       </div>

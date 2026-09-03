@@ -1,9 +1,21 @@
 import { Link } from "react-router";
+import { ArrowLeft } from "lucide-react";
 
 export function TermsPage() {
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
       <div className="max-w-3xl w-full bg-[#050505] border border-neutral-900 rounded-2xl p-8 text-neutral-200">
+        {/* Back Button */}
+        <div className="mb-2">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-blue-500 hover:underline text-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </Link>
+        </div>
+
         <h1 className="text-2xl font-bold mb-2">Terms of Service</h1>
 
         <p className="text-xs text-neutral-500 mb-8">
@@ -20,8 +32,8 @@ export function TermsPage() {
             </p>
             <p className="mt-3">
               By creating an account, accessing, or using Chess42, you agree to
-              be bound by these Terms. If you do not agree with these Terms,
-              you must not use the Service.
+              be bound by these Terms. If you do not agree with these Terms, you
+              must not use the Service.
             </p>
           </section>
 
@@ -33,9 +45,8 @@ export function TermsPage() {
             </p>
             <p className="mt-3">
               If you are under the age required to enter into contracts in your
-              country, you may use Chess42 only with the involvement and
-              consent of a parent or legal guardian where required by
-              applicable law.
+              country, you may use Chess42 only with the involvement and consent
+              of a parent or legal guardian where required by applicable law.
             </p>
             <p className="mt-3">
               By using the Service, you represent that the information you
@@ -45,7 +56,9 @@ export function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-lg font-semibold mb-2">2. Your Chess42 Account</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              2. Your Chess42 Account
+            </h3>
             <p>
               Certain features of Chess42 may require you to create an account.
             </p>
@@ -54,7 +67,9 @@ export function TermsPage() {
 
             <ul className="list-disc pl-6 space-y-1">
               <li>providing accurate and current information;</li>
-              <li>maintaining the confidentiality of your account credentials;</li>
+              <li>
+                maintaining the confidentiality of your account credentials;
+              </li>
               <li>keeping your account secure;</li>
               <li>all activity that occurs through your account; and</li>
               <li>
@@ -85,7 +100,9 @@ export function TermsPage() {
             <p className="mt-3">You must not:</p>
 
             <ul className="list-disc pl-6 space-y-1">
-              <li>use the Service for unlawful, fraudulent, or abusive purposes;</li>
+              <li>
+                use the Service for unlawful, fraudulent, or abusive purposes;
+              </li>
               <li>harass, threaten, or intimidate other users;</li>
               <li>engage in hate speech or targeted abusive behavior;</li>
               <li>distribute malicious software or harmful code;</li>
@@ -95,14 +112,17 @@ export function TermsPage() {
               </li>
               <li>interfere with the operation or security of the Service;</li>
               <li>
-                scrape, copy, reproduce, or systematically collect data from
-                the Service without authorization;
+                scrape, copy, reproduce, or systematically collect data from the
+                Service without authorization;
               </li>
               <li>
                 use bots, scripts, or automated systems in a way that is not
                 expressly authorized;
               </li>
-              <li>manipulate ratings, rankings, games, tournaments, or other competitive systems;</li>
+              <li>
+                manipulate ratings, rankings, games, tournaments, or other
+                competitive systems;
+              </li>
               <li>exploit bugs, vulnerabilities, or unintended features;</li>
               <li>sell, transfer, or otherwise misuse Chess42 accounts; or</li>
               <li>
@@ -218,10 +238,9 @@ export function TermsPage() {
             </h3>
             <p>
               The Service and its contents, including software, design,
-              graphics, logos, trademarks, interfaces, text, features, and
-              other materials provided by Chess42, are owned by or licensed to
-              Chess42 and are protected by applicable intellectual property
-              laws.
+              graphics, logos, trademarks, interfaces, text, features, and other
+              materials provided by Chess42, are owned by or licensed to Chess42
+              and are protected by applicable intellectual property laws.
             </p>
 
             <p className="mt-3">
@@ -233,14 +252,20 @@ export function TermsPage() {
               <li>copy or reproduce the Service;</li>
               <li>modify or create derivative works from the Service;</li>
               <li>distribute or publicly display Chess42 materials;</li>
-              <li>reverse engineer or attempt to extract source code from the Service;</li>
+              <li>
+                reverse engineer or attempt to extract source code from the
+                Service;
+              </li>
               <li>use Chess42 trademarks or branding without permission; or</li>
-              <li>commercially exploit any part of the Service without authorization.</li>
+              <li>
+                commercially exploit any part of the Service without
+                authorization.
+              </li>
             </ul>
 
             <p className="mt-3">
-              Nothing in these Terms transfers ownership of Chess42
-              intellectual property to you.
+              Nothing in these Terms transfers ownership of Chess42 intellectual
+              property to you.
             </p>
           </section>
 
@@ -291,9 +316,9 @@ export function TermsPage() {
             </p>
 
             <p className="mt-3">
-              Third-party services may be subject to their own terms and
-              privacy policies. Chess42 is not responsible for third-party
-              services that it does not control.
+              Third-party services may be subject to their own terms and privacy
+              policies. Chess42 is not responsible for third-party services that
+              it does not control.
             </p>
           </section>
 
@@ -328,8 +353,8 @@ export function TermsPage() {
             </p>
 
             <p className="mt-3">
-              Chess42 may modify, suspend, or discontinue any feature or part
-              of the Service at any time, subject to applicable law.
+              Chess42 may modify, suspend, or discontinue any feature or part of
+              the Service at any time, subject to applicable law.
             </p>
           </section>
 
@@ -358,8 +383,8 @@ export function TermsPage() {
             </ul>
 
             <p className="mt-3">
-              Nothing in these Terms excludes or limits any warranty or
-              consumer right that cannot legally be excluded or limited.
+              Nothing in these Terms excludes or limits any warranty or consumer
+              right that cannot legally be excluded or limited.
             </p>
           </section>
 
@@ -368,17 +393,16 @@ export function TermsPage() {
               13. Limitation of Liability
             </h3>
             <p>
-              To the maximum extent permitted by applicable law, Chess42 and
-              its affiliates, officers, employees, contractors, and service
+              To the maximum extent permitted by applicable law, Chess42 and its
+              affiliates, officers, employees, contractors, and service
               providers will not be liable for indirect, incidental, special,
-              consequential, or punitive damages arising from or related to
-              your use of, or inability to use, the Service.
+              consequential, or punitive damages arising from or related to your
+              use of, or inability to use, the Service.
             </p>
 
             <p className="mt-3">
               Where liability cannot legally be excluded, Chess42's liability
-              will be limited to the maximum extent permitted by applicable
-              law.
+              will be limited to the maximum extent permitted by applicable law.
             </p>
 
             <p className="mt-3">
@@ -400,9 +424,7 @@ export function TermsPage() {
               <li>your violation of these Terms;</li>
               <li>your unlawful use of the Service;</li>
               <li>your User Content; or</li>
-              <li>
-                your violation of the rights of another person or entity.
-              </li>
+              <li>your violation of the rights of another person or entity.</li>
             </ul>
           </section>
 
@@ -419,21 +441,23 @@ export function TermsPage() {
 
             <ul className="list-disc pl-6 space-y-1 mt-3">
               <li>violated these Terms;</li>
-              <li>engaged in cheating, fraud, abuse, or other prohibited activity;</li>
+              <li>
+                engaged in cheating, fraud, abuse, or other prohibited activity;
+              </li>
               <li>created a security or legal risk;</li>
               <li>misused the Service; or</li>
               <li>violated applicable law.</li>
             </ul>
 
             <p className="mt-3">
-              Where appropriate and legally required, Chess42 may provide
-              notice and an opportunity to remedy the violation.
+              Where appropriate and legally required, Chess42 may provide notice
+              and an opportunity to remedy the violation.
             </p>
 
             <p className="mt-3">
-              Termination does not affect provisions that by their nature
-              should survive termination, including provisions concerning
-              intellectual property, disclaimers, limitations of liability, and
+              Termination does not affect provisions that by their nature should
+              survive termination, including provisions concerning intellectual
+              property, disclaimers, limitations of liability, and
               dispute-related provisions.
             </p>
           </section>
@@ -442,9 +466,7 @@ export function TermsPage() {
             <h3 className="text-lg font-semibold mb-2">
               16. Changes to These Terms
             </h3>
-            <p>
-              Chess42 may update these Terms from time to time.
-            </p>
+            <p>Chess42 may update these Terms from time to time.</p>
 
             <p className="mt-3">
               If material changes are made, Chess42 may provide notice through
@@ -491,9 +513,7 @@ export function TermsPage() {
           </section>
 
           <section>
-            <h3 className="text-lg font-semibold mb-2">
-              19. Entire Agreement
-            </h3>
+            <h3 className="text-lg font-semibold mb-2">19. Entire Agreement</h3>
             <p>
               These Terms, together with any policies or additional terms
               expressly incorporated into them, constitute the agreement between
@@ -519,11 +539,8 @@ export function TermsPage() {
         </div>
 
         <div className="mt-8">
-          <Link
-            to="/login"
-            className="text-blue-500 hover:underline text-sm"
-          >
-            Back to Login
+          <Link to="/" className="text-gray-500 hover:underline text-sm">
+            Back
           </Link>
         </div>
       </div>
