@@ -1,14 +1,14 @@
 import React, { useMemo } from "react";
 
 export function FloatingPawns() {
-  // Generate 15 random pawns when the component loads
+  // Generate 20 random pawns when the component loads
   const pawns = useMemo(() => {
     return Array.from({ length: 20 }).map((_, i) => ({
       id: i,
       left: Math.random() * 100, // Random horizontal position (0% - 100%)
       size: Math.random() * 3 + 1.5, // Random size (1.5rem - 4.5rem)
-      delay: Math.random() * 15, // Random start delay (0s - 15s)
-      duration: Math.random() * 15 + 15, // Random speed (15s - 30s)
+      delay: Math.random() * 12, // Random start delay (0s - 15s)
+      duration: Math.random() * 15 + 22, // Random speed (15s - 37s)
     }));
   }, []);
 
