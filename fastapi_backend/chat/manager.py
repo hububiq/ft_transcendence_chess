@@ -4,7 +4,7 @@ import asyncio
 import logging
 from uuid import uuid4
 
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 
 from chat.schemas import (
     ChatAuthor,
@@ -468,6 +468,7 @@ class GlobalChatConnectionManager:
             asyncio.TimeoutError,
             OSError,
             RuntimeError,
+            WebSocketDisconnect,
         ):
             return False
         except Exception:

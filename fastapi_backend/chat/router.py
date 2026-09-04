@@ -310,11 +310,15 @@ async def global_chat_socket(
         user = authenticated_user.author
 
         # Register the socket only after authentication succeeds
-        await global_chat_manager.activate(
-            websocket,
-            user,
-            AuthenticatedServerEvent(user=user),
-        )
+        try:
+            await global_chat_manager.activate(
+                websocket,
+                user,
+                AuthenticatedServerEvent(user=user),
+            )
+        except ConnectionError:
+            return
+
         is_registered = True
 
         # Tell all clients that the logged user list changed
