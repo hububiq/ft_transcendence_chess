@@ -18,46 +18,99 @@ from tournament_progression_service import advance_tournament
 
 MULTIPLAYER_CLOCK_SECONDS = 15 * 60
 
-async def handle_game_over(
-    board: chess.Board,
+
+async def _build_game_pgn(
+    redis,
     game_id: str,
-    websocket,
-    is_surrender: bool = False,
-    surrender_loser_id: int = None,
-    is_timeout: bool = False,
-    timeout_loser_id: int = None,
-    is_disconnect_timeout: bool = False,
-    is_agreed_draw: bool = False
-):
-    """Generates the game history, cleans RAM, updates ELO, and advances tournaments."""
-    
-    redis = await get_redis()
+) -> str:
     moves_list = await redis.lrange(f"game:{game_id}:moves", 0, -1)
 
-    # Replay the game to generate PGN
     replay_board = chess.Board()
     for move_uci in moves_list:
         replay_board.push(chess.Move.from_uci(move_uci))
-    game_pgn = str(chess.pgn.Game.from_board(replay_board))
 
-    # DETERMINE THE WINNER USING PYTHON-CHESS RULES
-    result = board.result() # Returns '1-0' (White), '0-1' (Black), or '1/2-1/2' (Draw)
+    return str(chess.pgn.Game.from_board(replay_board))
+
+
+def _resolve_game_outcome(
+    result: str,
+    white_player_id: int | None,
+    black_player_id: int | None,
+    is_surrender: bool,
+    surrender_loser_id: int | None,
+    is_timeout: bool,
+    timeout_loser_id: int | None,
+    is_agreed_draw: bool,
+) -> tuple[int | None, int | None, str, bool]:
     winner_id = None
     loser_id = None
+    mark_as_draw = False
 
-    affected_user_ids: set[int] = set()
+    if is_surrender:
+        loser_id = surrender_loser_id
+        winner_id = (
+            white_player_id
+            if loser_id == black_player_id
+            else black_player_id
+        )
+        result = "Surrender"
 
-     # SAVE TO POSTGRESQL AND GRAB THE TRUE IDs
+    elif is_timeout:
+        loser_id = timeout_loser_id
+        winner_id = (
+            white_player_id
+            if loser_id == black_player_id
+            else black_player_id
+        )
+        result = "Timeout"
+
+    elif is_agreed_draw:
+        result = "1/2-1/2"
+        mark_as_draw = True
+
+    elif result == "1-0":
+        winner_id = white_player_id
+        loser_id = black_player_id
+
+    elif result == "0-1":
+        winner_id = black_player_id
+        loser_id = white_player_id
+
+    elif result == "1/2-1/2":
+        mark_as_draw = True
+
+    return winner_id, loser_id, result, mark_as_draw
+
+
+async def _cleanup_game_redis(
+    redis,
+    game_id: str,
+) -> None:
+    await redis.delete(f"game:{game_id}:fen")
+    await redis.delete(f"game:{game_id}:moves")
+    await redis.delete(f"game:{game_id}:time")
+    await redis.delete(f"game:{game_id}:started")
+
+
+async def _complete_game_in_database(
+    game_id: str,
+    game_pgn: str,
+    result: str,
+    is_surrender: bool,
+    surrender_loser_id: int | None,
+    is_timeout: bool,
+    timeout_loser_id: int | None,
+    is_agreed_draw: bool,
+) -> tuple[set[int], int | None, int | None, str] | None:
     async with async_session() as session:
         game = await session.get(Game, int(game_id))
         if not game:
-            return
+            return None
 
         if game.status == "completed":
             print(f"[SHIELD] Game {game_id} is already over. Ignoring duplicate request.")
-            return
+            return None
 
-        # Refresh active game state for every human player affected by this result
         affected_user_ids = {
             player_id
             for player_id in (
@@ -67,34 +120,20 @@ async def handle_game_over(
             if player_id is not None
         }
 
-        # Surrender overrides python-chess
-        if is_surrender:
-            loser_id = surrender_loser_id
-            winner_id = game.white_player_id if loser_id == game.black_player_id else game.black_player_id
-            result = "Surrender"
-        elif is_timeout:
-            loser_id = timeout_loser_id
-            winner_id = game.white_player_id if loser_id == game.black_player_id else game.black_player_id
-            result = "Timeout"
-        elif is_agreed_draw:
-            winner_id = None
-            loser_id = None
-            result = "1/2-1/2"
-            game.is_draw = True
-        else:
-            # Normal chess result
-            if result == "1-0":
-                winner_id = game.white_player_id
-                loser_id = game.black_player_id
-            elif result == "0-1":
-                winner_id = game.black_player_id
-                loser_id = game.white_player_id
-            elif result == "1/2-1/2":
-                winner_id = None
-                loser_id = None
-                game.is_draw = True
+        winner_id, loser_id, result, mark_as_draw = _resolve_game_outcome(
+            result,
+            game.white_player_id,
+            game.black_player_id,
+            is_surrender,
+            surrender_loser_id,
+            is_timeout,
+            timeout_loser_id,
+            is_agreed_draw,
+        )
 
-        # Persist the final game state for both normal endings and surrender
+        if mark_as_draw:
+            game.is_draw = True
+
         game.moves_pgn = game_pgn
         game.winner_id = winner_id
         game.status = "completed"
@@ -102,22 +141,32 @@ async def handle_game_over(
         await session.commit()
         print(f"[DB] Game {game_id} saved. Winner: {winner_id}")
 
-        # TOURNAMENT PROGRESSION TRIGGER
         if game.tournament_id is not None:
             print(f"[TOURNAMENT] Advancing tournament {game.tournament_id}...")
             await advance_tournament(
                 game_id=game.id,
                 winner_id=winner_id,
-                session=session
+                session=session,
             )
 
-    # Notify authenticated application sockets after the completed state is committed
+    return affected_user_ids, winner_id, loser_id, result
+
+
+async def _notify_game_completion(
+    affected_user_ids: set[int],
+    game_id: str,
+    winner_id: int | None,
+    loser_id: int | None,
+    result: str,
+    game_pgn: str,
+    is_timeout: bool,
+    is_disconnect_timeout: bool,
+) -> None:
     await global_chat_manager.send_to_users(
         affected_user_ids,
         ActiveGameChangedServerEvent(),
     )
 
-    # Report disconnect timeout only after the completed game state is committed
     if (
         is_timeout
         and is_disconnect_timeout
@@ -133,39 +182,98 @@ async def handle_game_over(
             ),
         )
 
-    # Notify players
     await manager.broadcast_to_game(int(game_id), {
         "type": "game_over",
         "winner_id": winner_id,
         "loser_id": loser_id,
         "result": result,
-        "pgn": game_pgn
+        "pgn": game_pgn,
     })
 
-    # Clean Redis
-    await redis.delete(f"game:{game_id}:fen")
-    await redis.delete(f"game:{game_id}:moves")
-    await redis.delete(f"game:{game_id}:time")
-    await redis.delete(f"game:{game_id}:started")
 
-    # Update ELO in Django
+async def _update_game_elo(
+    game_id: str,
+    winner_id: int | None,
+    loser_id: int | None,
+    result: str,
+    affected_user_ids: set[int],
+) -> None:
     async with httpx.AsyncClient() as client:
         try:
             await client.post(
                 "http://django_backend:8000/api/update-elo/",
-                # Include participant IDs because draws have no winner or loser
                 json={
                     "winner_id": winner_id,
                     "loser_id": loser_id,
                     "is_draw": result == "1/2-1/2",
                     "player_ids": sorted(affected_user_ids),
                 },
-                headers={"Host": "localhost"}
+                headers={"Host": "localhost"},
             )
             print(f"[GAME OVER] ELO updated for Game {game_id}")
         except Exception as e:
             print(f"[ERROR] Failed to reach Django: {e}")
 
+
+async def handle_game_over(
+    board: chess.Board,
+    game_id: str,
+    websocket,
+    is_surrender: bool = False,
+    surrender_loser_id: int = None,
+    is_timeout: bool = False,
+    timeout_loser_id: int = None,
+    is_disconnect_timeout: bool = False,
+    is_agreed_draw: bool = False
+):
+    """Generates the game history, cleans RAM, updates ELO, and advances tournaments."""
+
+    redis = await get_redis()
+    game_pgn = await _build_game_pgn(redis, game_id)
+
+    # DETERMINE THE WINNER USING PYTHON-CHESS RULES
+    result = board.result() # Returns '1-0' (White), '0-1' (Black), or '1/2-1/2' (Draw)
+
+    # SAVE TO POSTGRESQL AND GRAB THE TRUE IDs
+    completion = await _complete_game_in_database(
+        game_id,
+        game_pgn,
+        result,
+        is_surrender,
+        surrender_loser_id,
+        is_timeout,
+        timeout_loser_id,
+        is_agreed_draw,
+    )
+
+    if completion is None:
+        return
+
+    affected_user_ids, winner_id, loser_id, result = completion
+
+    # Notify authenticated application sockets after the completed state is committed
+    await _notify_game_completion(
+        affected_user_ids,
+        game_id,
+        winner_id,
+        loser_id,
+        result,
+        game_pgn,
+        is_timeout,
+        is_disconnect_timeout,
+    )
+
+    # Clean Redis
+    await _cleanup_game_redis(redis, game_id)
+
+    # Update ELO in Django
+    await _update_game_elo(
+        game_id,
+        winner_id,
+        loser_id,
+        result,
+        affected_user_ids,
+    )
 
 
 
