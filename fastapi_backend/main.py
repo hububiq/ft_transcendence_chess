@@ -18,7 +18,7 @@ from game_service import handle_player_move
 from game_service import MULTIPLAYER_CLOCK_SECONDS
 from api.history import router as history_router
 from api.statistics_history import router as statistics_history_router
-from api.tournaments import router as tournaments_router
+from tournament.tournaments import router as tournaments_router
 from api.games import router as games_router
 from garbage_games_collector import clean_dead_games
 from database import async_session
@@ -57,7 +57,7 @@ app.include_router(statistics_history_router)
 app.include_router(tournaments_router)
 app.include_router(games_router)
 app.include_router(chat_router)  # Expose the /ws/chat endpoint
-asyncio.create_task(friendship_notifications_loop())
+# asyncio.create_task(friendship_notifications_loop())
 
 
 # ---------------------------------------------------------
@@ -77,7 +77,7 @@ async def process_rematch_request(game_id: int, user_id: int, opponent_id: int):
             redis = await get_redis()
             #  SAVE THE OFFER TO REDIS (Expires in 120 seconds!)
             await redis.set(f"game:{game_id}:rematch_proposed_by", user_id, ex=120)
-            print(f"🚨 DEBUG SAVE: Wrote rematch offer to Redis for game {game_id} by user {user_id}")
+            print(f"Wrote rematch offer to Redis for game {game_id} by user {user_id}")
             # They are still here
             await manager.send_to_user(opponent_id, {"type": "rematch_request"})
             # Tell the sender that the request is successfully pending
@@ -122,6 +122,7 @@ async def startup_event():
     asyncio.create_task(clean_dead_games())
     asyncio.create_task(listen_for_friendship_events())
     asyncio.create_task(listen_for_user_identity_events())
+    asyncio.create_task(friendship_notifications_loop())
 
     # Resume processing Redis reconnect deadlines whenever FastAPI starts
     asyncio.create_task(reconnect_deadline_worker())
@@ -390,7 +391,7 @@ async def _send_completed_game_initial_state(
     proposed_by = await redis.get(f"game:{game_id}:rematch_proposed_by")
 
     print(
-        f"🚨 DEBUG LOAD: Refresh triggered! "
+        f"Refresh triggered! "
         f"Redis says proposed_by is: {proposed_by}"
     )
 
@@ -403,7 +404,7 @@ async def _send_completed_game_initial_state(
             await manager.send_to_user(game_context.opponent_id, {"type": "rematch_request"})
 
     print(
-        f"🚨 DEBUG SEND: Telling React that "
+        f"Telling React that "
         f"rematch_state is: {rematch_state}"
     )
 
@@ -566,7 +567,7 @@ async def _handle_rematch_game_message(
 ) -> None:
     if msg_type == "rematch_request":
         print(
-            f"🚨 DEBUG WS: React sent rematch_request "
+            f"React sent rematch_request "
             f"for Game {game_id}"
         )
         await process_rematch_request(
@@ -577,7 +578,7 @@ async def _handle_rematch_game_message(
 
     elif msg_type == "rematch_declined":
         print(
-            f"🚨 DEBUG WS: React sent rematch_declined "
+            f"React sent rematch_declined "
             f"for Game {game_id}"
         )
         await redis.delete(f"game:{game_id}:rematch_proposed_by")
@@ -587,7 +588,7 @@ async def _handle_rematch_game_message(
 
     elif msg_type == "rematch_accepted":
         print(
-            f"🚨 DEBUG WS: React sent rematch_accepted "
+            f"React sent rematch_accepted "
             f"for Game {game_id}"
         )
         await redis.delete(f"game:{game_id}:rematch_proposed_by")

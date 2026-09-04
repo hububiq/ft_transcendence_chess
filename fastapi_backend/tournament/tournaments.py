@@ -3,7 +3,7 @@ from sqlalchemy import func
 from sqlmodel import select
 from database import async_session
 from auth import get_current_user
-from tournament_progression_service import _create_game_for_match
+from tournament.tournament_progression_service import _create_game_for_match
 from server import manager
 
 from models import (
@@ -13,8 +13,8 @@ from models import (
     Game
 )
 
-from bracket_service import generate_bracket
-from bracket_importer import import_bracket
+from tournament.bracket_service import generate_bracket
+from tournament.bracket_importer import import_bracket
 
 router = APIRouter(prefix="/api/tournaments", tags=["tournaments"])
 

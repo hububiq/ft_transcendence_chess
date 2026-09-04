@@ -14,7 +14,7 @@ from chat.schemas import (
     GameReconnectResultServerEvent,
 )
 
-from tournament_progression_service import advance_tournament
+from tournament.tournament_progression_service import advance_tournament
 
 MULTIPLAYER_CLOCK_SECONDS = 15 * 60
 
