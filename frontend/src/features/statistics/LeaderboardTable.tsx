@@ -17,7 +17,7 @@ function LeaderboardRow({
   return (
     <div
       className={[
-        "grid min-w-[680px] grid-cols-[70px_minmax(180px,1fr)_100px_100px_100px_110px] items-center gap-4 border-b border-neutral-900 px-5 py-4 last:border-b-0",
+        "grid min-w-[780px] grid-cols-[70px_minmax(180px,1fr)_100px_100px_100px_110px] items-center gap-4 border-b border-neutral-900 px-5 py-4 last:border-b-0",
         player.is_current_user
           ? "bg-purple-500/10 ring-1 ring-inset ring-purple-400/30"
           : "bg-transparent",
@@ -63,7 +63,7 @@ function LeaderboardRow({
 
 function LeaderboardHeader() {
   return (
-    <div className="grid min-w-[680px] grid-cols-[70px_minmax(180px,1fr)_100px_100px_100px_110px] gap-4 border-b border-neutral-800 bg-neutral-950 px-5 py-3 text-xs font-medium uppercase tracking-wide text-purple-400">
+    <div className="grid min-w-[780px] grid-cols-[70px_minmax(180px,1fr)_100px_100px_100px_110px] gap-4 border-b border-neutral-800 bg-neutral-950 px-5 py-3 text-xs font-medium uppercase tracking-wide text-purple-400">
       <span>Rank</span>
       <span>Player</span>
       <span>ELO</span>
