@@ -53,7 +53,7 @@ export function Dashboard() {
         >
           {activeGame
             ? "You already have an active game. Return to continue playing."
-            : "Join our matchmaking queue to tackle random opponen or try to outsmart AI"}
+            : "Join our matchmaking queue to tackle random opponents or try to outsmart AI"}
         </p>
 
         {/* redundant code */}
