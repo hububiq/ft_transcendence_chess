@@ -4,6 +4,7 @@ import { StatisticsSummary } from "../../features/statistics/StatisticsSummary";
 import { useStatisticsHistory } from "../../features/statistics/hooks/useStatisticsHistory";
 import { useStatisticsSummary } from "../../features/statistics/hooks/useStatisticsSummary";
 import { BarChart3 } from "lucide-react";
+import { Link } from "react-router";
 
 export function Statistics() {
   const {
@@ -40,36 +41,56 @@ export function Statistics() {
 
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 p-8">
-      <header>
-        <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-white">
-          <BarChart3 className="h-8 w-8 shrink-0 text-blue-500" />
-          Statistics
-        </h1>
+    <div className="min-h-screen p-8 max-w-7xl mx-auto flex flex-col">
+      <div className="space-y-8">
+        <header>
+          <h1 className="flex items-center gap-3 text-3xl font-bold tracking-tight text-white">
+            <BarChart3 className="h-8 w-8 shrink-0 text-blue-500" />
+            Statistics
+          </h1>
 
-        <p className="mt-2 text-sm text-neutral-500">
-          Your game results and progress
-        </p>
-      </header>
+          <p className="mt-2 text-sm text-neutral-500">
+            Your game results and progress
+          </p>
+        </header>
 
-      <StatisticsSummary
-        user={user}
-        tournamentsWon={tournamentsWon}
-      />
-      
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <MatchHistory
-            username={user.username}
-            matches={matches}
-            isLoading={isHistoryLoading}
-            errorMessage={historyError}
+        <StatisticsSummary
+          user={user}
+          tournamentsWon={tournamentsWon}
         />
 
-        <StatisticsAchievements
-            user={user}
-            tournamentsWon={tournamentsWon}
-        />
-        </div>
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <MatchHistory
+              username={user.username}
+              matches={matches}
+              isLoading={isHistoryLoading}
+              errorMessage={historyError}
+          />
+
+          <StatisticsAchievements
+              user={user}
+              tournamentsWon={tournamentsWon}
+          />
+          </div>
+      </div>
+        {/* Footer Links */}
+    <div className="mt-auto flex justify-center items-center gap-4 pt-8 pb-2 text-sm text-neutral-700">
+      <Link
+        to="/terms"
+        className="hover:text-white transition-colors"
+      >
+        Terms of Service
+      </Link>
+
+      <span className="text-neutral-700">•</span>
+
+      <Link
+        to="/privacy"
+        className="hover:text-white transition-colors"
+      >
+        Privacy Policy
+      </Link>
     </div>
+  </div>
   );
 }
