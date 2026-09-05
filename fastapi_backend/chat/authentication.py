@@ -69,9 +69,7 @@ class AuthenticatedChatUser(BaseModel):
 
         now = datetime.now(timezone.utc)
 
-        return (
-            self.token_expires_at - now
-        ).total_seconds()
+        return (self.token_expires_at - now).total_seconds()
 
 
 # Restrict public authentication failures to known error codes
@@ -108,9 +106,7 @@ def _decode_token_identity(
             access_token,
             settings.jwt_secret_key,
             algorithms=[settings.jwt_algorithm],
-            options={
-                "require": ["user_id", "exp"],
-            },
+            options={"require": ["user_id", "exp"]},
         )
 
     # Convert an expired JWT into a safe public error
@@ -246,14 +242,10 @@ async def authenticate_chat_user(
     """Build the trusted chat identity from JWT and Django"""
 
     # Verify the token locally before contacting Django
-    token_user_id, token_expires_at = (
-        _decode_token_identity(access_token)
-    )
+    token_user_id, token_expires_at = _decode_token_identity(access_token)
 
     # Fetch the current trusted user data from Django
-    current_user = await _fetch_current_user(
-        access_token,
-    )
+    current_user = await _fetch_current_user(access_token)
 
     # Prevent a token from being associated with a different Django user
     if current_user.id != token_user_id:

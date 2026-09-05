@@ -47,9 +47,7 @@ async def _send_pre_auth_event(
 ) -> None:
     """Send an event before the socket enters the manager"""
 
-    await websocket.send_json(
-        event.model_dump(mode="json")
-    )
+    await websocket.send_json(event.model_dump(mode="json"))
 
 
 async def _send_pre_auth_error(
@@ -90,30 +88,22 @@ async def _receive_json_payload(
     message_type = message.get("type")
 
     if message_type == "websocket.disconnect":
-        raise WebSocketDisconnect(
-            code=message.get("code", 1000)
-        )
+        raise WebSocketDisconnect(code=message.get("code", 1000))
 
     if message_type != "websocket.receive":
-        raise ValueError(
-            "Unsupported WebSocket message type"
-        )
+        raise ValueError("Unsupported WebSocket message type")
 
     raw_text = message.get("text")
 
     # Binary frames are rejected because the protocol accepts JSON text only
     if not isinstance(raw_text, str):
-        raise ValueError(
-            "Only text WebSocket frames are supported"
-        )
+        raise ValueError("Only text WebSocket frames are supported")
 
     # Limit the raw frame before JSON parsing to avoid oversized client payloads
     raw_size = len(raw_text.encode("utf-8"))
 
     if raw_size > MAX_CLIENT_FRAME_BYTES:
-        raise ValueError(
-            "WebSocket frame is too large"
-        )
+        raise ValueError("WebSocket frame is too large")
 
     return json.loads(raw_text)
 
@@ -339,9 +329,7 @@ async def _receive_registered_payload(
 ) -> tuple[bool, object]:
     while True:
         # Limit the connection lifetime to the lifetime of the access token
-        seconds_until_expiry = (
-            authenticated_user.seconds_until_expiry()
-        )
+        seconds_until_expiry = authenticated_user.seconds_until_expiry()
 
         if seconds_until_expiry <= 0:
             await _send_registered_error(
@@ -464,9 +452,7 @@ async def _handle_registered_chat_payload(
     )
 
     # Broadcast only server-created messages to authenticated sockets
-    await global_chat_manager.broadcast(
-        message_event
-    )
+    await global_chat_manager.broadcast(message_event)
 
     return True
 
@@ -566,9 +552,7 @@ async def global_chat_socket(
     finally:
         if is_registered:
             # Cleanup always removes the socket even after errors or normal disconnects
-            await global_chat_manager.disconnect(
-                websocket
-            )
+            await global_chat_manager.disconnect(websocket)
 
             # Tell remaining clients that the logged user list changed
             await global_chat_manager.broadcast_presence()
