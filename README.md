@@ -1,14 +1,27 @@
 ***This project has been created as part
 of the 42 curriculum by hhurnik, wzielins, jkalinow, mmitkovi, hgatarek***
 
-# 42Chess
+# Chess42
 
 ## Description 
 
 Team-based, final Core Curriculum project in 42 Warsaw coding academy. Assignment is about creating single page application which transcend members more into full-stack developers. While having modular approach and key architectural decisions to make, it also demonstrates technical depth and big-picture-creativity. Our team decided to go with **web chess platform** with 1vs1, multiplayer with spectators mode, AI opponent and more.
 
 
-***!!! MORE ABOUT THE GAME - TO BE ADDED !!!***
+### 1v1 Multiplayer
+The multiplayer mode is a real-time chess arena built on WebSockets. It handles live moves, timers, and player interactions (draws, rematches, resignations) without HTTP polling.
+* **Real-Time Communication (WebSockets):** Uses a custom React hook (`useGameReconnectSocket`) to maintain a persistent connection to the backend. The server pushes JSON events (`move`, `board_state`, `draw_offer`), and the frontend updates the React state (FEN string, timers, move history) to trigger instant UI re-renders.
+* **Move Validation (`chess.js`):** Reuses the `<ChessBoard/>` component. When a player moves a piece, a local `chess.js` instance checks if the move is legal. If it is, the frontend sends the move via the WebSocket. This prevents illegal moves from ever hitting the server.
+* **Chess Clocks (`setInterval`):** Time management is handled via a 1-second interval. It checks the FEN string to see whose turn it is and ticks down their respective timer. If a clock hits 0, the client immediately sends a `claim_timeout` WebSocket payload to the server.
+* **Player Interactions:** Actions like offering a draw, resigning, or requesting a rematch send specific string payloads over the socket, triggering modal popups on the opponent's screen.
+* **Tournament Context:** The component reads the initial server payload to check if the match is part of a tournament, dynamically hiding UI elements (like the "Offer Draw" button) to enforce strict tournament rules.
+
+### Single-Player vs. AI
+The single-player mode delivers a stable, low-latency chess match against a server-side AI, that survives unexpected browser interruptions.
+* **Game Board (`chess.js`):** The visual chessboard uses the `chess.js` library to act as a real-time local referee. It instantly blocks illegal moves, highlights legal destinations/captures, and flashes a red warning on the King during check.
+* **Real-Time AI Connection:** Gameplay runs over a continuous WebSocket connection. As soon as you make a legal move, the backend engine calculates its response and instantly pushes the updated FEN string back to the UI without loading lag.
+* **Human-Like Opponent:** The interface tracks the engine's computation time, triggering a "bot thinking" visual state, and logging all moves in Standard Algebraic Notation (SAN).
+* **Session Survival:** To protect against accidental page refreshes, the app ties into browser `sessionStorage`. If reloaded mid-match, the game instantly reconnects, feeds the saved FEN string back into `chess.js`, and flawlessly restores the exact board state.
 
 ## Database scheme
 ![Application Screenshot](docs/transcendence-db-scheme.png)
@@ -31,7 +44,12 @@ To maintain strict microservice separation without overloading the host machine'
 The "central nervous system" connecting the microservices.
 Because Django and FastAPI have separate databases and run in different containers, they communicate asynchronously via Redis Pub/Sub. It also acts as an ultra-fast, in-memory queue for our matchmaking system and temporarily stores live game states to protect against sudden user disconnections.
 
-### 5. React (To be added)
+## Architecture summary and technology justification
+### 5. React (The Client-Side Application)
+The frontend is a Single Page Application (SPA) that splits network logic from visual components.
+* **Secure Authentication & Token Rotation:** An Axios network interceptor acts as a gatekeeper. It automatically injects JWT Bearer tokens into secure requests and invisibly refreshes expired sessions in the background without interrupting the user.
+* **Global State Memory:** A custom Context Provider (`AuthProvider`) holds the application's active memory, instantly broadcasting the user's login status to the navigation bar, game lobbies, and router guards.
+* **Strict Routing Guards:** Dedicated React Router wrapper components block unauthenticated users from accessing active game pages and redirect logged-in users away from redundant login screens.
 
 ## Libraries used 
 
@@ -45,7 +63,13 @@ Because Django and FastAPI have separate databases and run in different containe
 
 **SQLModel / SQLAlchemy**: To fulfill "Use an ORM" module, we used Django's built-in ORM for the Auth microservice, and SQLModel (an async SQLAlchemy wrapper) for the FastAPI microservice.
 
-### Frontend (To ba added)
+### Frontend
+**React & Vite (TypeScript):** The core framework and build tool, providing a fast, component-based UI with strict type safety.
+**Tailwind CSS:** Used for all styling, allowing for a rapid, custom dark-mode design system without bloated CSS files.
+**chess.js:** The local chess engine referee. Used client-side to instantly validate moves, calculate check states, and generate legal move hints before sending data to the server.
+**react-chessboard:** A highly customizable React wrapper for the chessboard visual interface, seamlessly integrating with `chess.js`.
+**Axios:** Handles all synchronous REST API HTTP requests, featuring custom interceptors for automatic JWT token rotation.
+**React Router:** Manages client-side navigation and route protection (`ProtectedRoute` / `PublicOnlyRoute`) to secure private game lobbies.
 
 # Instructions TO BE ADDED !!
 (software,
