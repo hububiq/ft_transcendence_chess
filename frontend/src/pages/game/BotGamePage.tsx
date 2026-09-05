@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, Bot } from "lucide-react";
 import { ChessBoard } from "../../features/gameplay/components/ChessBoard";
@@ -16,6 +16,33 @@ import { resolveMediaUrl } from "../../utils/utils";
 import { type MoveRecord, parseHistory } from "../../utils/chessHelpers";
 
 const SYSTEM_BOT_ID = null;
+
+type BotGameServerMessage =
+  | {
+      type: "board_state";
+      fen: string;
+      history: string[];
+    }
+  | {
+      type: "move";
+      fen: string;
+      san_move: string;
+    }
+  | {
+      type: "game_over";
+      result: string;
+      winner_id: number | null;
+      loser_id: number | null;
+    }
+  | {
+      type: "info";
+      message: string;
+    }
+  | {
+      type: "error";
+      message: string;
+      fen?: string;
+    };
 
 export function BotGame() {
   const [gameStarted, setGameStarted] = useState<boolean>(false);
@@ -54,8 +81,8 @@ export function BotGame() {
   };
 
   // Axios API
-  const initGame = async () => {
-    if (!user || !user.id) {
+  const initGame = useCallback(async (userId?: number) => {
+    if (!userId) {
       console.warn("Waiting for user profile to load...");
       return;
     }
@@ -70,7 +97,7 @@ export function BotGame() {
 
     try {
       const data = await createBotGame({
-        user_id: user.id,
+        user_id: userId,
       });
 
       sessionStorage.setItem("activeBotGameId", data.game_id.toString());
@@ -79,16 +106,20 @@ export function BotGame() {
     } catch (error) {
       console.error("Failed to initialize game:", error);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (user && user.id && !gameStarted && !hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      initGame();
-    }
-  }, [user]);
+    const userId = user?.id;
 
-  const handleServerMessage = (data: any) => {
+    if (!userId || hasFetchedRef.current) {
+      return;
+    }
+
+    hasFetchedRef.current = true;
+    void initGame(userId);
+  }, [user?.id, initGame]);
+
+  const handleServerMessage = (data: BotGameServerMessage) => {
     switch (data.type) {
       case "board_state":
         setCurrentFen(data.fen);
@@ -174,7 +205,7 @@ export function BotGame() {
 
     sessionStorage.removeItem("activeBotGameId");
     hasFetchedRef.current = false;
-    initGame();
+    void initGame(user?.id);
   };
 
   return (

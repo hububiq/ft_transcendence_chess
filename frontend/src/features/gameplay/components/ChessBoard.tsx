@@ -36,11 +36,7 @@ export function ChessBoard({
 
   function updateCheckState() {
     const chessGame = chessGameRef.current;
-    // Fallbacks to support different versions of chess.js
-    const isCheck =
-      typeof chessGame.isCheck === "function"
-        ? chessGame.isCheck()
-        : (chessGame as any).in_check?.();
+    const isCheck = chessGame.isCheck();
 
     if (isCheck) {
       const turn = chessGame.turn();
@@ -180,18 +176,9 @@ export function ChessBoard({
 
   function checkLocalGameOver() {
     const chessGame = chessGameRef.current;
-    const isMate =
-      typeof chessGame.isCheckmate === "function"
-        ? chessGame.isCheckmate()
-        : (chessGame as any).in_checkmate?.();
-    const isDraw =
-      typeof chessGame.isDraw === "function"
-        ? chessGame.isDraw()
-        : (chessGame as any).in_draw?.();
-    const isStalemate =
-      typeof chessGame.isStalemate === "function"
-        ? chessGame.isStalemate()
-        : (chessGame as any).in_stalemate?.();
+    const isMate = chessGame.isCheckmate();
+    const isDraw = chessGame.isDraw();
+    const isStalemate = chessGame.isStalemate();
 
     if (isMate) {
       onGameEnd("win");
