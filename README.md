@@ -78,10 +78,15 @@ The frontend is a Single Page Application (SPA) that splits network logic from v
 ### Frontend
 
 **React & Vite (TypeScript):** The core framework and build tool, providing a fast, component-based UI with strict type safety.
+
 **Tailwind CSS:** Used for all styling, allowing for a rapid, custom dark-mode design system without bloated CSS files.
+
 **chess.js:** The local chess engine referee. Used client-side to instantly validate moves, calculate check states, and generate legal move hints before sending data to the server.
+
 **react-chessboard:** A highly customizable React wrapper for the chessboard visual interface, seamlessly integrating with `chess.js`.
+
 **Axios:** Handles all synchronous REST API HTTP requests, featuring custom interceptors for automatic JWT token rotation.
+
 **React Router:** Manages client-side navigation and route protection (`ProtectedRoute` / `PublicOnlyRoute`) to secure private game lobbies.
 
 # Instructions TO BE ADDED !!
