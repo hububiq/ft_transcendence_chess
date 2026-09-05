@@ -500,6 +500,8 @@ async def global_chat_socket(
                 user,
                 AuthenticatedServerEvent(user=user),
             )
+        except ConnectionError:
+            return
 
         is_registered = True
 

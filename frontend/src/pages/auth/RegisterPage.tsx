@@ -5,6 +5,7 @@ import gitHubLogo from "../../assets/github.svg";
 import { USER_REGEX, PWD_REGEX } from "../../utils/constants";
 import { useOAuth } from "../../features/auth/hooks/useOAuth";
 import { Link } from "react-router";
+import { FloatingPawns } from "../../components/FloatingPawns";
 
 function GitHubIcon() {
   return <img width="7%" src={gitHubLogo} alt="GitHub Logo" />;
@@ -56,6 +57,7 @@ export function Register() {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
+      <FloatingPawns />
       <div className="w-full max-w-md bg-[#050505] border border-neutral-900 rounded-2xl shadow-2xl relative z-10 overflow-hidden">
         <div className="p-8">
           <div className="text-center mb-8">
