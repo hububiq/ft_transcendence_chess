@@ -26,7 +26,7 @@ from chat.schemas import (
     ServerEvent,
     parse_client_event,
 )
-from reconnect_service import (
+from game.reconnect_service import (
     get_reconnect_pending_events_for_user,
 )
 

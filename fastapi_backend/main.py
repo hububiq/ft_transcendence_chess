@@ -6,26 +6,26 @@ from config import settings
 from server import manager
 from redis_client import get_redis
 from ai_engine import compute_best_move
-from matchmaking import matchmaking_loop
+from game.matchmaking import matchmaking_loop
 import asyncio
 import json
 import io
 import chess
 from database import init_db
 from models import Game, Tournament
-from game_service import handle_game_over, handle_timeout_claim, handle_player_move
-from game_service import handle_player_move
-from game_service import MULTIPLAYER_CLOCK_SECONDS
+from game.game_service import handle_game_over, handle_timeout_claim, handle_player_move
+from game.game_service import handle_player_move
+from game.game_service import MULTIPLAYER_CLOCK_SECONDS
 from api.history import router as history_router
 from api.statistics_history import router as statistics_history_router
 from tournament.tournaments import router as tournaments_router
 from api.games import router as games_router
-from garbage_games_collector import clean_dead_games
+from game.garbage_games_collector import clean_dead_games
 from database import async_session
 from chat.router import router as chat_router
 from chat.friendship_events import listen_for_friendship_events
 from chat.user_identity_events import listen_for_user_identity_events
-from reconnect_service import (
+from game.reconnect_service import (
     reconnect_deadline_worker,
     register_game_connection,
     unregister_game_connection,
