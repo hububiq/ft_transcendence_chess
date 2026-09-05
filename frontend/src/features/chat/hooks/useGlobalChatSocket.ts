@@ -110,6 +110,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     }
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     // No authenticated application user means no chat connection
     if (!userId) {
@@ -572,15 +573,30 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
       socketRef.current = null;
 
       if (socket) {
-        // Detach handlers so cleanup cannot trigger another reconnect attempt
-        socket.onopen = null;
+        // Prevent stale socket events from reaching the old connection lifecycle
         socket.onmessage = null;
         socket.onerror = null;
         socket.onclose = null;
-        socket.close(
-          1000,
-          "Component unmounted or user logged out",
-        );
+
+        if (socket.readyState === WebSocket.CONNECTING) {
+          // A connecting WebSocket cannot be closed cleanly without a browser warning
+          socket.onopen = () => {
+            socket.onopen = null;
+            socket.close(
+              1000,
+              "Component unmounted or user logged out",
+            );
+          };
+        } else {
+          socket.onopen = null;
+
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.close(
+              1000,
+              "Component unmounted or user logged out",
+            );
+          }
+        }
       }
     };
   }, [
@@ -589,6 +605,7 @@ export function useGlobalChatSocket(): UseGlobalChatSocketResult {
     socketUrlResult.url,
     userId,
   ]);
+   /* eslint-enable react-hooks/set-state-in-effect */
 
   const sendMessage = useCallback(
     (rawText: string): SendChatMessageResult => {
