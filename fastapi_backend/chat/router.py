@@ -26,7 +26,7 @@ from chat.schemas import (
     ServerEvent,
     parse_client_event,
 )
-from reconnect_service import (
+from game.reconnect_service import (
     get_reconnect_pending_events_for_user,
 )
 
@@ -47,9 +47,7 @@ async def _send_pre_auth_event(
 ) -> None:
     """Send an event before the socket enters the manager"""
 
-    await websocket.send_json(
-        event.model_dump(mode="json")
-    )
+    await websocket.send_json(event.model_dump(mode="json"))
 
 
 async def _send_pre_auth_error(
@@ -90,30 +88,22 @@ async def _receive_json_payload(
     message_type = message.get("type")
 
     if message_type == "websocket.disconnect":
-        raise WebSocketDisconnect(
-            code=message.get("code", 1000)
-        )
+        raise WebSocketDisconnect(code=message.get("code", 1000))
 
     if message_type != "websocket.receive":
-        raise ValueError(
-            "Unsupported WebSocket message type"
-        )
+        raise ValueError("Unsupported WebSocket message type")
 
     raw_text = message.get("text")
 
     # Binary frames are rejected because the protocol accepts JSON text only
     if not isinstance(raw_text, str):
-        raise ValueError(
-            "Only text WebSocket frames are supported"
-        )
+        raise ValueError("Only text WebSocket frames are supported")
 
     # Limit the raw frame before JSON parsing to avoid oversized client payloads
     raw_size = len(raw_text.encode("utf-8"))
 
     if raw_size > MAX_CLIENT_FRAME_BYTES:
-        raise ValueError(
-            "WebSocket frame is too large"
-        )
+        raise ValueError("WebSocket frame is too large")
 
     return json.loads(raw_text)
 
@@ -163,11 +153,9 @@ def _validation_error_event(
     )
 
 
-async def _authenticate_connection(
+async def _receive_authentication_payload(
     websocket: WebSocket,
-) -> AuthenticatedChatUser | None:
-    """Require authentication as the first client event"""
-
+) -> tuple[bool, object]:
     # The first frame must arrive within the authentication timeout
     try:
         payload = await asyncio.wait_for(
@@ -184,7 +172,7 @@ async def _authenticate_connection(
             websocket,
             POLICY_VIOLATION_CLOSE_CODE,
         )
-        return None
+        return False, None
     except json.JSONDecodeError:
         await _send_pre_auth_error(
             websocket,
@@ -195,7 +183,7 @@ async def _authenticate_connection(
             websocket,
             POLICY_VIOLATION_CLOSE_CODE,
         )
-        return None
+        return False, None
     except ValueError:
         await _send_pre_auth_error(
             websocket,
@@ -206,8 +194,15 @@ async def _authenticate_connection(
             websocket,
             POLICY_VIOLATION_CLOSE_CODE,
         )
-        return None
+        return False, None
 
+    return True, payload
+
+
+async def _parse_authentication_event(
+    websocket: WebSocket,
+    payload: object,
+) -> AuthenticateClientEvent | None:
     try:
         event = parse_client_event(payload)
     except ValidationError:
@@ -217,9 +212,7 @@ async def _authenticate_connection(
             error_message = "Authentication is invalid"
         else:
             error_code = "AUTH_REQUIRED"
-            error_message = (
-                "Authentication must be the first event"
-            )
+            error_message = "Authentication must be the first event"
 
         await _send_pre_auth_error(
             websocket,
@@ -243,6 +236,27 @@ async def _authenticate_connection(
             websocket,
             POLICY_VIOLATION_CLOSE_CODE,
         )
+        return None
+
+    return event
+
+
+async def _authenticate_connection(
+    websocket: WebSocket,
+) -> AuthenticatedChatUser | None:
+    """Require authentication as the first client event"""
+
+    has_payload, payload = await _receive_authentication_payload(websocket)
+
+    if not has_payload:
+        return None
+
+    event = await _parse_authentication_event(
+        websocket,
+        payload,
+    )
+
+    if event is None:
         return None
 
     try:
@@ -287,6 +301,162 @@ async def _send_registered_error(
     )
 
 
+async def _restore_pending_reconnect_events(
+    websocket: WebSocket,
+    user_id: int,
+) -> bool:
+    pending_reconnect_events = (
+        await get_reconnect_pending_events_for_user(
+            user_id,
+        )
+    )
+
+    for pending_event in pending_reconnect_events:
+        was_sent = await global_chat_manager.send_to(
+            websocket,
+            pending_event,
+        )
+
+        if not was_sent:
+            return False
+
+    return True
+
+
+async def _receive_registered_payload(
+    websocket: WebSocket,
+    authenticated_user: AuthenticatedChatUser,
+) -> tuple[bool, object]:
+    while True:
+        # Limit the connection lifetime to the lifetime of the access token
+        seconds_until_expiry = authenticated_user.seconds_until_expiry()
+
+        if seconds_until_expiry <= 0:
+            await _send_registered_error(
+                websocket,
+                code="AUTH_EXPIRED",
+                message="Authentication has expired",
+            )
+            await _close_safely(
+                websocket,
+                POLICY_VIOLATION_CLOSE_CODE,
+            )
+            return False, None
+
+        try:
+            # Waiting only until token expiry prevents stale authenticated sockets
+            payload = await asyncio.wait_for(
+                _receive_json_payload(websocket),
+                timeout=seconds_until_expiry,
+            )
+        except asyncio.TimeoutError:
+            await _send_registered_error(
+                websocket,
+                code="AUTH_EXPIRED",
+                message="Authentication has expired",
+            )
+            await _close_safely(
+                websocket,
+                POLICY_VIOLATION_CLOSE_CODE,
+            )
+            return False, None
+        except json.JSONDecodeError:
+            was_sent = await _send_registered_error(
+                websocket,
+                code="INVALID_JSON",
+                message="Invalid JSON payload",
+            )
+
+            if not was_sent:
+                return False, None
+
+            continue
+        except ValueError:
+            was_sent = await _send_registered_error(
+                websocket,
+                code="INVALID_EVENT",
+                message="Unsupported or invalid chat event",
+            )
+
+            if not was_sent:
+                return False, None
+
+            continue
+
+        # Check expiry again because the token may expire while data arrives
+        if authenticated_user.seconds_until_expiry() <= 0:
+            await _send_registered_error(
+                websocket,
+                code="AUTH_EXPIRED",
+                message="Authentication has expired",
+            )
+            await _close_safely(
+                websocket,
+                POLICY_VIOLATION_CLOSE_CODE,
+            )
+            return False, None
+
+        return True, payload
+
+
+async def _handle_registered_chat_payload(
+    websocket: WebSocket,
+    authenticated_user: AuthenticatedChatUser,
+    payload: object,
+) -> bool:
+    user = authenticated_user.author
+
+    try:
+        # Validate every decoded payload against the shared client event schema
+        event = parse_client_event(payload)
+    except ValidationError as error:
+        return await global_chat_manager.send_to(
+            websocket,
+            _validation_error_event(error),
+        )
+
+    # Authentication is allowed only once at the beginning of the connection
+    if isinstance(event, AuthenticateClientEvent):
+        return await _send_registered_error(
+            websocket,
+            code="INVALID_EVENT",
+            message="Connection is already authenticated",
+        )
+
+    # The basic global chat accepts only validated message events after auth
+    if not isinstance(event, SendMessageClientEvent):
+        return await _send_registered_error(
+            websocket,
+            code="INVALID_EVENT",
+            message="Unsupported or invalid chat event",
+        )
+
+    # Rate limiting is keyed by the authenticated backend user identifier
+    is_allowed = await global_chat_rate_limiter.allow(
+        user.id
+    )
+
+    if not is_allowed:
+        return await _send_registered_error(
+            websocket,
+            code="RATE_LIMITED",
+            message="You are sending messages too quickly",
+        )
+
+    # The server assigns message identity author and timestamp
+    message_event = ChatMessageServerEvent(
+        message_id=uuid4(),
+        author=user,
+        text=event.text,
+        sent_at=datetime.now(timezone.utc),
+    )
+
+    # Broadcast only server-created messages to authenticated sockets
+    await global_chat_manager.broadcast(message_event)
+
+    return True
+
+
 @router.websocket("/ws/chat")
 async def global_chat_socket(
     websocket: WebSocket,
@@ -325,174 +495,31 @@ async def global_chat_socket(
         await global_chat_manager.broadcast_presence()
 
         # Restore an active reconnect countdown after the application socket reconnects
-        pending_reconnect_events = (
-            await get_reconnect_pending_events_for_user(
-                user.id,
-            )
+        reconnect_events_restored = await _restore_pending_reconnect_events(
+            websocket,
+            user.id,
         )
 
-        for pending_event in pending_reconnect_events:
-            was_sent = await global_chat_manager.send_to(
-                websocket,
-                pending_event,
-            )
-
-            if not was_sent:
-                return
+        if not reconnect_events_restored:
+            return
 
         while True:
-            # Limit the connection lifetime to the lifetime of the access token
-            seconds_until_expiry = (
-                authenticated_user.seconds_until_expiry()
+            has_payload, payload = await _receive_registered_payload(
+                websocket,
+                authenticated_user,
             )
 
-            if seconds_until_expiry <= 0:
-                await _send_registered_error(
-                    websocket,
-                    code="AUTH_EXPIRED",
-                    message="Authentication has expired",
-                )
-                await _close_safely(
-                    websocket,
-                    POLICY_VIOLATION_CLOSE_CODE,
-                )
+            if not has_payload:
                 return
 
-            try:
-                # Waiting only until token expiry prevents stale authenticated sockets
-                payload = await asyncio.wait_for(
-                    _receive_json_payload(websocket),
-                    timeout=seconds_until_expiry,
-                )
-            except asyncio.TimeoutError:
-                await _send_registered_error(
-                    websocket,
-                    code="AUTH_EXPIRED",
-                    message="Authentication has expired",
-                )
-                await _close_safely(
-                    websocket,
-                    POLICY_VIOLATION_CLOSE_CODE,
-                )
+            handled = await _handle_registered_chat_payload(
+                websocket,
+                authenticated_user,
+                payload,
+            )
+
+            if not handled:
                 return
-            except json.JSONDecodeError:
-                was_sent = await _send_registered_error(
-                    websocket,
-                    code="INVALID_JSON",
-                    message="Invalid JSON payload",
-                )
-
-                if not was_sent:
-                    return
-
-                continue
-            except ValueError:
-                was_sent = await _send_registered_error(
-                    websocket,
-                    code="INVALID_EVENT",
-                    message=(
-                        "Unsupported or invalid chat event"
-                    ),
-                )
-
-                if not was_sent:
-                    return
-
-                continue
-
-            # Check expiry again after receiving because the token may expire while data arrives
-            if (
-                authenticated_user.seconds_until_expiry()
-                <= 0
-            ):
-                await _send_registered_error(
-                    websocket,
-                    code="AUTH_EXPIRED",
-                    message="Authentication has expired",
-                )
-                await _close_safely(
-                    websocket,
-                    POLICY_VIOLATION_CLOSE_CODE,
-                )
-                return
-
-            try:
-                # Validate every decoded payload against the shared client event schema
-                event = parse_client_event(payload)
-            except ValidationError as error:
-                was_sent = await global_chat_manager.send_to(
-                    websocket,
-                    _validation_error_event(error),
-                )
-
-                if not was_sent:
-                    return
-
-                continue
-
-            # Authentication is allowed only once at the beginning of the connection
-            if isinstance(event, AuthenticateClientEvent):
-                was_sent = await _send_registered_error(
-                    websocket,
-                    code="INVALID_EVENT",
-                    message=(
-                        "Connection is already authenticated"
-                    ),
-                )
-
-                if not was_sent:
-                    return
-
-                continue
-
-            # The basic global chat accepts only validated message events after auth
-            if not isinstance(event, SendMessageClientEvent):
-                was_sent = await _send_registered_error(
-                    websocket,
-                    code="INVALID_EVENT",
-                    message=(
-                        "Unsupported or invalid chat event"
-                    ),
-                )
-
-                if not was_sent:
-                    return
-
-                continue
-
-            # Rate limiting is keyed by the authenticated backend user identifier
-            is_allowed = (
-                await global_chat_rate_limiter.allow(
-                    user.id
-                )
-            )
-
-            if not is_allowed:
-                was_sent = await _send_registered_error(
-                    websocket,
-                    code="RATE_LIMITED",
-                    message=(
-                        "You are sending messages too quickly"
-                    ),
-                )
-
-                if not was_sent:
-                    return
-
-                continue
-
-            # The server assigns message identity author and timestamp
-            message_event = ChatMessageServerEvent(
-                message_id=uuid4(),
-                author=user,
-                text=event.text,
-                sent_at=datetime.now(timezone.utc),
-            )
-
-            # Broadcast only server-created messages to authenticated sockets
-            await global_chat_manager.broadcast(
-                message_event
-            )
 
     except WebSocketDisconnect:
         return
@@ -525,9 +552,7 @@ async def global_chat_socket(
     finally:
         if is_registered:
             # Cleanup always removes the socket even after errors or normal disconnects
-            await global_chat_manager.disconnect(
-                websocket
-            )
+            await global_chat_manager.disconnect(websocket)
 
             # Tell remaining clients that the logged user list changed
             await global_chat_manager.broadcast_presence()
