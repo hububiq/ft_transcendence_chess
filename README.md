@@ -1,11 +1,10 @@
 **_This project has been created as part
 of the 42 curriculum by hhurnik, wzielins, jkalinow, mmitkovi, hgatarek_**
 
-# Chess42
 
 # Description
 
-Team-based, final Core Curriculum project in 42 Warsaw coding academy. Assignment was about creating single page application which transcend members more into full-stack developers. While having modular approach and key architectural decisions to make, it also demonstrates technical depth and big-picture-creativity. Our team decided to go with **web chess platform** with 1vs1, multiplayer with spectators mode, AI opponent and more. We attempted to build enterprise-grade, easy scalable architecture with the code as robust and clean as we possibly could develop.
+Team-based, final Core Curriculum project in 42 Warsaw coding academy. Assignment was about creating single page application which transcend members more into full-stack developers. While having modular approach and key architectural decisions to make, it also demonstrates technical depth and big-picture-creativity. Our team decided to go with **web chess platform - Chess42** with 1vs1, multiplayer with spectators mode, AI opponent and more. We attempted to build enterprise-grade, easy scalable architecture with the code as robust and clean as we possibly could develop.
 
 ### 1v1 Multiplayer
 
@@ -120,7 +119,7 @@ The frontend is a Single Page Application (SPA) that splits network logic from v
 
 - python-dotenv: A lightweight tool that reads key-value pairs from a .env file and loads them into the system environment. This works seamlessly with Pydantic in FastAPI to ensure our application secrets are safely loaded into memory without hardcoding them.
 
-# Instruction
+# Instructions
 
 **Prerequisites**
 
@@ -166,7 +165,7 @@ make
 - FastAPI Docs (Game Engine Swagger API): http://localhost:8001/docs
 
 
-# How to test Remore Multiplayer (LAN)
+# How to test Remote Multiplayer (LAN)
 
 To satisfy the Remote Players major module, two players on the same network can play together.
 - Find the Host IP: On the machine running Docker, find the local IP address (hostname -I command).
@@ -200,18 +199,46 @@ run the project
 
 # Roles
 
+While our team maintained designated roles to ensure project structure and accountability, the Agile nature of our workflow meant that roles were highly collaborative and fluid. All team members acted as Developers, actively writing code, reviewing pull requests, and implementing core modules.
+
+*Overview*:
+
 **Product Owner** (PO) Milos (mmitkovi)
 
 **Project Manager** (PM)  Hubert, (hgatarek)
 
 **Technical Lead / Architect**: Hubert, Mios
 
-**Developers** - Honorata, Weronika, Jacek (hhurnik, wzielins, jkalinow)
+**Developers** - Honorata, Weronika, Jacek, Milos, Hubert (hhurnik, wzielins, jkalinow, hgatarek, mmitkovi)
 
-Roles were rather fluid, with Honorata doing remarkable job in every role, at the end of the project becoming full Technical Lead.
+**Milos (mmitkovi)**
+
+Role: Product Owner (PO), Technical Lead (Frontend), Developer
+Responsibilities: Defined the overarching product vision and prioritized features to ensure we met the strict grading rubric. As the Frontend Tech Lead, Milos architected the React/Vite Single Page Application, built the custom design system (Tailwind/shadcn), managed the complex React state hooks, and seamlessly integrated the frontend with our WebSocket and REST API endpoints.
+
+**Hubert (hgatarek)**
+
+Role: Project Manager (PM), Technical Lead (Backend & Architecture), Developer
+Responsibilities: Facilitated team coordination, managed the GitHub workflow (including the CI pipeline), and removed developmental blockers. Architected the loosely-coupled microservice infrastructure (Docker, Postgres, Redis, Django, FastAPI). Handled backend database engineering, stateless JWT security implementation, and developed the Minimax AI Chess Engine.
+
+**Honorata (hhurnik)**
+
+Role: from Developer to Technical Lead
+Responsibilities: Started the project as a core Full-Stack Developer, but due to exceptional adaptability, deep technical understanding, and rigorous code reviews, organically transitioned into a full Technical Lead by the end of the project. She played a remarkable role across all stacks, jumping between frontend and backend to debug complex network state issues and ensure the final codebase was rock-solid.
+
+**Weronika (wzielins)**
+
+Role: Developer
+Responsibilities: Contributed to the development of core application features and modules. Responsible for writing, testing, and debugging functional code, ensuring that user inputs were properly validated, avatar is visible, and collaborating with the Tech Leads to integrate feature branches smoothly into the main application.
+
+**Jacek (jkalinow)**
+
+Role: Developer
+Responsibilities: Especially devoted to FastAPI backend and Tournament system. Focused on module implementation and feature development. Responsibilities included writing robust backend/frontend logic, participating in peer code reviews, optimizing database interactions, and ensuring the application maintained high performance during concurrent real-time gameplay.
 
 # Project Management
 ### Tools & Workflow
+- Google Docs (Knowledge Base & Architecture): Before writing any code, we established a centralized Google Docs workspace. This served as our living "Single Source of Truth" and extended documentation hub. We used it to collaboratively draft our preliminary technology propositions, map out database scheme and document exact API JSON contracts.
 - GitHub Issues (Task Tracking): We used GitHub Issues as our central vision board. Every feature, bug, and module from the 42 subject was translated into a dedicated Issue, tagged by category (Frontend, Backend, DevOps, AI), and assigned to specific team members to ensure total accountability.
 = Branching Strategy: We utilized a strict Feature-Branch workflow. Developers worked on isolated branches (e.g., feat/user-management-django, fix/websocket-reconnect). We used conventional commits methodology.
 - Code Reviews & Pull Requests: Code was never pushed directly to main. Every feature required a Pull Request (PR) and a code review to ensure that API contracts between the React frontend and the Python microservices were respected before merging.
@@ -227,17 +254,84 @@ Frontend (React/Vite): Focused on UI/UX, state management, WebSocket integration
 - Backend & DevOps (Django/FastAPI/Docker): Focused on container orchestration, database schema design, REST API routing, JWT security, and implementing the Minimax chess AI.
 - API Contracts: Whenever a new feature was planned (like Matchmaking or Tournaments), the Frontend and Backend leads would first agree on the exact JSON payload and HTTP/WebSocket endpoints, allowing both sides to develop their halves simultaneously.
 
-# Features List
+# Key features List
+
+Our application is a feature-rich, real-time chess platform. Below is a breakdown of the core functionalities implemented to satisfy the project modules:
+1. Secure User Authentication & OAuth 2.0 (Implemented by: hgatarek, mmitkovi, wzielins, hhurnik)
+Functionality: Users can register via standard Email/Password (secured with PBKDF2 password hashing and strict regex validation) or seamlessly log in using GitHub OAuth. The system issues mathematically secure JWT (JSON Web Tokens) to manage user sessions completely statelessly across our microservices.
+2. Dynamic User Profiles & Statistics (Implemented by: hhurnik, mmitkovi, hgatarek)
+Functionality: Each user has a dedicated profile tracking their ELO rating, peak rating, win/loss/draw ratios, and current win streak. Users can update their bio, location, and seamlessly upload custom avatar images (processed securely via Pillow) or fallback to their GitHub avatars.
+3. Real-Time 1v1 Multiplayer Chess (Implemented by: hgatarek)
+Functionality: The core game engine. Players are connected via lightning-fast FastAPI WebSockets. The server acts as a strict referee using python-chess to validate all moves, calculate checks/checkmates, and manage the chess clocks. It features Disconnect Safety: live game states (FEN strings) are cached in Redis, allowing players to refresh their browsers or drop WiFi and instantly resume their game without losing progress.
+4. AI Opponent (The Chess Bot) (Implemented by: hgatarek)
+Functionality: Users can instantly challenge a server-side AI. The "Brain" is a custom-built, recursive Minimax algorithm featuring Alpha-Beta pruning to heavily optimize CPU usage. It utilizes positional heuristics (prioritizing center-board control) to simulate challenging, human-like gameplay at a calculated depth.
+5. Real-Time Matchmaking Lobby (Implemented by: hgatarek)
+Functionality: A fast, event-driven queue system. Players sit in a WebSocket lobby and are pushed into a Redis queue. A continuous background worker evaluates the queue, securely pairs available players, creates the database match, and broadcasts a redirect signal to teleport players onto the active chessboard.
+6. Automated Tournament Engine (Implemented by: jkalinow, hgatarek, mmitkovi)
+Functionality: Supports dynamic 4-to-8 player tournaments. The creator can force-start the bracket once minimum capacity is reached. The engine mathematically handles "Byes" (free advances for uneven brackets) and is entirely event-driven—the exact second a match ends, the server evaluates the bracket, builds the next round, and invites the surviving players. Eliminated players are safely transitioned into a live Spectator Mode.
+7. Social Hub & Global Chat (Implemented by: hhurnik)
+Functionality: A persistent friends system allowing users to add/remove friends and track their live online status (indicated by a green UI dot). It also features a real-time Global Chat room powered by WebSockets and Redis Pub/Sub, bridging communication between all users currently browsing the application.
+8. Advanced Game Statistics & Match History (Implemented by: hhurnik)
+Functionality: Beyond basic profiles, the system provides a comprehensive, visual analytics dashboard for every user.
+
+8a) Match History: The backend securely generates and stores standard PGN (Portable Game Notation) strings for every completed game. The frontend fetches this data to display a detaied ledger of past matches, including dates, specific opponents, and exact ELO changes.
+
+8b) Player Analytics & Progression: The system tracks deep player statistics including total games played, distinct win/loss/draw ratios, ongoing win streaks, and all-time peak ratings. It also features a gamified achievements system to visually reward player progression and milestones.
 
 # Individual Contributions
 
-# known limitations
-test are not developed enough
+# Known limitations
+
+The following edge cases and limitations have been identified:
+
+### Tournaments & Matchmaking
+* **Lobby State Desynchronization (Multi-session testing):** 
+  - Rejoining a tournament bracket after leaving prior to tournament start can occasionally cause state desync—especially when testing with multiple browser windows/profiles. In this state, the UI may mark the tournament as ongoing, list the user with a generic fallback name (e.g., `Player 5`), and prevent the user from properly joining or leaving.
+* **Host & Participant Disconnections:** 
+  - If the tournament host closes their browser tab unexpectedly, participants currently remain locked in the bracket without automatic cancellation or return to the lobby.
+  - If a player disconnects abruptly, their slot remains visible in the bracket rather than forfeiting automatically.
+  - Deleting a tournament as a host does not  notify joined participants
+* **Bracket Bye Allocation:** 
+  - With non-standard player counts (e.g., 5 players in an 8-slot bracket), the current bracket generation assigns an unbalanced bye, allowing the 5th player to advance directly to the finals without playing intermediate rounds.
+
+### Chat & Persistence
+* **Lack of Message Persistence:** 
+  * Chat messages are stored entirely in memory. Navigating away from the chat interface, entering a chess match, or refreshing the page will clear the message history.
+* **In-Game Chat:** 
+  * Chat is not currently integrated into the active chess match screen.
+
+### UI / UX Glitches
+* **Avatar Update Delay:** 
+  * Updating a profile avatar does not instantly update the bottom-left profile component reactively; it requires a page refresh.
+* **Draw Notification UI:** 
+  * Draw request notifications rely on a fallback alert library rather than the custom, polished modal components used for rematch requests.
+* **Banner Flickering:** 
+  * A periodic UI re-render causes a red status banner to flicker at regular intervals
+
+###  Automated Testing
+* **Limited Test Coverage:** 
+  * The automated test suite (unit, integration, no end-to-end tests) is in an early stage and does not fully cover complex edge cases, such as asynchronous WebSocket race conditions, abrupt user disconnections, and dynamic bracket generation.
 
 # AI usage
 
-# anything-else section
-maybe some trello or some more from Agile development would be nice to use not only github issues
+In accordance with the 42 Network AI guidelines, Artificial Intelligence (LLMs) was utilized strictly as an educational tool, pair-programming assistant, and debugging partner. No code was blindly generated or integrated without full team comprehension. 
+
+Specific areas where AI assisted our workflow:
+*   **Systems Architecture:** Used as a sounding board to debate the pros and cons of monolithic (Django Channels) vs. microservice (Django + FastAPI + Redis) designs, helping us finalize our Database-per-Service boundaries.
+*   **Complex Debugging:** Assisted in translating obscure backend traceback logs (e.g., PostgreSQL volume permission locks, ASGI Event Loop crashes) and identifying asynchronous race conditions between React's state management and FastAPI's WebSockets.
+*   **Boilerplate Generation:** Utilized to speed up typing repetitive boilerplate, such as generic Tailwind CSS styling and basic Python Pydantic models. 
+
+# Lessons Learned & Possible Improvements
+Building a decoupled, real-time microservice architecture from scratch was an incredible challenge. If we were to continue developing this platform, or applying these lessons to future enterprise projects, here is what we would refine:
+- Project Management & Agile Tooling
+
+While GitHub Issues served as a great baseline for tracking our sprint tasks, it occasionally lacked the visual "flow" needed for rapid, daily Agile development. In retrospect, adopting a dedicated, Agile-friendly Kanban tool like Trello or Jira would have provided better visibility into pipeline bottlenecks (e.g., seeing exactly which backend endpoint the frontend was currently waiting on).
+- Advancing the Matchmaking AI
+
+Our current matchmaking queue is a highly efficient "First-Come, First-Serve" system. Given more time, we would implement the Scikit-Learn Machine Learning module we originally researched. By clustering users based on their historical metadata (e.g., ELO rating, average game length, aggressive vs. defensive openings), we could route players into dynamic, skill-based Redis queues for hyper-personalized matchmaking.
+- Scaling the WebSocket Layer
+
+We successfully utilized Redis Pub/Sub to act as a message broker between Django and FastAPI. If the application needed to scale to handle 10,000+ concurrent chess matches, our architecture is already perfectly positioned to spin up multiple FastAPI containers behind a load balancer. Redis would effortlessly broadcast game states and chat messages across all distributed worker nodes, proving the true power of stateless microservice design.
 
 
 
@@ -314,3 +408,9 @@ Implementation: Project follows strictly unified rules for UI:
 
 1. Card Family: Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
 2. Dialog Family: Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
+
+# License
+
+This project is licensed under the **MIT License**. You are free to use, modify, and distribute this software, provided that the original copyright notice and permission notice are included in all copies or substantial portions of the software. 
+
+See the [LICENSE](LICENSE) file for more details.
