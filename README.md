@@ -322,7 +322,6 @@ Functionality: Beyond basic profiles, the system provides a comprehensive, visua
 
 8b) Player Analytics & Progression: The system tracks deep player statistics including total games played, distinct win/loss/draw ratios, ongoing win streaks, and all-time peak ratings. It also features a gamified achievements system to visually reward player progression and milestones.
 
-# Individual Contributions
 
 # Known limitations
 
@@ -355,6 +354,9 @@ The following edge cases and limitations have been identified:
 ###  Automated Testing
 * **Limited Test Coverage:** 
   * The automated test suite (unit, integration, no end-to-end tests) is in an early stage and does not fully cover complex edge cases, such as asynchronous WebSocket race conditions, abrupt user disconnections, and dynamic bracket generation.
+
+
+# Individual Contributions
 
 **wzielins**
 
@@ -419,9 +421,6 @@ The following edge cases and limitations have been identified:
 
     - Modularized the FastAPI backend by reorganizing game and tournament code into domain packages and decomposing large handlers such as game_socket(), handle_game_over() and global_chat_socket() into smaller, focused helpers without changing their overall lifecycle responsibilities.
     - Cleaned up frontend and backend code by resolving TypeScript, ESLint and build errors, improving explicit typing and React hook/lifecycle handling, removing dead or duplicated code, correcting imports and file structure, and fixing asynchronous startup task initialization.
-
-# known limitations
-test are not developed enough
 
 # AI usage
 
