@@ -158,10 +158,10 @@ We have automated the database migrations and OAuth injections into a single com
 ```
 make
 ```
-
+mozl
 5. Access the platform 
-- Frontend (Play the Game): http://localhost:3000
-- Django Admin (Manage Users): http://localhost:8000/admin/
+- Frontend (Play the Game): http://localhost (or your Host IP for LAN)
+- Django Admin (Manage Users): http://localhost/admin/
 - FastAPI Docs (Game Engine Swagger API): http://localhost:8001/docs
 
 
@@ -189,11 +189,6 @@ app.add_middleware(
 - Rebuild the Frontend Container: Run docker-compose up -d --build frontend to bake the new IP into the React code.
 - Play. The second player simply opens their web browser, navigates to http://<Host-IP>:3000, logs in, and clicks "Find Match" at the same time as the host!
 
-
-
-(software,
-tools, versions, configuration like .env setup, etc.), and step-by-step instructions to
-run the project
 
 # Resources
 Django Documentation - https://docs.djangoproject.com/en/6.1/
