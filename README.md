@@ -268,7 +268,7 @@ Responsibilities: Facilitated team coordination, managed the GitHub workflow (in
 **Honorata (hhurnik)**
 
 Role: from Developer to Technical Lead
-Responsibilities: Started the project as a core Full-Stack Developer, but due to exceptional adaptability, deep technical understanding, and rigorous code reviews, organically transitioned into a full Technical Lead by the end of the project. She played a remarkable role across all stacks, jumping between frontend and backend to debug complex network state issues and ensure the final codebase was rock-solid.
+Responsibilities: Started the project as a core Full-Stack Developer, but due to her adaptability and rigorous code reviews, she organically transitioned into a full Technical Lead by the end of the project. She played a role across all stacks, jumping between frontend and backend to debug complex network state issues and ensure the final codebase was rock-solid.
 
 **Weronika (wzielins)**
 
