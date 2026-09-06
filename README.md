@@ -443,6 +443,10 @@ Our current matchmaking queue is a highly efficient "First-Come, First-Serve" sy
 
 We successfully utilized Redis Pub/Sub to act as a message broker between Django and FastAPI. If the application needed to scale to handle 10,000+ concurrent chess matches, our architecture is already perfectly positioned to spin up multiple FastAPI containers behind a load balancer. Redis would effortlessly broadcast game states and chat messages across all distributed worker nodes, proving the true power of stateless microservice design.
 
+- Separating development and production branch
+
+As we look at things from the finished project's perspective, it would be wiser to separate concerns by only merging into designated sandbox branch first, and after that deploying to production branch - completely clean, safe  and ready code. This is great that we figured it out eventually, it makes us think more as a senior-level programmer and use enterprise native way of deploying.
+
 
 
 # Modules (total 21pts)
