@@ -76,17 +76,17 @@ function AchievementCard({
 }: {
   achievement: Achievement;
 }) {
-  const hasProgress =
-    achievement.current !== null;
+  const current = achievement.current;
+  const hasProgress = current !== null;
 
   const isCompleted =
     hasProgress &&
-    achievement.current >= achievement.target;
+    current >= achievement.target;
 
   const progress =
     hasProgress
       ? getProgressPercent(
-          achievement.current,
+          current,
           achievement.target,
         )
       : 0;
@@ -94,7 +94,7 @@ function AchievementCard({
   const displayedProgress =
     hasProgress
       ? Math.min(
-          achievement.current,
+          current,
           achievement.target,
         )
       : null;

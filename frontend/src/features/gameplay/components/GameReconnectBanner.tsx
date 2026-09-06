@@ -29,37 +29,35 @@ export function GameReconnectBanner() {
     gameReconnectEvent,
   } = useGlobalChat();
 
-  const [isVisible, setIsVisible] =
-    useState(false);
+  const [dismissedEvent, setDismissedEvent] =
+    useState<typeof gameReconnectEvent>(null);
+
+  const isVisible =
+    gameReconnectEvent !== null &&
+    dismissedEvent !== gameReconnectEvent;
   const [
     remainingSeconds,
     setRemainingSeconds,
   ] = useState(0);
 
   useEffect(() => {
-    if (!gameReconnectEvent) {
-      setIsVisible(false);
-      return;
-    }
-
-    setIsVisible(true);
-
     if (
-      gameReconnectEvent.type ===
-      "game_reconnect_pending"
+      !gameReconnectEvent ||
+      gameReconnectEvent.type === "game_reconnect_pending"
     ) {
       return;
     }
 
+    const eventToDismiss = gameReconnectEvent;
+
     const duration =
-      gameReconnectEvent.type ===
-      "game_reconnected"
+      gameReconnectEvent.type === "game_reconnected"
         ? RECONNECTED_MESSAGE_DURATION_MS
         : RESULT_MESSAGE_DURATION_MS;
 
     const timer = window.setTimeout(
       () => {
-        setIsVisible(false);
+        setDismissedEvent(eventToDismiss);
       },
       duration,
     );

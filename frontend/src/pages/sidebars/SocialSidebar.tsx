@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { MessageSquare, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { GlobalChatPanel } from "../../features/chat/components/GlobalChatPanel";
 import { useGlobalChat } from "../../features/chat/context/GlobalChatProvider";
@@ -20,40 +20,37 @@ export function SocialSidebar() {
     friendshipChangeRevision,
   } = useGlobalChat();
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  //const isFirstRender = useRef(true); // Prevents the toast from popping up on initial page load
-  const lastFriendshipChangeRevisionRef =
-    useRef(friendshipChangeRevision);
+  const [
+    dismissedFriendshipChangeRevision,
+    setDismissedFriendshipChangeRevision,
+  ] = useState(friendshipChangeRevision);
+
+  const shouldShowFriendshipToast =
+    friendshipChangeRevision !== 0 &&
+    friendshipChangeRevision !== dismissedFriendshipChangeRevision;
+
+  const toastMessage = shouldShowFriendshipToast
+    ? "Your friends list has been updated!"
+    : null;
 
   useEffect(() => {
-    if (
-      friendshipChangeRevision ===
-      lastFriendshipChangeRevisionRef.current
-    ) {
+    if (!shouldShowFriendshipToast) {
       return;
     }
 
-    lastFriendshipChangeRevisionRef.current =
-      friendshipChangeRevision;
-
-    if (friendshipChangeRevision === 0) {
-      return;
-    }
-
-    // Show the banner only for a friendship revision received after this sidebar mounted
-    setToastMessage(
-      "Your friends list has been updated!",
-    );
+    const revisionToDismiss = friendshipChangeRevision;
 
     const timer = window.setTimeout(
-      () => setToastMessage(null),
+      () => {
+        setDismissedFriendshipChangeRevision(revisionToDismiss);
+      },
       3000,
     );
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [friendshipChangeRevision]);
+  }, [friendshipChangeRevision, shouldShowFriendshipToast]);
 
   // Load friendship data from Django and refresh it after realtime invalidation
   const {

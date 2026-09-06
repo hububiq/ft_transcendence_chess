@@ -68,6 +68,7 @@ function parseHistoryItem(
   if (
     !isPositiveInteger(value.game_id) ||
     typeof value.is_bot !== "boolean" ||
+    !isNullablePositiveInteger(value.opponent_id) ||
     !isMatchResult(value.result) ||
     typeof value.played_at !== "string" ||
     Number.isNaN(

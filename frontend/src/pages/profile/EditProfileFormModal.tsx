@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { X, AlertCircle } from "lucide-react";
 import clsx from "clsx";
 import type { UserData } from "../../utils/interfaces";
@@ -23,21 +23,11 @@ export function EditProfileForm({
   const [draftData, setDraftData] = useState<UserData>(initialData);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState(
-    initialData.profile.oauth_avatar_url ||
-      resolveMediaUrl(initialData.profile.avatar) ||
+    resolveMediaUrl(initialData.profile.avatar) ||
+      initialData.profile.oauth_avatar_url ||
       defaultAvatar,
   );
   const [localError, setLocalError] = useState("");
-
-  useEffect(() => {
-    setDraftData(initialData);
-    setAvatarFile(null);
-    setAvatarPreview(
-      resolveMediaUrl(initialData.profile.avatar) ||
-        initialData.profile.oauth_avatar_url ||
-        defaultAvatar,
-    );
-  }, [initialData]);
 
   // Form Submission Handler
   const handleSubmit = (e: React.SyntheticEvent) => {
