@@ -3,34 +3,44 @@ of the 42 curriculum by hhurnik, wzielins, jkalinow, mmitkovi, hgatarek_**
 
 # Chess42
 
-## Description
+# Description
 
-Team-based, final Core Curriculum project in 42 Warsaw coding academy. Assignment is about creating single page application which transcend members more into full-stack developers. While having modular approach and key architectural decisions to make, it also demonstrates technical depth and big-picture-creativity. Our team decided to go with **web chess platform** with 1vs1, multiplayer with spectators mode, AI opponent and more.
+Team-based, final Core Curriculum project in 42 Warsaw coding academy. Assignment was about creating single page application which transcend members more into full-stack developers. While having modular approach and key architectural decisions to make, it also demonstrates technical depth and big-picture-creativity. Our team decided to go with **web chess platform** with 1vs1, multiplayer with spectators mode, AI opponent and more. We attempted to build enterprise-grade, easy scalable architecture with the code as robust and clean as we possibly could develop.
 
 ### 1v1 Multiplayer
 
 The multiplayer mode is a real-time chess arena built on WebSockets. It handles live moves, timers, and player interactions (draws, rematches, resignations) without HTTP polling.
 
-- **Real-Time Communication (WebSockets):** Uses a custom React hook (`useGameReconnectSocket`) to maintain a persistent connection to the backend. The server pushes JSON events (`move`, `board_state`, `draw_offer`), and the frontend updates the React state (FEN string, timers, move history) to trigger instant UI re-renders.
-- **Move Validation (`chess.js`):** Reuses the `<ChessBoard/>` component. When a player moves a piece, a local `chess.js` instance checks if the move is legal. If it is, the frontend sends the move via the WebSocket. This prevents illegal moves from ever hitting the server.
-- **Chess Clocks (`setInterval`):** Time management is handled via a 1-second interval. It checks the FEN string to see whose turn it is and ticks down their respective timer. If a clock hits 0, the client immediately sends a `claim_timeout` WebSocket payload to the server.
-- **Player Interactions:** Actions like offering a draw, resigning, or requesting a rematch send specific string payloads over the socket, triggering modal popups on the opponent's screen.
-- **Tournament Context:** The component reads the initial server payload to check if the match is part of a tournament, dynamically hiding UI elements (like the "Offer Draw" button) to enforce strict tournament rules.
+- **Real-Time Communication (WebSockets):** The frontend uses a custom React hook  (`useGameReconnectSocket`) to maintain a persistent connection, but the heavy lifting is handled by FastAPI and Redis Pub/Sub. When a move is made, FastAPI instantly broadcasts the JSON payload through Redis to the opponent's WebSocket, completely bypassing slow HTTP polling. The server pushes JSON events (`move`, `board_state`, `draw_offer`), and the frontend updates the React state (FEN string, timers, move history) to trigger instant UI re-renders.
+
+- **Move Validation** (The "Source of Truth"): While the frontend uses chess.js for visual drag-and-drop feedback, our FastAPI backend acts as the impenetrable Referee. Using python-chess, the backend strictly recalculates and validates every incoming move. If a move is illegal, the server rejects it and forces the frontend board to snap back to the true Server State, making cheating impossible.
+
+- **Chess Clocks & The Arbiter**: the frontend visualizes the timer via a 1-second `setInterval`, but the actual time is securely tracked in Redis RAM using server-side timestamps. When a player's clock hits zero and the frontend sends a claim_timeout payload, our backend "Arbiter" function mathematically verifies the elapsed time before officially declaring a winner.
+
+- **Event-Driven Tournaments**: The backend engine reads the game state to enforce strict tournament rules (e.g., disabling mutual draws). When a tournament game ends, an event-driven progression system (advance_tournament) checks the PostgreSQL bracket, automatically generates the next round of matches, and pushes a WebSocket redirect to the surviving players. From the frontend perspective, the component reads the initial server payload to check if the match is part of a tournament, dynamically hiding UI elements (like the "Offer Draw" button) to enforce strict tournament rules.
+
+- **Post-Game Architecture**: Upon checkmate or surrender, FastAPI generates the official PGN history, asynchronously commits the game to its PostgreSQL database (fastapi_db), and makes a secure internal REST API call to Django (django_db) to recalculate and update the players' ELO ratings. From the frontend perspective, actions like offering a draw, resigning, or requesting a rematch send specific string payloads over the socket, triggering modal popups on the opponent's screen.
+
 
 ### Single-Player vs. AI
 
-The single-player mode delivers a stable, low-latency chess match against a server-side AI, that survives unexpected browser interruptions.
+The single-player mode delivers a stable, low-latency chess match against a custom-built, server-side AI that survives unexpected browser interruptions.
+
+- **The AI Engine (Minimax)**: Our AI is not a 3rd-party library. It is a custom-built recursive Minimax algorithm with Alpha-Beta pruning. It evaluates millions of board states by analyzing material point values and positional heuristics (e.g., prioritizing center-board control and penalizing edge-knights). We restricted it to Depth 4 to simulate challenging, human-like, imperfect play.
+
+- **CPU Isolation**: Because calculating chess trees is highly CPU-bound, the AI logic runs entirely inside the FastAPI microservice. This guarantees that heavy bot computations never block the Django Auth server from serving other users.
+
+- **Session Survival (Redis State)**: If a user accidentally closes their laptop or refreshes the page mid-match, the game is not lost. While React uses sessionStorage to trigger a reconnect, the true game state (FEN strings and move history) is safely frozen in Redis. The exact millisecond the WebSocket re-establishes, FastAPI fetches the data from Redis and flawlessly restores the board to its exact previous state.
 
 - **Game Board (`chess.js`):** The visual chessboard uses the `chess.js` library to act as a real-time local referee. It instantly blocks illegal moves, highlights legal destinations/captures, and flashes a red warning on the King during check.
 - **Real-Time AI Connection:** Gameplay runs over a continuous WebSocket connection. As soon as you make a legal move, the backend engine calculates its response and instantly pushes the updated FEN string back to the UI without loading lag.
-- **Human-Like Opponent:** The interface tracks the engine's computation time, triggering a "bot thinking" visual state, and logging all moves in Standard Algebraic Notation (SAN).
-- **Session Survival:** To protect against accidental page refreshes, the app ties into browser `sessionStorage`. If reloaded mid-match, the game instantly reconnects, feeds the saved FEN string back into `chess.js`, and flawlessly restores the exact board state.
+
 
 ## Database scheme
 
 ![Application Screenshot](docs/transcendence-db-scheme.png)
 
-## Architecture summary and technology justification
+# Architecture summary and technology justification
 
 For this project, we have chosen a **loosely-coupled microservices architecture**, separating our backend into two distinct services: an Authentication/Admin service and a Real-Time Game/AI service. This design ensures fault isolation, allows parallel team development and adheres strictly to the "Single Responsibility" principle. Entire project is built around microservices idea, which takes application to enterprise level, allows scalability while being immune to big breakdowns.
 
@@ -63,43 +73,148 @@ The frontend is a Single Page Application (SPA) that splits network logic from v
 - **Global State Memory:** A custom Context Provider (`AuthProvider`) holds the application's active memory, instantly broadcasting the user's login status to the navigation bar, game lobbies, and router guards.
 - **Strict Routing Guards:** Dedicated React Router wrapper components block unauthenticated users from accessing active game pages and redirect logged-in users away from redundant login screens.
 
-## Libraries used
+# Libraries used
 
-### Backend
+**Backend Core & Architecture**
 
-**python-chess**: The absolute "Source of Truth" referee inside FastAPI. It validates legal moves, calculates checkmates, and generates the official PGN histories.
+- Django REST Framework (DRF) & SimpleJWT**: Used to rapidly build the JSON API endpoints and provide stateless, mathematically verifiable JWT tokens.
 
-**Django REST Framework (DRF) & SimpleJWT**: Used to rapidly build the JSON API endpoints and provide stateless, mathematically verifiable JWT tokens.
+- django-allauth & dj-rest-auth: Handled the complex OAuth2 callback flow for GitHub login, bridging the gap between social authentication and our React SPA.
 
-**django-allauth & dj-rest-auth**: Handled the complex OAuth2 callback flow for GitHub login.
+- SQLModel / SQLAlchemy: To fulfill "Use an ORM" module, we used Django's built-in ORM for the Auth microservice, and SQLModel (an async SQLAlchemy wrapper) for the FastAPI microservice.
 
-**SQLModel / SQLAlchemy**: To fulfill "Use an ORM" module, we used Django's built-in ORM for the Auth microservice, and SQLModel (an async SQLAlchemy wrapper) for the FastAPI microservice.
+- Uvicorn: The high-performance ASGI (Asynchronous Server Gateway Interface) web server that powers FastAPI. Unlike traditional WSGI servers, Uvicorn natively supports the asynchronous event loop required to keep our live multiplayer WebSockets open simultaneously.
 
-### Frontend
 
-**React & Vite (TypeScript):** The core framework and build tool, providing a fast, component-based UI with strict type safety.
+**Game Logic & Data Flow**
 
-**Tailwind CSS:** Used for all styling, allowing for a rapid, custom dark-mode design system without bloated CSS files.
+- python-chess: The absolute "Source of Truth" referee inside FastAPI. It validates legal moves, calculates checkmates, and generates the official PGN histories.
 
-**chess.js:** The local chess engine referee. Used client-side to instantly validate moves, calculate check states, and generate legal move hints before sending data to the server.
+- Pydantic & pydantic-settings: Provides rigorous, C-like type checking and data validation for incoming JSON payloads in FastAPI (protecting the server from bad frontend data). Also handles strict, type-safe loading of our .env variables to prevent startup crashes.
+ 
+- HTTPX (Async): An asynchronous HTTP client. When a match ends, FastAPI uses httpx.AsyncClient() to send a non-blocking REST API request to Django to update player ELO ratings, ensuring the real-time game engine never freezes.
 
-**react-chessboard:** A highly customizable React wrapper for the chessboard visual interface, seamlessly integrating with `chess.js`.
+- Redis Client (redis.asyncio & redis): The Python interface for our message broker. Used asynchronously in FastAPI for matchmaking queues and caching live FEN board states. Used synchronously in Django to broadcast social events (like friendship updates) across the microservice boundary.
 
-**Axios:** Handles all synchronous REST API HTTP requests, featuring custom interceptors for automatic JWT token rotation.
+**Frontend**
 
-**React Router:** Manages client-side navigation and route protection (`ProtectedRoute` / `PublicOnlyRoute`) to secure private game lobbies.
+- React & Vite (TypeScript): The core framework and build tool, providing a fast, component-based UI with strict type safety.
 
-# Instructions TO BE ADDED !!
+- Tailwind CSS: Used for all styling, allowing for a rapid, custom dark-mode design system without bloated CSS files.
+
+- chess.js: The local chess engine referee. Used client-side to instantly validate moves, calculate check states, and generate legal move hints before sending data to the server.
+
+- react-chessboard: A highly customizable React wrapper for the chessboard visual interface, seamlessly integrating with `chess.js`.
+
+- Axios: Handles all synchronous REST API HTTP requests, featuring custom interceptors for automatic JWT token rotation.
+
+- React Router: Manages client-side navigation and route protection (`ProtectedRoute` / `PublicOnlyRoute`) to secure private game lobbies.
+
+**Utilities**
+
+- Pillow: Required by Django's ImageField to securely validate, process, and save user-uploaded avatar files directly into our Docker media volume.
+
+- Faker: Used to write our seed_db.py script, allowing us to rapidly generate 50+ realistic test users, ELO ratings, and bots to unblock frontend UI development.
+
+- cryptography: A highly secure, C-based encryption library required by django-allauth to safely parse, validate, and decrypt external OpenID Connect (OIDC) and OAuth tokens (like Google and GitHub).
+
+- python-dotenv: A lightweight tool that reads key-value pairs from a .env file and loads them into the system environment. This works seamlessly with Pydantic in FastAPI to ensure our application secrets are safely loaded into memory without hardcoding them.
+
+# Instruction
+
+**Prerequisites**
+
+Project is fully containerized. No need to install Python, Node.js, or PostgreSQL. Only tools needed:
+
+- Git 
+- Docker Engine with Docker Compose
+- Make 
+
+**Step-by-step installation**
+
+1. Clone the repository
+```
+git clone <repository_url> chess42
+cd chess42
+```
+
+2. Setup the Environment Variables
+
+Create two .env files based on the provided templates.
+- *Backend Secrets*: In the root directory, copy .env.example to .env. Generate a random 50-character string for the SECRET_KEY, and ensure the POSTGRES_PASSWORD perfectly matches the password inside the DATABASE_URL string.
+- *Frontend URLs*: In the frontend/ directory, copy .env.example to .env. Add your GitHub Client ID (see Step 3 below).
+
+3.  Configure GitHub OAuth2 (Mandatory for GitHub Login)
+
+To enable the social login module:
+- Go to your GitHub account: Settings > Developer Settings > OAuth Apps > New OAuth App.
+- Set the Homepage URL to your frontend URL (e.g., http://localhost:3000).
+- Set the Authorization callback URL to http://localhost:3000/auth/github/callback.
+- Copy the generated Client ID and Client Secret into the root .env file (GITHUB_CLIENT_ID and GITHUB_SECRET).
+- Also place the Client ID in the frontend/.env file (VITE_GITHUB_CLIENT_ID).
+
+4. Build and Run the Project
+
+We have automated the database migrations and OAuth injections into a single command. From the root directory, run:
+```
+make
+```
+
+5. Access the platform 
+- Frontend (Play the Game): http://localhost:3000
+- Django Admin (Manage Users): http://localhost:8000/admin/
+- FastAPI Docs (Game Engine Swagger API): http://localhost:8001/docs
+
+
+# How to test Remore Multiplayer (LAN)
+
+To satisfy the Remote Players major module, two players on the same network can play together.
+- Find the Host IP: On the machine running Docker, find the local IP address (hostname -I command).
+- Update Django Settings: Open django_backend/core/settings.py and add the Host IP to both ALLOWED_HOSTS and CORS_ALLOWED_ORIGINS.
+- Update React Environment: Open frontend/.env and replace all localhost instances with the Host IP (e.g., VITE_BASE_API_URL="http://10.11.12.13:8000").
+- Update fastapi_backend/main.py. Right below imports, in this sections after colon add host IP:
+```
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://10.18.200.89:3000",  # for campus 1vs1 2 machines testing - add your own IP
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://10.13.9.2:3000",
+        "http://172.29.45.254:3000",
+		"http://10.13.5.3:3000",
+    ],
+```
+
+- Update GitHub OAuth: Temporarily update your GitHub OAuth App's Authorization Callback URL to use the Host IP instead of localhost.
+- Rebuild the Frontend Container: Run docker-compose up -d --build frontend to bake the new IP into the React code.
+- Play. The second player simply opens their web browser, navigates to http://<Host-IP>:3000, logs in, and clicks "Find Match" at the same time as the host!
+
+
 
 (software,
 tools, versions, configuration like .env setup, etc.), and step-by-step instructions to
 run the project
 
-# Resources TO BE ADDED !!
+# Resources
 
-## Roles, Project Management, Features List, Individual Contributions TO BE ADDED !!
+# Roles
 
-## Mandatory Modules
+# Project Management
+
+# Features List
+
+# Individual Contributions
+
+#  known limitations
+
+# AI usage
+
+# anything-else section
+
+
+
+# Mandatory Modules
 
 **_Major_**: Use a framework for both the frontend and backend. (2 pts)
 
@@ -135,7 +250,7 @@ Implementation: Users can register, edit bios/locations, upload custom avatars, 
 
 Implementation: A custom-built recursive Minimax algorithm with Alpha-Beta pruning and positional heuristics (fighting for center control), running entirely on the FastAPI backend.
 
-**Bonus Modules**
+# Bonus Modules
 
 **_Major_**: Allow users to interact with other users. (2pts)
 
