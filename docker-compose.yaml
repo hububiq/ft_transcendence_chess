@@ -96,7 +96,7 @@ services:
     env_file:
       - ./frontend/.env
     ports:   # ---- WHEN WE ARE READY FOR PRODUCTION
-     - "80:80"
+     - "443:443"
     # ports: development
       # - "3000:3000"
     # volumes:
@@ -119,8 +119,5 @@ volumes:
   redis_data:
   media_data:
 
-#later: health check and adminer to view database by the team
 
-#later: will add React when frontend will start deploying (node.js)
 #for evaluation (production) it nginx will have to be setup to sent static files to nginx server and view and throw node.js away
-#for now: just standard React container on port 3000
