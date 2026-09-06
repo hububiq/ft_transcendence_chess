@@ -50,7 +50,11 @@ export function Profile() {
             
             {/* Avatar Area */}
             <img
-              src={resolveMediaUrl(user?.profile.avatar) || playerAvatar}
+              src={
+                resolveMediaUrl(user?.profile.avatar) ||
+                user?.profile.oauth_avatar_url ||
+                playerAvatar
+              }
               alt="Profile Avatar"
               className="w-28 h-28 md:w-32 md:h-32 shrink-0 rounded-full border-4 border-blue-600/20 object-cover"
             />
