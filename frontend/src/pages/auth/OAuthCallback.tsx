@@ -21,6 +21,7 @@ export function OAuthCallback() {
     const code = searchParams.get("code");
     if (!code) {
       navigate("/auth");
+      return;
     }
 
     hasFetched.current = true;

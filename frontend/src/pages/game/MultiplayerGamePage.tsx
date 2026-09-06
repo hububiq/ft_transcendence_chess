@@ -16,6 +16,63 @@ import {
   formatNotation,
 } from "../../utils/chessHelpers";
 
+type MultiplayerGameServerMessage =
+  | {
+      type: "board_state";
+      fen: string;
+      color: "w" | "b";
+      opponent_id: number | null;
+      tournament_id?: number | null;
+      history: string[];
+      white_time?: number;
+      black_time?: number;
+    }
+  | {
+      type: "move";
+      move: string;
+      san_move: string;
+      fen: string;
+    }
+  | {
+      type: "game_over";
+      winner_id: number | null;
+      loser_id: number | null;
+      result: "1-0" | "0-1" | "1/2-1/2";
+      pgn: string;
+      rematch_state?: "idle" | "received" | "sent";
+    }
+  | {
+      type: "draw_offer";
+    }
+  | {
+      type: "draw_declined";
+    }
+  | {
+      type: "rematch_request";
+    }
+  | {
+      type: "rematch_accepted";
+      new_game_id: number;
+    }
+  | {
+      type: "rematch_declined";
+    }
+  | {
+      type: "rematch_request_sent";
+    }
+  | {
+      type: "opponent_gone";
+    }
+  | {
+      type: "tournament_won";
+      tournament_id: number;
+    }
+  | {
+      type: "error";
+      message: string;
+      fen?: string;
+    };
+
 export function Game() {
   const { gameId } = useParams<{ gameId: string }>();
   const { user } = useUser();
@@ -66,11 +123,7 @@ export function Game() {
     avatar: avatar_1,
   });
 
-  const handleServerMessage = (data: any) => {
-    if (data.opponent) {
-      setOpponent(data.opponent);
-    }
-
+  const handleServerMessage = (data: MultiplayerGameServerMessage) => {
     switch (data.type) {
       case "board_state":
         setCurrentFen(data.fen);
@@ -543,7 +596,7 @@ export function Game() {
               key={boardKey}
               fen={currentFen}
               onMove={handlePlayerMove}
-              onGameEnd={setGameOver as any}
+              onGameEnd={setGameOver}
               playerColor={playerColor}
             />
           </div>

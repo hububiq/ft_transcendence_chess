@@ -1,12 +1,17 @@
 import { useEffect, useRef } from "react";
 
-interface UseWebSocketProps {
+interface UseWebSocketProps<TMessage> {
   url: string;
   enabled: boolean;
-  onMessage: (data: any) => void;
+  onMessage: (data: TMessage) => void;
 }
 
-export function useWebSocket({ url, enabled, onMessage }: UseWebSocketProps) {
+export function useWebSocket<TMessage>({
+  url,
+  enabled,
+  onMessage,
+}: UseWebSocketProps<TMessage>) {
+
   const wsRef = useRef<WebSocket | null>(null);
 
   const savedOnMessage = useRef(onMessage);
@@ -42,7 +47,7 @@ export function useWebSocket({ url, enabled, onMessage }: UseWebSocketProps) {
 
     socket.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
+        const data = JSON.parse(event.data) as TMessage;
         savedOnMessage.current(data);
       } catch (err) {
         console.error("Failed to parse WebSocket message:", err);

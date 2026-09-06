@@ -27,33 +27,25 @@ class FriendshipChangedRedisEvent(BaseModel):
 
     type: Literal["friends_changed"]
 
-    user_ids: list[
-        Annotated[int, Field(gt=0)]
-    ] = Field(min_length=1)
+    user_ids: list[Annotated[int, Field(gt=0)]] = Field(min_length=1)
 
 
 async def _handle_friendship_event(
     raw_payload: object,
 ) -> None:
     if not isinstance(raw_payload, str):
-        logger.warning(
-            "Ignored friendship event with invalid payload type"
-        )
+        logger.warning("Ignored friendship event with invalid payload type")
         return
 
     try:
         decoded_payload = json.loads(raw_payload)
 
-        event = FriendshipChangedRedisEvent.model_validate(
-            decoded_payload
-        )
+        event = FriendshipChangedRedisEvent.model_validate(decoded_payload)
     except (
         json.JSONDecodeError,
         ValidationError,
     ):
-        logger.warning(
-            "Ignored invalid friendship event"
-        )
+        logger.warning("Ignored invalid friendship event")
         return
 
     try:
@@ -63,10 +55,7 @@ async def _handle_friendship_event(
             FriendsChangedServerEvent(),
         )
     except Exception:
-        logger.warning(
-            "Failed to deliver friendship change event",
-            exc_info=True,
-        )
+        logger.warning("Failed to deliver friendship change event", exc_info=True)
 
 
 async def listen_for_friendship_events() -> None:
@@ -77,29 +66,18 @@ async def listen_for_friendship_events() -> None:
             redis_conn = await get_redis()
 
             async with redis_conn.pubsub() as pubsub:
-                await pubsub.subscribe(
-                    FRIENDSHIP_EVENTS_CHANNEL
-                )
+                await pubsub.subscribe(FRIENDSHIP_EVENTS_CHANNEL)
 
-                logger.info(
-                    "Friendship event listener subscribed"
-                )
+                logger.info("Friendship event listener subscribed")
 
                 async for message in pubsub.listen():
                     if message.get("type") != "message":
                         continue
 
-                    await _handle_friendship_event(
-                        message.get("data")
-                    )
+                    await _handle_friendship_event(message.get("data"))
 
         except RedisError:
-            logger.warning(
-                "Friendship event listener lost Redis connection",
-                exc_info=True,
-            )
+            logger.warning("Friendship event listener lost Redis connection", exc_info=True)
 
             # Retry without terminating the FastAPI process
-            await asyncio.sleep(
-                FRIENDSHIP_RECONNECT_DELAY_SECONDS
-            )
+            await asyncio.sleep(FRIENDSHIP_RECONNECT_DELAY_SECONDS)

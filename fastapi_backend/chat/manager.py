@@ -4,7 +4,7 @@ import asyncio
 import logging
 from uuid import uuid4
 
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 
 from chat.schemas import (
     ChatAuthor,
@@ -13,7 +13,6 @@ from chat.schemas import (
     PresenceServerEvent,
     ServerEvent,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -25,16 +24,10 @@ class GlobalChatConnectionManager:
 
     def __init__(self) -> None:
         # Map every active socket to the user verified during authentication
-        self._users_by_socket: dict[
-            WebSocket,
-            ChatAuthor,
-        ] = {}
+        self._users_by_socket: dict[WebSocket, ChatAuthor] = {}
 
         # Keep the newest trusted identity while the user is active or waiting for leave grace
-        self._latest_users_by_id: dict[
-            int,
-            ChatAuthor,
-        ] = {}
+        self._latest_users_by_id: dict[int, ChatAuthor] = {}
 
         self._state_lock = asyncio.Lock()
 
@@ -42,10 +35,7 @@ class GlobalChatConnectionManager:
         self._presence_transition_lock = asyncio.Lock()
 
         # Keep one delayed leave task per authenticated user
-        self._pending_leave_tasks: dict[
-            int,
-            asyncio.Task[None],
-        ] = {}
+        self._pending_leave_tasks: dict[int, asyncio.Task[None]] = {}
 
         # One send lock prevents concurrent writes to the same socket
         self._send_lock = asyncio.Lock()
@@ -93,9 +83,7 @@ class GlobalChatConnectionManager:
 
                     self._users_by_socket[websocket] = user
                     self._latest_users_by_id[user.id] = user
-                    connection_count = len(
-                        self._users_by_socket
-                    )
+                    connection_count = len(self._users_by_socket)
 
                     # A reconnect during the grace period continues the same presence session
                     should_announce_join = (
@@ -114,10 +102,7 @@ class GlobalChatConnectionManager:
                     )
                 )
 
-        logger.info(
-            "Global chat connection registered, active connections=%s",
-            connection_count,
-        )
+        logger.info("Global chat connection registered, active connections=%s", connection_count)
 
     async def update_user_identity(
         self,
@@ -134,9 +119,7 @@ class GlobalChatConnectionManager:
                     if active_user.id == user.id
                 ]
 
-                has_pending_leave = (
-                    user.id in self._pending_leave_tasks
-                )
+                has_pending_leave = user.id in self._pending_leave_tasks
 
                 if (
                     not matching_sockets
@@ -148,9 +131,7 @@ class GlobalChatConnectionManager:
 
                 # Replace every active tab so presence and future disconnects use one identity
                 for websocket in matching_sockets:
-                    self._users_by_socket[
-                        websocket
-                    ] = user
+                    self._users_by_socket[websocket] = user
 
         return bool(matching_sockets)
 
@@ -162,13 +143,8 @@ class GlobalChatConnectionManager:
 
         # Removing by socket keeps multiple tabs from affecting each other
         async with self._state_lock:
-            removed_user = self._users_by_socket.pop(
-                websocket,
-                None,
-            )
-            connection_count = len(
-                self._users_by_socket
-            )
+            removed_user = self._users_by_socket.pop(websocket, None)
+            connection_count = len(self._users_by_socket)
 
             if removed_user is not None:
                 has_other_connection = any(
@@ -192,10 +168,7 @@ class GlobalChatConnectionManager:
                     )
 
         if removed_user is not None:
-            logger.info(
-                "Global chat connection removed, active connections=%s",
-                connection_count,
-            )
+            logger.info("Global chat connection removed, active connections=%s", connection_count)
 
     async def _announce_leave_after_grace(
         self,
@@ -209,9 +182,7 @@ class GlobalChatConnectionManager:
             return
 
         try:
-            await asyncio.sleep(
-                CHAT_PRESENCE_LEAVE_GRACE_SECONDS
-            )
+            await asyncio.sleep(CHAT_PRESENCE_LEAVE_GRACE_SECONDS)
 
             # Serialize final leave with reconnect and identity refresh
             async with self._presence_transition_lock:
@@ -276,9 +247,7 @@ class GlobalChatConnectionManager:
             async with self._send_lock:
                 # Read sockets and users from the same protected state snapshot
                 async with self._state_lock:
-                    sockets = list(
-                        self._users_by_socket.keys()
-                    )
+                    sockets = list(self._users_by_socket.keys())
 
                     # Deduplicate users who have more than one active socket
                     users_by_id = {
@@ -415,9 +384,7 @@ class GlobalChatConnectionManager:
         async with self._send_lock:
             # Copy the current socket list without holding the state lock during network writes
             async with self._state_lock:
-                sockets = list(
-                    self._users_by_socket.keys()
-                )
+                sockets = list(self._users_by_socket.keys())
 
             if not sockets:
                 return
@@ -468,6 +435,7 @@ class GlobalChatConnectionManager:
             asyncio.TimeoutError,
             OSError,
             RuntimeError,
+            WebSocketDisconnect,
         ):
             return False
         except Exception:
