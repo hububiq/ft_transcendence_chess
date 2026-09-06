@@ -200,21 +200,48 @@ run the project
 
 # Roles
 
+**Product Owner** (PO) Milos (mmitkovi)
+
+**Project Manager** (PM)  Hubert, (hgatarek)
+
+**Technical Lead / Architect**: Hubert, Mios
+
+**Developers** - Honorata, Weronika, Jacek (hhurnik, wzielins, jkalinow)
+
+Roles were rather fluid, with Honorata doing remarkable job in every role, at the end of the project becoming full Technical Lead.
+
 # Project Management
+### Tools & Workflow
+- GitHub Issues (Task Tracking): We used GitHub Issues as our central vision board. Every feature, bug, and module from the 42 subject was translated into a dedicated Issue, tagged by category (Frontend, Backend, DevOps, AI), and assigned to specific team members to ensure total accountability.
+= Branching Strategy: We utilized a strict Feature-Branch workflow. Developers worked on isolated branches (e.g., feat/user-management-django, fix/websocket-reconnect). We used conventional commits methodology.
+- Code Reviews & Pull Requests: Code was never pushed directly to main. Every feature required a Pull Request (PR) and a code review to ensure that API contracts between the React frontend and the Python microservices were respected before merging.
+- Knowledge base and extended documentation was hosted on GoogleDocs
+- Daily Contributions: The team maintained a high velocity with code commits pushed daily. We prioritized continuous integration, ensuring that the docker-compose environment was always buildable and stable at the end of every day.
+
+### Communication
+- Slack (Daily Operations): Slack served as our primary communication hub. We used it for daily asynchronous updates, sharing server logs, rapidly debugging cross-container network errors (CORS, WebSocket drops), and documenting API JSON payload structures.
+- Weekly Meetings (Architecture Syncs): We held mandatory weekly voice/video meetings. These sessions were dedicated to "Big Picture" sprint planning, resolving severe blockers, and making core architectural decisions (such as splitting the backend into Django and FastAPI, or designing the database schema).
+### Task Distribution
+Work was strictly modularized to fit the strengths of the team:
+Frontend (React/Vite): Focused on UI/UX, state management, WebSocket integration, and building reusable design components.
+- Backend & DevOps (Django/FastAPI/Docker): Focused on container orchestration, database schema design, REST API routing, JWT security, and implementing the Minimax chess AI.
+- API Contracts: Whenever a new feature was planned (like Matchmaking or Tournaments), the Frontend and Backend leads would first agree on the exact JSON payload and HTTP/WebSocket endpoints, allowing both sides to develop their halves simultaneously.
 
 # Features List
 
 # Individual Contributions
 
-#  known limitations
+# known limitations
+test are not developed enough
 
 # AI usage
 
 # anything-else section
+maybe some trello or some more from Agile development would be nice to use not only github issues
 
 
 
-# Mandatory Modules
+# Modules (total 21pts)
 
 **_Major_**: Use a framework for both the frontend and backend. (2 pts)
 
@@ -250,7 +277,7 @@ Implementation: Users can register, edit bios/locations, upload custom avatars, 
 
 Implementation: A custom-built recursive Minimax algorithm with Alpha-Beta pruning and positional heuristics (fighting for center control), running entirely on the FastAPI backend.
 
-# Bonus Modules
+### Bonus Modules
 
 **_Major_**: Allow users to interact with other users. (2pts)
 
