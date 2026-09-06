@@ -197,6 +197,50 @@ tools, versions, configuration like .env setup, etc.), and step-by-step instruct
 run the project
 
 # Resources
+Django Documentation - https://docs.djangoproject.com/en/6.1/
+
+Django REST Framework - https://www.django-rest-framework.org/
+
+SimpleJWT - https://django-rest-framework-simplejwt.readthedocs.io/en/latest/
+
+django-allauth - https://docs.allauth.org/en/latest/
+
+dj-rest-auth - https://dj-rest-auth.readthedocs.io/en/latest/
+
+FastAPI WebSockets - https://fastapi.tiangolo.com/reference/websockets/
+
+Python asyncio - https://docs.python.org/3/library/asyncio.html
+
+Pydantic - https://pydantic.dev/docs/validation/latest/get-started/
+
+PostgreSQL - https://www.postgresql.org/docs/
+
+SQLAlchemy - https://docs.sqlalchemy.org/en/20/
+
+Redis - https://redis.io/docs/latest/
+
+redis-py - https://redis.readthedocs.io/en/stable/
+
+React - https://react.dev/
+
+TypeScript - https://www.typescriptlang.org/docs/
+
+Vite - https://vite.dev/guide/
+
+React Router - https://reactrouter.com/
+
+Axios - https://axios.rest/pages/getting-started/first-steps
+
+python-chess - https://python-chess.readthedocs.io/en/stable/
+
+chess.js - https://jhlywa.github.io/chess.js/
+
+react-chessboard - https://react-chessboard.vercel.app/?path=/docs/get-started--docs
+
+Tailwind CSS - https://tailwindcss.com/docs/installation/using-vite
+
+Docker Compose - https://docs.docker.com/compose/
+
 
 # Roles
 
@@ -230,6 +274,71 @@ Frontend (React/Vite): Focused on UI/UX, state management, WebSocket integration
 # Features List
 
 # Individual Contributions
+
+
+**wzielins**
+
+1. Avatar and Profile Integration
+
+    - Implemented avatar image support in the user profile and Social Hub.
+    - Connected avatar upload functionality between the React frontend and backend.
+    - Fixed issues related to displaying and updating user avatars.
+    - Added support for uploading an avatar during registration as well as from the profile dashboard.
+
+2. Tournament Integration
+
+    - Started to connect the Tournament functionality between the FastAPI backend and React frontend.
+    - Integrated tournament-related API calls and frontend flows.
+    - Worked on the interaction between tournament state, players, matchmaking, and the game interface.
+
+3. Registration and User Validation
+
+    - Made frontend and backend registration validation consistent.
+    - Implemented and aligned username and password requirements across both sides of the application.
+    - Ensured that validation rules provide a consistent user experience and match backend requirements.
+
+4. Legal and Documentation
+
+    - Added and integrated Privacy Policy and Terms of Service pages.
+    - Added navigation to these pages from the application interface, including the footer.
+
+5. Development Infrastructure
+
+    - Added an Adminer container to the project to simplify database inspection and management during development.
+
+**hhurnik**
+
+1. Social Hub
+
+    - Added real-time user presence with joined/left events, multi-tab handling and reconnect grace for temporary disconnects.
+    - Added friend add/remove functionality, friends synchronization through Redis/WebSockets, and real-time username updates.
+    - Added public profile hover cards with live profile data and real-time username refresh.
+    - Improved Social Hub WebSocket lifecycle reliability and friend-list refresh behavior across reconnects and user sessions.
+
+2. Global Chat
+
+    - Implemented authenticated real-time WebSocket chat for logged-in users with backend-verified message authorship.
+    - Added frontend and backend message validation, rate limiting, safe error handling and protection against malformed or oversized messages.
+    - Added connection state handling with connect, disconnect and automatic reconnect support.
+    - Improved chat WebSocket lifecycle reliability for route changes, logout, refresh and multiple simultaneous users.
+
+3. Game Reconnect & WebSocket Security
+
+    - Implemented active game detection, Return to Game, active-game preview and graceful reconnect for ongoing remote PvP games.
+    - Added real-time removal of completed games from the dashboard.
+    - Secured the game WebSocket with JWT authentication, game membership validation and backend-trusted player identity.
+
+4. Statistics, Match History & Leaderboard
+
+    - Built the Statistics page using existing player data, with derived values such as win rate and tournament wins displayed in a dedicated summary.
+    - Implemented Match History from existing game and tournament data, including opponent resolution, win/loss/draw results from the current player’s perspective, game dates, bot matches and tournament round context.
+    - Added Achievements with progress and completion states derived from existing game, rating and tournament data without introducing additional database models.
+    - Implemented the Leaderboard, including Top 10 ranking by ELO, games, wins, win rate, current-player highlighting and a separate position for users outside the Top 10
+
+5. Refactor
+
+    - Modularized the FastAPI backend by reorganizing game and tournament code into domain packages and decomposing large handlers such as game_socket(), handle_game_over() and global_chat_socket() into smaller, focused helpers without changing their overall lifecycle responsibilities.
+    - Cleaned up frontend and backend code by resolving TypeScript, ESLint and build errors, improving explicit typing and React hook/lifecycle handling, removing dead or duplicated code, correcting imports and file structure, and fixing asynchronous startup task initialization.
 
 # known limitations
 test are not developed enough
