@@ -13,14 +13,25 @@ EXPOSE 3000
 CMD ["sh", "-c", "npm install && npm run dev -- --host --port 3000"] 
 
 # --- STAGE 3: Production (for eval) ---
-FROM base AS production
+FROM base AS builder
 COPY . .
 RUN npm run build
+
 # Switch to Nginx
-FROM nginx:alpine
-COPY --from=production /app/dist /usr/share/nginx/html
+FROM nginx:alpine AS production
+
+# Generate a self-signed cert at build time (fine for eval/local; swap for
+# real certs / certbot in an actual production deploy)
+RUN apk add --no-cache openssl && \
+    mkdir -p /etc/nginx/ssl && \
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      -keyout /etc/nginx/ssl/privkey.pem \
+      -out /etc/nginx/ssl/fullchain.pem \
+      -subj "/CN=localhost"
+
+COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf 
-EXPOSE 80
+EXPOSE 80 443
 CMD ["nginx", "-g", "daemon off;"]
 
 # nginx.conf will include routing /api traffic to django and /ws to fastapi ascting as a "API Gateway"

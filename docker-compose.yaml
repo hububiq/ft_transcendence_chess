@@ -96,7 +96,8 @@ services:
     env_file:
       - ./frontend/.env
     ports:   # ---- WHEN WE ARE READY FOR PRODUCTION
-     - "443:443"
+      - "80:80"
+      - "443:443"
     # ports: development
       # - "3000:3000"
     # volumes:

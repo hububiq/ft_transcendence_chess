@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 
 export function FloatingPawns() {
   // Generate 20 random pawns when the component loads
