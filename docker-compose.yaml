@@ -89,21 +89,28 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: development
-      # target: production    # <--- Docker skips the dev server and builds Nginx
+      # target: development
+      target: production    #  Docker skips the dev server and builds Nginx
     container_name: react_frontend
     restart: on-failure
     env_file:
       - ./frontend/.env
-    # ports:   ---- WHEN WE ARE READY FOR PRODUCTION
-    #  - "80:80"
-    ports:
-      - "3000:3000"
-    volumes:
-      # Bind mount for Hot Reloading
-      - ./frontend:/app
+    ports:   # ---- WHEN WE ARE READY FOR PRODUCTION
+      # - "80:80"
+      # - "443:443"
+      - "8443:443"
+    # ports: development
+      # - "3000:3000"
+    # volumes:
+      # Bind mount for Hot Reloading -- removed on Nginx - Nginx loads baked-in static files
+      # - ./frontend:/app
       # Anonymous volume to prevent local node_modules from saving other system's binary files and breaking the Linux container
-      - /app/node_modules
+      # - /app/node_modules
+
+    volumes:
+      - ./certs/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - ./certs/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+
     depends_on:
       django_backend:
         condition: service_started
@@ -119,8 +126,5 @@ volumes:
   redis_data:
   media_data:
 
-#later: health check and adminer to view database by the team
 
-#later: will add React when frontend will start deploying (node.js)
 #for evaluation (production) it nginx will have to be setup to sent static files to nginx server and view and throw node.js away
-#for now: just standard React container on port 3000

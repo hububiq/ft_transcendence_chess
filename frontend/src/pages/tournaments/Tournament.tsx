@@ -20,6 +20,7 @@ import {
 } from "../../api/tournamentApi";
 
 import { useWebSocket } from "../../hooks/useWebSocket";
+import { useActiveGame } from "../../hooks/useActiveGame"; 
 
 // const rounds = [
 //   {
@@ -81,6 +82,7 @@ export function Tournament() {
   const navigate = useNavigate();
   const [nextMatch, setNextMatch] = useState<TournamentMatch | null>(null);
   const { user } = useUser();
+  const { activeGame } = useActiveGame();
   const [loading, setLoading] = useState(true);
   const [activeTournament, setActiveTournament] =
     useState<TournamentType | null>(null);
@@ -111,7 +113,7 @@ export function Tournament() {
         break;
       case "tournament_updated":
         // Instantly trigger a database re-fetch when someone joins/leaves!
-        setRefreshTrigger((prev) => prev + 1);
+        setRefreshTrigger((prev: number) => prev + 1);
         break;
 
       case "tournament_deleted":
@@ -119,8 +121,9 @@ export function Tournament() {
         setRefreshTrigger((prev) => prev + 1);
 
         // 2. If the user is currently INSIDE the deleted tournament, kick them out cleanly!
-        setActiveTournament((currentActive) => {
+        setActiveTournament((currentActive: TournamentType | null) => {
           if (currentActive?.id === data.tournament_id) {
+			alert("The host has deleted this tournament.");
             setBracketData([]);
             setNextMatch(null);
             return null; // This drops them back to the Lobby UI
@@ -427,7 +430,7 @@ export function Tournament() {
                   </button>
                 ) : (
                   <div className="mt-2 flex flex-wrap gap-2 w-full">
-                    {/* 👇 The Disabled 'Too Late' Badge 👇 */}
+                    {/*  The Disabled 'Too Late' Badge  */}
                     <button
                       disabled
                       className="flex-1 min-w-[120px] py-2 bg-neutral-900/50 border border-neutral-800 text-neutral-500 rounded-lg text-xs font-medium cursor-not-allowed"
@@ -435,7 +438,7 @@ export function Tournament() {
                       Too late to join
                     </button>
 
-                    {/* 👇 The Spectate Button (Keeps the original 'Enter' logic!) 👇 */}
+                    {/*  The Spectate Button (Keeps the original 'Enter' logic!)  */}
                     <button
                       onClick={() => setActiveTournament(tourney)}
                       className="flex-1 min-w-[120px] py-2 bg-purple-950/30 hover:bg-purple-900/40 text-purple-500 border border-purple-900/30 rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
@@ -510,9 +513,14 @@ export function Tournament() {
           ) : nextMatch && nextMatch.game_id ? (
             <button
               onClick={() => navigate(`/game/${nextMatch.game_id}`)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] animate-pulse"
+              className={clsx(
+                "flex items-center gap-2 text-white px-8 py-3 rounded-xl font-bold transition-all animate-pulse",
+                activeGame?.game_id === nextMatch.game_id
+                  ? "bg-green-600 hover:bg-green-500 shadow-[0_0_20px_rgba(22,163,74,0.4)]"
+                  : "bg-blue-600 hover:bg-blue-500 shadow-[0_0_20px_rgba(37,99,235,0.4)]"
+              )}
             >
-              Play Next Match
+              {activeGame?.game_id === nextMatch.game_id ? "Return to Game" : "Play Next Match"}
             </button>
           ) : !isEliminated &&
             !isRefreshing &&
