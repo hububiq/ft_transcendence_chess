@@ -113,7 +113,7 @@ export function Tournament() {
         break;
       case "tournament_updated":
         // Instantly trigger a database re-fetch when someone joins/leaves!
-        setRefreshTrigger((prev) => prev + 1);
+        setRefreshTrigger((prev: number) => prev + 1);
         break;
 
       case "tournament_deleted":
@@ -121,8 +121,9 @@ export function Tournament() {
         setRefreshTrigger((prev) => prev + 1);
 
         // 2. If the user is currently INSIDE the deleted tournament, kick them out cleanly!
-        setActiveTournament((currentActive) => {
+        setActiveTournament((currentActive: TournamentType | null) => {
           if (currentActive?.id === data.tournament_id) {
+			alert("The host has deleted this tournament.");
             setBracketData([]);
             setNextMatch(null);
             return null; // This drops them back to the Lobby UI
