@@ -33,19 +33,24 @@ from game.reconnect_service import (
 from auth import get_current_user
 import time
 from notifications import friendship_notifications_loop
-
+import os
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(debug=settings.debug)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://10.18.200.89:3000",  # for campus 1vs1 2 machines testing - add your own IP
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://10.13.9.2:3000",
-        "http://172.29.45.254:3000",
-		"http://10.13.5.3:3000",
+           # Localhost
+    	   "http://localhost:3000",
+    	   "http://127.0.0.1:3000",
+    	   "https://localhost:8443",
+		   "https://127.0.0.1:8443",
+
+    	   # Dynamic Host IP (Dev and Production HTTPS)
+    	   f"http://{HOST_IP}:3000",
+    	   f"https://{HOST_IP}:8443",
+           f"https://{HOST_IP}",
     ],
     allow_credentials=True,
     allow_methods=["*"],

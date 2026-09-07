@@ -40,7 +40,8 @@ RUN npm run build
 # Switch to Nginx
 FROM nginx:alpine AS production
 
-# ARG HOST_IP=127.0.0.1
+ARG HOST_IP=${}
+ENV HOST_IP=${}
 
 # # Generate a self-signed TLS certificate for local and evaluation deployment
 # RUN apk add --no-cache openssl && \

@@ -15,6 +15,8 @@ from pathlib import Path
 import os
 import dj_database_url
 
+HOST_IP = os.environ.get("HOST_IP", "127.0.0.1")
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -31,7 +33,7 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 # SECURITY WARNING: don't run with debug turned on in production
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django_backend', '10.13.9.2', '172.29.45.254', '10.13.5.3']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django_backend', HOST_IP]
 
 
 # Application definition
@@ -151,6 +153,9 @@ CORS_ALLOWED_ORIGINS = [
 	"http://10.13.9.2:3000",
     "http://172.29.45.254:3000",
 	"http://10.13.5.3:3000",
+    f"http://{HOST_IP}:3000",
+    f"https://{HOST_IP}:8443",
+    f"https://{HOST_IP}",
 ]
 
 CORS_ALLOWED_CREDENTIALS = True
@@ -199,3 +204,9 @@ REST_AUTH = {
     #'JWT_AUTH_REFRESH_COOKIE': 'my-refresh-token',
     'JWT_AUTH_HTTPONLY': False, # prevents hiding refresh token on oauth-logged profile
 }
+
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{HOST_IP}:8443",
+    f"https://{HOST_IP}",
+    "https://localhost:8443",
+]
