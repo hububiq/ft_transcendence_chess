@@ -6,7 +6,7 @@ services:
     container_name: adminer
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8090:8090"
     depends_on:
       - postgres_db
     networks:
@@ -102,8 +102,7 @@ services:
     env_file:
       - ./frontend/.env
     ports:   # ---- WHEN WE ARE READY FOR PRODUCTION
-      # - "80:80"
-      # - "443:443"
+      - "8080:80"
       - "8443:443"
     # ports: development
       # - "3000:3000"
@@ -112,9 +111,10 @@ services:
       # - ./frontend:/app
       # Anonymous volume to prevent local node_modules from saving other system's binary files and breaking the Linux container
       # - /app/node_modules
-    volumes:
-      - ./certs/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
-      - ./certs/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+
+    # volumes:
+    #   - ./certs/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+    #   - ./certs/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
 
     depends_on:
       django_backend:
