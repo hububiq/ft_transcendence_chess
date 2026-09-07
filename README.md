@@ -465,11 +465,10 @@ The following edge cases and limitations have been identified:
 - Message Broker Integration: Orchestrated Redis as a central Nervous System. Used Redis as a high-speed data cache (for live FEN/clock states), a queue manager (for matchmaking), and a Pub/Sub message broker (for cross-container notifications).
  2. DevOps & Infrastructure (Excluding Nginx)
 
-- Container Orchestration: Authored the docker-compose.yaml and Dockerfiles for Django, FastAPI, and Vite/React.
+- Container Orchestration: Authored the docker-compose.yaml and Dockerfiles for Django, FastAPI, Vite/React, Redis, PostgreSQL. Configured Nginx reverse proxy.
 - LAN Multiplayer Networking: Resolved CORS, IP binding (0.0.0.0), and environment variable routing to enable true Remote 1v1 multiplayer across physical campus networks.
 - CI & Environment Safety: Built a Makefile with targeted cache-clearing (fclean) to prevent host-machine data wiping. Automated the initial database setup by baking init.sql directly into the Postgres image to bypass 42 Campus NFS network permission bugs.
 3. Django Backend (Auth & Social)
-
 - Custom User Models & Security: Overrode Django's default authentication to enforce Email-based login. Enforced strict password complexity and Regex alphanumeric username validation on the backend APIs.
 OAuth2 GitHub Integration: Successfully integrated django-allauth and dj-rest-auth. Wrote a custom Adapter and Serializer to_representation method to gracefully handle GitHub's hidden-email privacy settings without crashing the database Unique Constraints.
 - Automated Signals: Implemented Django post_save signals to automatically generate Player Profiles with default ELO ratings the exact millisecond an account is created via Email or OAuth.
@@ -482,7 +481,6 @@ OAuth2 GitHub Integration: Successfully integrated django-allauth and dj-rest-au
 5. AI Bot Algorithm
 - Custom Minimax Engine: Developed a recursive Minimax chess engine from scratch with Alpha-Beta pruning to heavily optimize computational speed.
 Positional Heuristics: Augmented the AI's standard piece-counting math with spatial awareness (e.g., granting bonus points for center-board control and penalizing edge-placed Knights).
-
 6. Tournament UI & React Refactoring (Frontend collaboration)
 - UI State Debugging: Solved severe React race conditions ("Stale Closures", "Zombie Intervals") where the UI would fetch data before profiles were loaded.
 - Tournament UX Polish: Advised and corrected the React logic for "Spectator Mode" vs "Active Player" views. Fixed the logic for dynamic buttons (Green "Waiting" vs Blue "Play Next Match"), and engineered the logic to securely drop users back into the bracket view after a match ends.
