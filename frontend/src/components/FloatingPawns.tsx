@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-import { useMemo } from "react";
-=======
 const PAWNS = Array.from({ length: 20 }).map((_, i) => ({
   id: i,
   left: Math.random() * 100,
@@ -8,7 +5,6 @@ const PAWNS = Array.from({ length: 20 }).map((_, i) => ({
   delay: Math.random() * 12,
   duration: Math.random() * 15 + 22,
 }));
->>>>>>> main
 
 export function FloatingPawns() {
   return (
