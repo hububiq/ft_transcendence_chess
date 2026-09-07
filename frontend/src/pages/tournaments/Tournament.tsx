@@ -96,7 +96,7 @@ export function Tournament() {
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(true);
-  const [setShowWinnerModal] = useState(false);
+  const [, setShowWinnerModal] = useState(false);
 
   const handleLobbyMessage = (data: TournamentLobbyMessage) => {
     switch (data.type) {

@@ -96,8 +96,9 @@ services:
     env_file:
       - ./frontend/.env
     ports:   # ---- WHEN WE ARE READY FOR PRODUCTION
-      - "80:80"
-      - "443:443"
+      # - "80:80"
+      # - "443:443"
+      - "8443:443"
     # ports: development
       # - "3000:3000"
     # volumes:
@@ -105,6 +106,11 @@ services:
       # - ./frontend:/app
       # Anonymous volume to prevent local node_modules from saving other system's binary files and breaking the Linux container
       # - /app/node_modules
+
+    volumes:
+      - ./certs/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - ./certs/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+
     depends_on:
       django_backend:
         condition: service_started
