@@ -421,6 +421,27 @@ The following edge cases and limitations have been identified:
    - Modularized the FastAPI backend by reorganizing game and tournament code into domain packages and decomposing large handlers such as game_socket(), handle_game_over() and global_chat_socket() into smaller, focused helpers without changing their overall lifecycle responsibilities.
    - Cleaned up frontend and backend code by resolving TypeScript, ESLint and build errors, improving explicit typing and React hook/lifecycle handling, removing dead or duplicated code, correcting imports and file structure, and fixing asynchronous startup task initialization.
 
+**jkalinow**
+
+1. Knockout Tournament System
+   - Implemented the full knockout tournament module in FastAPI, including creation, bracket generation and round progression.
+   - Built a dynamic bracket generator for 4–8 players with automatic BYE insertion and adaptive pairing.
+   - Developed a match generator for Round 1 and a state machine handling pending → active → finished transitions.
+   - Added early‑start support, allowing the creator to begin tournaments even with incomplete brackets.
+   - Implemented semifinals, finals and automatic winner advancement until the champion is finalized.
+   - Integrated tournament completion with player statistics and result reporting.
+
+2. SQLAlchemy ORM & Database Layer
+   - Designed SQLAlchemy models for tournaments, matches and participants with proper relationships.
+   - Implemented CRUD operations for bracket storage, match updates and tournament finalization.
+   - Ensured atomic transactions and consistent behavior across FastAPI’s database layer.
+
+3. FastAPI Architecture & Integration
+   - Modularized tournament logic using domain‑driven structure and clear separation of responsibilities.
+   - Integrated tournament flows with the existing WebSocket‑based game system.
+   - Connected FastAPI endpoints with the React frontend, providing stable JSON schemas and predictable API behavior.
+   - Handled edge cases for 5–7 player brackets and contributed to architectural decisions on bracket algorithms and state machines.
+
 **mmitkovi**
 
 1. Frontend Architecture & UI/UX
