@@ -81,6 +81,8 @@ The frontend is a Single Page Application (SPA) that splits network logic from v
 
 - Uvicorn: The high-performance ASGI (Asynchronous Server Gateway Interface) web server that powers FastAPI. Unlike traditional WSGI servers, Uvicorn natively supports the asynchronous event loop required to keep our live multiplayer WebSockets open simultaneously.
 
+- Nginx (API Gateway & Reverse Proxy): Acts as the single entry point for our production environment. It serves the compiled React static files, securely routes /api/ and /ws/ traffic to the respective Django and FastAPI microservices, and handles SSL/TLS (HTTPS) encryption termination.
+
 **Game Logic & Data Flow**
 
 - python-chess: The absolute "Source of Truth" referee inside FastAPI. It validates legal moves, calculates checkmates, and generates the official PGN histories.
