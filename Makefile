@@ -3,8 +3,11 @@ DOCKER_COMPOSE = docker compose
 all: up
 
 up:
+	@echo "Preparing local HTTPS certificates..."
+	@bash scripts/generate-local-certs.sh
 	@echo "Building and starting containers..."
 	$(DOCKER_COMPOSE) up -d --build
+
 # migrate:
 	@sleep 3
 	@echo "Checking for model changes and creating migration files..."

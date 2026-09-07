@@ -6,7 +6,7 @@ services:
     container_name: adminer
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8090:8090"
     depends_on:
       - postgres_db
     networks:
@@ -50,6 +50,9 @@ services:
     restart: on-failure
     env_file:
       - .env
+    environment:
+      # - HOST_IP=${HOST_IP}
+      - HOST_IP=${HOST_IP:-127.0.0.1}
     volumes:
       # Syncs your live code edits to the container so you don't have to rebuild! It's bind mount! (.)
       # bind mount is used for local development so live edits are sync immediately
@@ -73,6 +76,9 @@ services:
     restart: on-failure
     env_file:
       - .env
+    environment:
+      # - HOST_IP=${HOST_IP}
+      - HOST_IP=${HOST_IP:-127.0.0.1}
     volumes:
       - ./fastapi_backend:/app
     ports:
@@ -91,13 +97,14 @@ services:
       dockerfile: Dockerfile
       # target: development
       target: production    #  Docker skips the dev server and builds Nginx
+      args:
+        HOST_IP: ${HOST_IP:-127.0.0.1}
     container_name: react_frontend
     restart: on-failure
     env_file:
       - ./frontend/.env
     ports:   # ---- WHEN WE ARE READY FOR PRODUCTION
-      # - "80:80"
-      # - "443:443"
+      - "8080:80"
       - "8443:443"
     # ports: development
       # - "3000:3000"
@@ -107,9 +114,9 @@ services:
       # Anonymous volume to prevent local node_modules from saving other system's binary files and breaking the Linux container
       # - /app/node_modules
 
-    volumes:
-      - ./certs/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
-      - ./certs/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+    # volumes:
+    #   - ./certs/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+    #   - ./certs/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
 
     depends_on:
       django_backend:
