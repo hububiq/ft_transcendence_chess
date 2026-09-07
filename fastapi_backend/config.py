@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     debug: bool = Field(default=True)
     host: str = Field(default="0.0.0.0")
     port: int = Field(default=8001)
+    host_ip: str = Field(default="127.0.0.1", alias="HOST_IP")
 
     # ---------------------------------------------------------
     # DATABASE (async PostgreSQL)

@@ -48,9 +48,9 @@ app.add_middleware(
 		   "https://127.0.0.1:8443",
 
     	   # Dynamic Host IP (Dev and Production HTTPS)
-    	   f"http://{HOST_IP}:3000",
-    	   f"https://{HOST_IP}:8443",
-           f"https://{HOST_IP}",
+           f"http://{settings.host_ip}:3000",
+           f"https://{settings.host_ip}:8443",
+           f"https://{settings.host_ip}",
     ],
     allow_credentials=True,
     allow_methods=["*"],

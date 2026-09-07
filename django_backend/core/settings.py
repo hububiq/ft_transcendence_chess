@@ -15,7 +15,7 @@ from pathlib import Path
 import os
 import dj_database_url
 
-HOST_IP = os.environ.get("HOST_IP" or "127.0.0.1")
+HOST_IP = os.environ.get("HOST_IP") or "127.0.0.1"
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -148,11 +148,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-	"http://10.13.9.2:3000",
-    "http://172.29.45.254:3000",
-	"http://10.13.5.3:3000",
+    # "http://localhost:3000",
+    # "http://127.0.0.1:3000",
+	# "http://10.13.9.2:3000",
+    # "http://172.29.45.254:3000",
+	# "http://10.13.5.3:3000",
     f"http://{HOST_IP}:3000",
     f"https://{HOST_IP}:8443",
     f"https://{HOST_IP}",
