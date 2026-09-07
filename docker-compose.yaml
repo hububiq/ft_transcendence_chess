@@ -91,6 +91,8 @@ services:
       dockerfile: Dockerfile
       # target: development
       target: production    #  Docker skips the dev server and builds Nginx
+      args:
+        HOST_IP: ${HOST_IP:-127.0.0.1}
     container_name: react_frontend
     restart: on-failure
     env_file:
@@ -106,7 +108,6 @@ services:
       # - ./frontend:/app
       # Anonymous volume to prevent local node_modules from saving other system's binary files and breaking the Linux container
       # - /app/node_modules
-
     volumes:
       - ./certs/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
       - ./certs/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
