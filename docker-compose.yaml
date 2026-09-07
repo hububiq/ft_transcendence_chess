@@ -51,7 +51,8 @@ services:
     env_file:
       - .env
     environment:
-      - HOST_IP=${HOST_IP}
+      # - HOST_IP=${HOST_IP}
+      - HOST_IP=${HOST_IP:-127.0.0.1}
     volumes:
       # Syncs your live code edits to the container so you don't have to rebuild! It's bind mount! (.)
       # bind mount is used for local development so live edits are sync immediately
@@ -76,7 +77,8 @@ services:
     env_file:
       - .env
     environment:
-      - HOST_IP=${HOST_IP}
+      # - HOST_IP=${HOST_IP}
+      - HOST_IP=${HOST_IP:-127.0.0.1}
     volumes:
       - ./fastapi_backend:/app
     ports:
