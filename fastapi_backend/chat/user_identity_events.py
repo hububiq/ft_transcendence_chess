@@ -59,23 +59,15 @@ def _parse_identity_event(
         return None
 
     try:
-        decoded_payload = json.loads(
-            raw_payload
-        )
+        decoded_payload = json.loads(raw_payload)
 
-        return (
-            UserIdentityChangedRedisEvent.model_validate(
-                decoded_payload
-            )
-        )
+        return UserIdentityChangedRedisEvent.model_validate(decoded_payload)
 
     except (
         json.JSONDecodeError,
         ValidationError,
     ):
-        logger.warning(
-            "Ignored invalid user identity event"
-        )
+        logger.warning("Ignored invalid user identity event")
         return None
 
 
@@ -84,11 +76,7 @@ async def _sync_chat_identity(
 ) -> None:
     """Synchronize the trusted identity stored by the chat manager"""
 
-    has_active_connection = (
-        await global_chat_manager.update_user_identity(
-            user
-        )
-    )
+    has_active_connection = await global_chat_manager.update_user_identity(user)
 
     if has_active_connection:
         await global_chat_manager.broadcast_presence()
@@ -128,32 +116,21 @@ async def listen_for_user_identity_events() -> None:
             redis_conn = await get_redis()
 
             async with redis_conn.pubsub() as pubsub:
-                await pubsub.subscribe(
-                    USER_IDENTITY_EVENTS_CHANNEL
-                )
+                await pubsub.subscribe(USER_IDENTITY_EVENTS_CHANNEL)
 
-                logger.info(
-                    "User identity event listener subscribed"
-                )
+                logger.info("User identity event listener subscribed")
 
                 async for message in pubsub.listen():
-                    if (
-                        message.get("type")
-                        != "message"
-                    ):
+                    if message.get("type") != "message":
                         continue
 
-                    event = _parse_identity_event(
-                        message.get("data")
-                    )
+                    event = _parse_identity_event(message.get("data"))
 
                     if event is None:
                         continue
 
                     try:
-                        await _handle_identity_event(
-                            event
-                        )
+                        await _handle_identity_event(event)
                     except Exception:
                         logger.warning(
                             "Failed to deliver user identity change event",
@@ -167,6 +144,4 @@ async def listen_for_user_identity_events() -> None:
             )
 
             # Retry without terminating the FastAPI process
-            await asyncio.sleep(
-                USER_IDENTITY_RECONNECT_DELAY_SECONDS
-            )
+            await asyncio.sleep(USER_IDENTITY_RECONNECT_DELAY_SECONDS)

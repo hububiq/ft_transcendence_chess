@@ -15,6 +15,8 @@ import {
   leaveTournament,
   deleteTournament,
   type Tournament as TournamentType,
+  type TournamentParticipant,
+  type TournamentMatch,
 } from "../../api/tournamentApi";
 
 import { useWebSocket } from "../../hooks/useWebSocket";
@@ -35,9 +37,50 @@ import { useActiveGame } from "../../hooks/useActiveGame";
 //   },
 // ];
 
+interface FormattedBracketMatch {
+  id: number | null;
+  p1: string;
+  p2: string;
+  p1Id: number | null;
+  p2Id: number | null;
+  isUserP1: boolean;
+  isUserP2: boolean;
+  winner: string | null;
+  winnerId: number | null;
+}
+
+interface FormattedBracketRound {
+  title: string;
+  matches: FormattedBracketMatch[];
+}
+
+interface TournamentUserListItem {
+  id: number;
+  username: string;
+}
+
+type TournamentLobbyMessage =
+  | {
+      type: "match_start";
+      game_id: number;
+      round_number?: number;
+    }
+  | {
+      type: "tournament_won";
+      tournament_id: number;
+    }
+  | {
+      type: "tournament_updated";
+      tournament_id?: number;
+    }
+  | {
+      type: "tournament_deleted";
+      tournament_id: number;
+    };
+
 export function Tournament() {
   const navigate = useNavigate();
-  const [nextMatch, setNextMatch] = useState<any>(null);
+  const [nextMatch, setNextMatch] = useState<TournamentMatch | null>(null);
   const { user } = useUser();
   const { activeGame } = useActiveGame();
   const [loading, setLoading] = useState(true);
@@ -46,16 +89,20 @@ export function Tournament() {
   const [lobbyTournaments, setLobbyTournaments] = useState<TournamentType[]>(
     [],
   );
-  const [bracketData, setBracketData] = useState<any[]>([]);
-  const [participants, setParticipants] = useState<any[]>([]);
+  const [bracketData, setBracketData] = useState<FormattedBracketRound[]>([]);
+  const [participants, setParticipants] = useState<TournamentParticipant[]>([]);
   const [isStarting, setIsStarting] = useState(false);
-  const [userNames, setUserNames] = useState<Record<int, string>>({});
+  const [userNames, setUserNames] = useState<Record<number, string>>({});
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(true);
+<<<<<<< HEAD
   const [setShowWinnerModal] = useState(false);
+=======
+  const [, setShowWinnerModal] = useState(false);
+>>>>>>> main
 
-  const handleLobbyMessage = (data: any) => {
+  const handleLobbyMessage = (data: TournamentLobbyMessage) => {
     switch (data.type) {
       case "match_start":
         if (!data.round_number || data.round_number === 1) {
@@ -102,15 +149,15 @@ export function Tournament() {
   useEffect(() => {
     const fetchNames = async () => {
       try {
-        const res = await api.get(
+        const res = await api.get<TournamentUserListItem[]>(
           `${import.meta.env.VITE_BASE_API_URL}/api/users/`,
         );
         const nameMap: Record<number, string> = {};
-        res.data.forEach((u: any) => {
+        res.data.forEach((u) => {
           nameMap[u.id] = u.username;
         });
         setUserNames(nameMap);
-      } catch (e) {
+      } catch {
         console.error("Failed to fetch usernames");
       }
     };
@@ -119,14 +166,12 @@ export function Tournament() {
 
   // Check User State on Load
   useEffect(() => {
-    if (!user?.id) return;
+    const userId = user?.id;
+    if (!userId) return;
 
     const fetchTournamentState = async () => {
-      if (!activeTournament && lobbyTournaments.length === 0) {
-        setLoading(true);
-      }
       try {
-        const currentTourney = await getPlayerTournament(user.id);
+        const currentTourney = await getPlayerTournament(userId);
         if (currentTourney && currentTourney.tournament) {
           setActiveTournament(currentTourney.tournament);
         } else {
@@ -169,7 +214,7 @@ export function Tournament() {
           } else {
             const formattedRounds = roundKeys.map((roundNum) => ({
               title: `Round ${roundNum}`,
-              matches: rawData.rounds[roundNum].map((match: any) => {
+              matches: rawData.rounds[roundNum].map((match) => {
                 const p1Name = match.player1
                   ? userNames[match.player1] || `Player ${match.player1}`
                   : "--";
@@ -192,9 +237,6 @@ export function Tournament() {
                   p2Id: match.player2,
                   isUserP1,
                   isUserP2,
-                  p1Score: match.player1_score ?? null,
-                  p2Score: match.player2_score ?? null,
-                  isCurrent: match.status === "in_progress",
                   winner: winnerName,
                   winnerId: match.winner,
                 };
@@ -432,7 +474,7 @@ export function Tournament() {
 
   const isEliminated = bracketData.some((round) =>
     round.matches.some(
-      (m: any) =>
+      (m) =>
         (m.isUserP1 || m.isUserP2) &&
         m.winnerId !== null &&
         m.winnerId !== user?.id,
@@ -513,7 +555,9 @@ export function Tournament() {
         <div className="bg-green-950/40 border border-green-900 text-green-400 p-6 rounded-xl text-center mt-6 shadow-lg flex flex-col items-center gap-4">
           <p className="text-xl font-bold">
             🏆 Tournament Finished! Winner:{" "}
-            {userNames[activeTournament.winner_id] || "Unknown"}
+            {activeTournament.winner_id != null
+              ? userNames[activeTournament.winner_id] || "Unknown"
+              : "Unknown"}
           </p>
           <button
             onClick={() => {
@@ -645,7 +689,7 @@ export function Tournament() {
 
               {/* Match List */}
               <div className="divide-y divide-neutral-900/50">
-                {round.matches.map((match: any) => (
+                {round.matches.map((match) => (
                   <div
                     key={match.id}
                     className="p-6 flex items-center justify-between hover:bg-neutral-900/20 transition-colors"

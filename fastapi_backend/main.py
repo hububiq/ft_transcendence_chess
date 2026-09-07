@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,26 +6,26 @@ from config import settings
 from server import manager
 from redis_client import get_redis
 from ai_engine import compute_best_move
-from matchmaking import matchmaking_loop
+from game.matchmaking import matchmaking_loop
 import asyncio
 import json
 import io
 import chess
 from database import init_db
 from models import Game, Tournament
-from game_service import handle_game_over, handle_timeout_claim, handle_player_move
-from game_service import handle_player_move
-from game_service import MULTIPLAYER_CLOCK_SECONDS
+from game.game_service import handle_game_over, handle_timeout_claim, handle_player_move
+from game.game_service import handle_player_move
+from game.game_service import MULTIPLAYER_CLOCK_SECONDS
 from api.history import router as history_router
 from api.statistics_history import router as statistics_history_router
-from api.tournaments import router as tournaments_router
+from tournament.tournaments import router as tournaments_router
 from api.games import router as games_router
-from garbage_games_collector import clean_dead_games
+from game.garbage_games_collector import clean_dead_games
 from database import async_session
 from chat.router import router as chat_router
 from chat.friendship_events import listen_for_friendship_events
 from chat.user_identity_events import listen_for_user_identity_events
-from reconnect_service import (
+from game.reconnect_service import (
     reconnect_deadline_worker,
     register_game_connection,
     unregister_game_connection,
@@ -56,7 +57,7 @@ app.include_router(statistics_history_router)
 app.include_router(tournaments_router)
 app.include_router(games_router)
 app.include_router(chat_router)  # Expose the /ws/chat endpoint
-asyncio.create_task(friendship_notifications_loop())
+# asyncio.create_task(friendship_notifications_loop())
 
 
 # ---------------------------------------------------------
@@ -76,7 +77,7 @@ async def process_rematch_request(game_id: int, user_id: int, opponent_id: int):
             redis = await get_redis()
             #  SAVE THE OFFER TO REDIS (Expires in 120 seconds!)
             await redis.set(f"game:{game_id}:rematch_proposed_by", user_id, ex=120)
-            print(f"🚨 DEBUG SAVE: Wrote rematch offer to Redis for game {game_id} by user {user_id}")
+            print(f"Wrote rematch offer to Redis for game {game_id} by user {user_id}")
             # They are still here
             await manager.send_to_user(opponent_id, {"type": "rematch_request"})
             # Tell the sender that the request is successfully pending
@@ -121,6 +122,7 @@ async def startup_event():
     asyncio.create_task(clean_dead_games())
     asyncio.create_task(listen_for_friendship_events())
     asyncio.create_task(listen_for_user_identity_events())
+    asyncio.create_task(friendship_notifications_loop())
 
     # Resume processing Redis reconnect deadlines whenever FastAPI starts
     asyncio.create_task(reconnect_deadline_worker())
@@ -175,10 +177,9 @@ async def lobby_socket(websocket: WebSocket, user_id: int):
 # ------------------------------------------------------------
 # Game WebSocket (game_id + user_id)
 # ------------------------------------------------------------
-@app.websocket("/ws/game/{game_id}")
-async def game_socket(websocket: WebSocket, game_id: int):
-    await websocket.accept()
-
+async def _authenticate_game_socket(
+    websocket: WebSocket,
+) -> int | None:
     try:
         # Require authentication before registering the game connection
         auth_payload = await asyncio.wait_for(
@@ -190,15 +191,15 @@ async def game_socket(websocket: WebSocket, game_id: int):
             code=1008,
             reason="Authentication timeout",
         )
-        return
+        return None
     except WebSocketDisconnect:
-        return
+        return None
     except Exception:
         await websocket.close(
             code=1008,
             reason="Invalid authentication message",
         )
-        return
+        return None
 
     if (
         not isinstance(auth_payload, dict)
@@ -208,7 +209,7 @@ async def game_socket(websocket: WebSocket, game_id: int):
             code=1008,
             reason="Authentication required",
         )
-        return
+        return None
 
     access_token = auth_payload.get("access_token")
 
@@ -217,7 +218,7 @@ async def game_socket(websocket: WebSocket, game_id: int):
             code=1008,
             reason="Authentication required",
         )
-        return
+        return None
 
     try:
         current_user = await get_current_user(
@@ -231,11 +232,31 @@ async def game_socket(websocket: WebSocket, game_id: int):
             code=1008,
             reason="Authentication failed",
         )
-        return
+        return None
 
     # Use only the user identity verified from the access token
-    user_id = current_user.id
+    return current_user.id
 
+
+# Keep related game state together instead of returning an error-prone positional tuple
+@dataclass
+class _GameSocketContext:
+    color: str
+    opponent_id: int | None
+    is_completed: bool
+    winner_id: int | None
+    loser_id: int | None
+    result: str | None
+    saved_pgn: str
+    is_draw: bool
+    tournament_id: int | None
+
+
+async def _load_and_validate_game_socket_context(
+    websocket: WebSocket,
+    game_id: int,
+    user_id: int,
+) -> _GameSocketContext | None:
     color = "w"
     opponent_id = None
     is_completed = False
@@ -244,7 +265,6 @@ async def game_socket(websocket: WebSocket, game_id: int):
     result = None
     saved_pgn = ""
     is_draw = False
-
     tournament_id = None
 
     async with async_session() as session:
@@ -255,7 +275,7 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 code=1008,
                 reason="Game is not active",
             )
-            return
+            return None
 
         tournament_id = game.tournament_id
 
@@ -271,7 +291,7 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 code=1008,
                 reason="User is not a player in this game",
             )
-            return
+            return None
 
         if game.status == "completed":
             is_completed = True
@@ -294,8 +314,27 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 code=1008,
                 reason="Game is not active",
             )
-            return
+            return None
 
+    return _GameSocketContext(
+        color=color,
+        opponent_id=opponent_id,
+        is_completed=is_completed,
+        winner_id=winner_id,
+        loser_id=loser_id,
+        result=result,
+        saved_pgn=saved_pgn,
+        is_draw=is_draw,
+        tournament_id=tournament_id,
+    )
+
+
+async def _register_game_socket_connection(
+    websocket: WebSocket,
+    game_id: int,
+    user_id: int,
+    is_completed: bool,
+) -> bool:
     if is_completed:
         # Keep completed games on the existing connection path without reconnect grace
         await manager.connect(
@@ -303,136 +342,368 @@ async def game_socket(websocket: WebSocket, game_id: int):
             websocket,
             user_id,
         )
-    else:
-        # Register ongoing games through reconnect lifecycle so a valid return cancels the deadline
-        is_registered = await register_game_connection(
+        return True
+
+    # Register ongoing games through reconnect lifecycle so a valid return cancels the deadline
+    is_registered = await register_game_connection(
+        game_id,
+        websocket,
+        user_id,
+    )
+
+    if not is_registered:
+        await websocket.close(
+            code=1008,
+            reason="Game is not active",
+        )
+        return False
+
+    return True
+
+
+async def _send_completed_game_initial_state(
+    websocket: WebSocket,
+    redis,
+    game_id: int,
+    user_id: int,
+    game_context: _GameSocketContext,
+) -> None:
+    final_fen = chess.Board().fen()
+
+    # Rebuild the final board from persisted PGN because completed games should not depend on Redis board state
+    if game_context.saved_pgn:
+        pgn_io = io.StringIO(game_context.saved_pgn)
+        parsed_game = chess.pgn.read_game(pgn_io)
+
+        if parsed_game:
+            final_board = parsed_game.end().board()
+            final_fen = final_board.fen()
+
+    await websocket.send_json({
+        "type": "board_state",
+        "fen": final_fen,
+        "color": game_context.color,
+        "opponent_id": game_context.opponent_id,
+        "history": [],
+    })
+
+    rematch_state = "idle"
+    proposed_by = await redis.get(f"game:{game_id}:rematch_proposed_by")
+
+    print(
+        f"Refresh triggered! "
+        f"Redis says proposed_by is: {proposed_by}"
+    )
+
+    if proposed_by:
+        if int(proposed_by) == game_context.opponent_id:
+            rematch_state = "received"
+            await manager.send_to_user(game_context.opponent_id, {"type": "rematch_request_sent"})
+        elif int(proposed_by) == user_id:
+            rematch_state = "sent"
+            await manager.send_to_user(game_context.opponent_id, {"type": "rematch_request"})
+
+    print(
+        f"Telling React that "
+        f"rematch_state is: {rematch_state}"
+    )
+
+    await websocket.send_json({
+        "type": "game_over",
+        "winner_id": game_context.winner_id,
+        "loser_id": game_context.loser_id,
+        "result": game_context.result,
+        "pgn": game_context.saved_pgn,
+        "rematch_state": rematch_state,
+    })
+
+
+async def _send_ongoing_game_initial_state(
+    websocket: WebSocket,
+    redis,
+    game_id: int,
+    user_id: int,
+    game_context: _GameSocketContext,
+) -> str | None:
+    redis_key = f"game:{game_id}:fen"
+    current_fen = await redis.get(redis_key)
+
+    if not current_fen:
+        starting_fen = chess.Board().fen()
+        await redis.set(redis_key, starting_fen)
+        current_fen = starting_fen
+
+        time_data = {
+            "white_time": MULTIPLAYER_CLOCK_SECONDS,
+            "black_time": MULTIPLAYER_CLOCK_SECONDS,
+            "last_move_at": None,
+        }
+        await redis.set(f"game:{game_id}:time", json.dumps(time_data))
+
+    # Rebuild move history from Redis so reconnecting clients receive the current game state
+    moves_key = f"game:{game_id}:moves"
+    raw_moves_uci = await redis.lrange(
+        moves_key,
+        0,
+        -1,
+    )
+
+    # Convert persisted UCI moves into SAN for the frontend history
+    san_history = []
+    temp_board = chess.Board()
+
+    for move_uci in raw_moves_uci:
+        move_obj = chess.Move.from_uci(move_uci)
+        san_history.append(temp_board.san(move_obj))
+        temp_board.push(move_obj)
+
+    white_time = MULTIPLAYER_CLOCK_SECONDS
+    black_time = MULTIPLAYER_CLOCK_SECONDS
+
+    time_data_str = await redis.get(f"game:{game_id}:time")
+
+    if time_data_str:
+        td = json.loads(time_data_str)
+        white_time = td["white_time"]
+        black_time = td["black_time"]
+
+        # Deduct elapsed time only after White has made the first move
+        if (
+            len(raw_moves_uci) > 0
+            and td.get("last_move_at") is not None
+        ):
+            time_spent = (int(time.time()) - td["last_move_at"])
+            board_for_time = chess.Board(current_fen)
+
+            if board_for_time.turn == chess.WHITE:
+                white_time -= time_spent
+            else:
+                black_time -= time_spent
+
+    try:
+        await websocket.send_json({
+            "type": "board_state",
+            "fen": current_fen,
+            "color": game_context.color,
+            "opponent_id": game_context.opponent_id,
+            "tournament_id": game_context.tournament_id,
+            "history": san_history,
+            "white_time": max(0, white_time),
+            "black_time": max(0, black_time),
+        })
+    except Exception as e:
+        print(f"[WS] Browser disconnected before receiving board state: {e}")
+
+        # Treat connection loss during initial state delivery as a reconnectable disconnect
+        await unregister_game_connection(
             game_id,
             websocket,
             user_id,
         )
+        return None
 
-        if not is_registered:
-            await websocket.close(
-                code=1008,
-                reason="Game is not active",
-            )
-            return
+    return redis_key
+
+
+async def _handle_game_socket_disconnect(
+    game_id: int,
+    websocket: WebSocket,
+    user_id: int,
+) -> None:
+    # Start reconnect handling only after an authenticated game socket actually disconnects
+    await unregister_game_connection(
+        game_id,
+        websocket,
+        user_id,
+    )
+
+    await asyncio.sleep(2)
+
+    room_connections = manager.rooms.get(
+        game_id,
+        [],
+    )
+
+    if len(room_connections) < 2:
+        await manager.broadcast_to_game(
+            game_id,
+            {
+                "type": "opponent_gone",
+            },
+        )
+
+
+async def _handle_game_socket_error(
+    game_id: int,
+    websocket: WebSocket,
+    user_id: int,
+    error: Exception,
+) -> None:
+    await manager.disconnect(
+        game_id,
+        websocket,
+        user_id,
+    )
+
+    await asyncio.sleep(2)
+
+    room_connections = manager.rooms.get(
+        game_id,
+        [],
+    )
+
+    if len(room_connections) < 2:
+        await manager.broadcast_to_game(game_id, {"type": "opponent_gone"})
+
+    print(f"WebSocket error for game {game_id}: {error}")
+
+
+async def _handle_rematch_game_message(
+    msg_type: str,
+    redis,
+    game_id: int,
+    user_id: int,
+    opponent_id: int | None,
+) -> None:
+    if msg_type == "rematch_request":
+        print(
+            f"React sent rematch_request "
+            f"for Game {game_id}"
+        )
+        await process_rematch_request(
+            game_id,
+            user_id,
+            opponent_id,
+        )
+
+    elif msg_type == "rematch_declined":
+        print(
+            f"React sent rematch_declined "
+            f"for Game {game_id}"
+        )
+        await redis.delete(f"game:{game_id}:rematch_proposed_by")
+
+        if opponent_id is not None:
+            await manager.send_to_user(opponent_id, {"type": "rematch_declined"})
+
+    elif msg_type == "rematch_accepted":
+        print(
+            f"React sent rematch_accepted "
+            f"for Game {game_id}"
+        )
+        await redis.delete(f"game:{game_id}:rematch_proposed_by")
+        await process_rematch_accepted(game_id)
+
+
+async def _forward_draw_game_message(
+    msg_type: str,
+    opponent_id: int | None,
+) -> None:
+    if msg_type == "offer_draw":
+        await manager.send_to_user(opponent_id, {"type": "draw_offer"})
+
+    elif msg_type == "draw_declined":
+        if opponent_id is not None:
+            await manager.send_to_user(opponent_id, {"type": "draw_declined"})
+
+
+async def _handle_draw_accepted_game_message(
+    redis,
+    redis_key: str,
+    game_id: int,
+    websocket: WebSocket,
+) -> None:
+    current_fen = await redis.get(redis_key)
+    board = (
+        chess.Board(current_fen)
+        if current_fen
+        else chess.Board()
+    )
+
+    await handle_game_over(
+        board,
+        game_id,
+        websocket=websocket,
+        is_agreed_draw=True,
+    )
+
+
+async def _handle_surrender_game_message(
+    redis,
+    redis_key: str,
+    game_id: int,
+    websocket: WebSocket,
+    user_id: int,
+) -> None:
+    current_fen = await redis.get(redis_key)
+    board = (
+        chess.Board(current_fen)
+        if current_fen
+        else chess.Board()
+    )
+
+    # Use the authenticated socket identity as the surrendering player
+    await handle_game_over(
+        board,
+        game_id,
+        websocket=websocket,
+        is_surrender=True,
+        surrender_loser_id=user_id,
+    )
+
+
+@app.websocket("/ws/game/{game_id}")
+async def game_socket(websocket: WebSocket, game_id: int):
+    await websocket.accept()
+
+    user_id = await _authenticate_game_socket(websocket)
+
+    if user_id is None:
+        return
+
+    game_context = await _load_and_validate_game_socket_context(
+        websocket,
+        game_id,
+        user_id,
+    )
+
+    if game_context is None:
+        return
+
+    opponent_id = game_context.opponent_id
+    is_completed = game_context.is_completed
+
+    connection_ready = await _register_game_socket_connection(
+        websocket,
+        game_id,
+        user_id,
+        is_completed,
+    )
+
+    if not connection_ready:
+        return
 
     redis = await get_redis()
     
     try:
         if is_completed:
-            final_fen = chess.Board().fen() # Default to start
-            # Don't touch Redis. We just tell React it's over
-            if saved_pgn:
-                pgn_io = io.StringIO(saved_pgn)
-                parsed_game = chess.pgn.read_game(pgn_io)
-                if parsed_game:
-                    final_board = parsed_game.end().board()
-                    final_fen = final_board.fen()
-
-            await websocket.send_json({
-                "type": "board_state",
-                "fen": final_fen,
-                "color": color,
-                "opponent_id": opponent_id,
-                "history": []
-            })        
-
-            rematch_state = "idle"
-            proposed_by = await redis.get(f"game:{game_id}:rematch_proposed_by")
-            print(f"🚨 DEBUG LOAD: Refresh triggered! Redis says proposed_by is: {proposed_by}")
-
-            if proposed_by:
-                if int(proposed_by) == opponent_id:
-                    rematch_state = "received"
-                    await manager.send_to_user(opponent_id, {"type": "rematch_request_sent"})
-                elif int(proposed_by) == user_id:
-                    rematch_state = "sent"
-                    await manager.send_to_user(opponent_id, {"type": "rematch_request"})
-            print(f"🚨 DEBUG SEND: Telling React that rematch_state is: {rematch_state}")
-            
-            await websocket.send_json({
-                "type": "game_over",
-                "winner_id": winner_id,
-                "loser_id": loser_id,
-                "result": result,
-                "pgn": saved_pgn,
-                "rematch_state": rematch_state
-            })
+            await _send_completed_game_initial_state(
+                websocket,
+                redis,
+                game_id,
+                user_id,
+                game_context,
+            )
         else:
-            redis_key = f"game:{game_id}:fen"
-            current_fen = await redis.get(redis_key)
-            if not current_fen:
-                starting_fen = chess.Board().fen()
-                await redis.set(redis_key, starting_fen)
-                current_fen = starting_fen
+            redis_key = await _send_ongoing_game_initial_state(
+                websocket,
+                redis,
+                game_id,
+                user_id,
+                game_context,
+            )
 
-                time_data = {
-                    "white_time": MULTIPLAYER_CLOCK_SECONDS,
-                    "black_time": MULTIPLAYER_CLOCK_SECONDS,
-                    "last_move_at": None,
-                }
-                await redis.set(f"game:{game_id}:time", json.dumps(time_data))
-
-            # GRAB THE HISTORY FROM REDIS 
-            moves_key = f"game:{game_id}:moves"
-            raw_moves_uci = await redis.lrange(moves_key, 0, -1)
-
-            # Translate the UCI moves (e2e4) back into SAN (e4) for frontend history sidebar
-            san_history = []
-            temp_board = chess.Board()
-            for move_uci in raw_moves_uci:
-                move_obj = chess.Move.from_uci(move_uci)
-                san_history.append(temp_board.san(move_obj))
-                temp_board.push(move_obj)
-
-            white_time = MULTIPLAYER_CLOCK_SECONDS
-            black_time = MULTIPLAYER_CLOCK_SECONDS
-    
-            time_data_str = await redis.get(f"game:{game_id}:time")
-            if time_data_str:
-                td = json.loads(time_data_str)
-                white_time = td["white_time"]
-                black_time = td["black_time"]
-
-                # Deduct elapsed time only after White has made the first move
-                if (
-                    len(raw_moves_uci) > 0
-                    and td.get("last_move_at") is not None
-                ):
-                    time_spent = (
-                        int(time.time())
-                        - td["last_move_at"]
-                    )
-                    board_for_time = chess.Board(
-                        current_fen
-                    )
-
-                    if board_for_time.turn == chess.WHITE:
-                        white_time -= time_spent
-                    else:
-                        black_time -= time_spent
-
-            try:
-                await websocket.send_json({
-                    "type": "board_state",
-                    "fen": current_fen,
-                    "color": color,            # Tells React to flip the board or not
-                    "opponent_id": opponent_id,  # Tells React who they are playing
-                    "tournament_id": tournament_id,
-                    "history": san_history,
-                    "white_time": max(0, white_time),
-                    "black_time": max(0, black_time)
-                })
-            except Exception as e:
-                print(f"[WS] Browser disconnected before receiving board state: {e}")
-                # Treat connection loss during initial state delivery as a reconnectable disconnect
-                await unregister_game_connection(
-                    game_id,
-                    websocket,
-                    user_id,
-                )
+            if redis_key is None:
                 return
 
     except Exception as e:
@@ -451,59 +722,46 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 pass
 
             elif msg_type == "surrender":
-                current_fen = await redis.get(redis_key)
-                board = chess.Board(current_fen) if current_fen else chess.Board()
-                await handle_game_over(
-                    board,
+                await _handle_surrender_game_message(
+                    redis,
+                    redis_key,
                     game_id,
-                    websocket=websocket,
-                    is_surrender=True,
-                    surrender_loser_id=user_id,
+                    websocket,
+                    user_id,
                 )
 
             elif msg_type == "claim_timeout":
                 print(f"[WS] Received timeout claim from user for Game {game_id}!")
                 await handle_timeout_claim(data, str(game_id), websocket)
 
-            elif msg_type == "rematch_request":
-                print(f"🚨 DEBUG WS: React sent rematch_request for Game {game_id}")
-                await process_rematch_request(game_id, user_id, opponent_id)
-
-            elif msg_type == "rematch_declined":
-                print(f"🚨 DEBUG WS: React sent rematch_declined for Game {game_id}")
-                await redis.delete(f"game:{game_id}:rematch_proposed_by")
-                if opponent_id is not None:
-                    await manager.send_to_user(
-                        opponent_id,
-                        {"type": "rematch_declined"},
-                    )
-
-            elif msg_type == "rematch_accepted":
-                print(f"🚨 DEBUG WS: React sent rematch_accepted for Game {game_id}")
-                await redis.delete(f"game:{game_id}:rematch_proposed_by")
-                await process_rematch_accepted(game_id)
-
-            elif msg_type == "offer_draw":
-                await manager.send_to_user(
+            elif msg_type in {
+                "rematch_request",
+                "rematch_declined",
+                "rematch_accepted",
+            }:
+                await _handle_rematch_game_message(
+                    msg_type,
+                    redis,
+                    game_id,
+                    user_id,
                     opponent_id,
-                    {"type": "draw_offer"},
                 )
 
-            elif msg_type == "draw_declined":
-                if opponent_id is not None:
-                    await manager.send_to_user(
-                        opponent_id,
-                        {"type": "draw_declined"},
-                    )
+            elif msg_type in {
+                "offer_draw",
+                "draw_declined",
+            }:
+                await _forward_draw_game_message(
+                    msg_type,
+                    opponent_id,
+                )
 
             elif msg_type == "draw_accepted":
-                current_fen = await redis.get(redis_key)
-                board = chess.Board(current_fen) if current_fen else chess.Board()
-                await handle_game_over(
-                    board,
+                await _handle_draw_accepted_game_message(
+                    redis,
+                    redis_key,
                     game_id,
-                    websocket=websocket,
-                    is_agreed_draw=True,
+                    websocket,
                 )
 
             else:
@@ -513,34 +771,16 @@ async def game_socket(websocket: WebSocket, game_id: int):
                 })
 
     except WebSocketDisconnect:
-
-        # Start reconnect handling only after an authenticated game socket actually disconnects
-        await unregister_game_connection(
+        await _handle_game_socket_disconnect(
             game_id,
             websocket,
             user_id,
         )
 
-        await asyncio.sleep(2)
-
-        room_connections = manager.rooms.get(
-            game_id,
-            [],
-        )
-
-        if len(room_connections) < 2:
-            await manager.broadcast_to_game(
-                game_id,
-                {
-                    "type": "opponent_gone",
-                },
-            )
-
     except Exception as e:
-        await manager.disconnect(game_id, websocket, user_id)
-        await asyncio.sleep(2)
-        room_connections = manager.rooms.get(game_id, [])
-        if len(room_connections) < 2:
-            await manager.broadcast_to_game(game_id, {"type": "opponent_gone"})
-        print(f"WebSocket error for game {game_id}: {e}")
-
+        await _handle_game_socket_error(
+            game_id,
+            websocket,
+            user_id,
+            e,
+        )

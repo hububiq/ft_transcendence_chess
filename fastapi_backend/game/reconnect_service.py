@@ -15,7 +15,7 @@ from chat.schemas import (
 )
 
 from database import async_session
-from game_service import handle_game_over
+from game.game_service import handle_game_over
 from models import Game
 from redis_client import get_redis
 from server import manager

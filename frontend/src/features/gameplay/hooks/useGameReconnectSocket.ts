@@ -4,17 +4,17 @@ import { fetchCurrentUser } from "../../auth/api/authService";
 
 const RECONNECT_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 10_000] as const;
 
-interface UseGameReconnectSocketProps {
+interface UseGameReconnectSocketProps<TMessage> {
   url: string;
   enabled: boolean;
-  onMessage: (data: any) => void;
+  onMessage: (data: TMessage) => void;
 }
 
-export function useGameReconnectSocket({
+export function useGameReconnectSocket<TMessage>({
   url,
   enabled,
   onMessage,
-}: UseGameReconnectSocketProps) {
+}: UseGameReconnectSocketProps<TMessage>) {
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const reconnectAttemptRef = useRef(0);
@@ -148,7 +148,7 @@ export function useGameReconnectSocket({
         }
 
         try {
-          const data = JSON.parse(event.data);
+          const data = JSON.parse(event.data) as TMessage;
 
           // Reset reconnect state only after the backend accepts the connection
           reconnectAttemptRef.current = 0;

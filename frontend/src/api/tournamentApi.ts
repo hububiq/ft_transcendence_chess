@@ -44,7 +44,7 @@ export async function getTournaments(): Promise<Tournament[]> {
 // GET /api/tournaments/{tournament_id}/
 export async function getTournament(
   tournamentId: number | string,
-): Promise<any> {
+): Promise<unknown> {
   const response = await api.get(`/api/tournaments/${tournamentId}`, config);
   return response.data;
 }
@@ -64,8 +64,8 @@ export async function createTournament(
 export async function joinTournament(
   tournamentId: number | string,
   payload: JoinTournamentRequest,
-): Promise<any> {
-  const response = await api.post(
+): Promise<JoinTournamentResponse> {
+  const response = await api.post<JoinTournamentResponse>(
     `/api/tournaments/${tournamentId}/join`,
     null,
     { ...config, params: payload }, // payload as query parameter
@@ -107,8 +107,8 @@ export async function getPlayerTournament(
 export async function getNextMatch(
   tournamentId: number | string,
   playerId: number | string,
-): Promise<any> {
-  const response = await api.get(
+): Promise<NextMatchResponse> {
+  const response = await api.get<NextMatchResponse>(
     `/api/tournaments/${tournamentId}/next/${playerId}`,
     config,
   );
@@ -118,8 +118,8 @@ export async function getNextMatch(
 // GET /api/tournaments/{tournament_id}/bracket
 export async function getTournamentBracket(
   tournamentId: number | string,
-): Promise<any> {
-  const response = await api.get(
+): Promise<TournamentBracketResponse> {
+  const response = await api.get<TournamentBracketResponse>(
     `/api/tournaments/${tournamentId}/bracket`,
     config,
   );
@@ -129,7 +129,7 @@ export async function getTournamentBracket(
 // GET /api/tournaments/{tournament_id}/history
 export async function getTournamentHistory(
   tournamentId: number | string,
-): Promise<any> {
+): Promise<unknown> {
   const response = await api.get(
     `/api/tournaments/${tournamentId}/history`,
     config,
@@ -160,4 +160,34 @@ export async function deleteTournament(tournamentId: number) {
     config,
   );
   return response.data;
+}
+
+export interface JoinTournamentResponse {
+  joined: boolean;
+  position: number;
+}
+
+export interface TournamentParticipant {
+  id: number | null;
+  tournament_id: number;
+  player_id: number;
+  bracket_position: number;
+}
+
+export interface TournamentMatch {
+  id: number | null;
+  tournament_id: number;
+  round_number: number;
+  player1: number | null;
+  player2: number | null;
+  winner: number | null;
+  game_id: number | null;
+}
+
+export interface NextMatchResponse {
+  match: TournamentMatch | null;
+}
+
+export interface TournamentBracketResponse {
+  rounds: Record<string, TournamentMatch[]>;
 }
