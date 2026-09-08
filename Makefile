@@ -18,7 +18,7 @@ up:
 
 	@echo "Updating .env..."
 	@sed -i.tmp "s|^HOST_IP=.*|HOST_IP=$(HOST_IP)|" .env
-	@sed -i.tmp "s|^FRONTEND_URL=.*|FRONTEND_URL=http://$(HOST_IP):3000|" .env
+	@sed -i.tmp "s|^FRONTEND_URL=.*|FRONTEND_URL=https://$(HOST_IP):3000|" .env
 	@rm -f .env.tmp
 
 	@echo "Updating frontend/.env..."

@@ -13,7 +13,7 @@ export const fetchCurrentUser = async () => {
 };
 
 export const exchangeGithubCode = async (code: string) => {
-  return api.post("api/github/login/", { code });
+  return api.post("/api/github/login/", { code });
 };
 
 // This file is responsible for talking to your Django/FastAPI backend.

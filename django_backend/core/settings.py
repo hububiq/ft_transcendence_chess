@@ -30,6 +30,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # Grab the frontend URL from .env (default to localhost if missing)
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
+ACCOUNT_DEFAULT_HTTP_RROTOCOL = 'https'
+
 # SECURITY WARNING: don't run with debug turned on in production
 DEBUG = True
 
