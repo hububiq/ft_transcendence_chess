@@ -205,6 +205,8 @@ REST_AUTH = {
     'JWT_AUTH_HTTPONLY': False, # prevents hiding refresh token on oauth-logged profile
 }
 
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 CSRF_TRUSTED_ORIGINS = [
     f"https://{HOST_IP}:8443",
     f"https://{HOST_IP}",
