@@ -159,7 +159,15 @@ We have automated the database migrations and OAuth injections into a single com
 make
 ```
 
-5. Access the platform
+5. Trust the Local HTTPS Certificate
+- Open the certificate manager in your browser:
+   chrome://certificate-manager/localcerts
+- Open Installed by you and then Trusted certificates.
+- Click import and select the localCA.pem file.
+- Completely close and reopen the browser after importing the certificate.
+
+
+6. Access the platform
 
 - Frontend (Play the Game): http://localhost:8443
 - Django Admin (Manage Users): http://localhost:8000/admin/
