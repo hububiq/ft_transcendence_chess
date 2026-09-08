@@ -17,4 +17,4 @@ build/
 
 
 venv/
-# certs/
+certs/
