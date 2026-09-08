@@ -22,7 +22,7 @@ export function FloatingPawns() {
             animationDelay: `${pawn.delay}s`,
           }}
         >
-          ♟
+         <img src={pawnImg} alt="pawn background" className="w-full h-auto opacity-70" />
         </div>
       ))}
 
