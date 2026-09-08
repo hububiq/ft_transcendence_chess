@@ -355,6 +355,8 @@ The following edge cases and limitations have been identified:
   - Chat messages are stored entirely in memory. Navigating away from the chat interface, entering a chess match, or refreshing the page will clear the message history.
 - **In-Game Chat:**
   - Chat is not currently integrated into the active chess match screen.
+- **Stale username in existing chat messages after username change:**
+   - After a user changes their username, messages already displayed in Global Chat keep the username that was attached when they were sent; only new messages use the updated username.
 
 ### UI / UX Glitches
 
@@ -369,6 +371,7 @@ The following edge cases and limitations have been identified:
 
 - **Limited Test Coverage:**
   - The automated test suite (unit, integration, no end-to-end tests) is in an early stage and does not fully cover complex edge cases, such as asynchronous WebSocket race conditions, abrupt user disconnections, and dynamic bracket generation.
+
 
 # Individual Contributions
 
