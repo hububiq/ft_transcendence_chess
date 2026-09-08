@@ -159,7 +159,15 @@ We have automated the database migrations and OAuth injections into a single com
 make
 ```
 
-5. Access the platform
+5. Trust the Local HTTPS Certificate
+- Open the certificate manager in your browser:
+   chrome://certificate-manager/localcerts
+- Open Installed by you and then Trusted certificates.
+- Click import and select the localCA.pem file.
+- Completely close and reopen the browser after importing the certificate.
+
+
+6. Access the platform
 
 - Frontend (Play the Game): http://localhost:8443
 - Django Admin (Manage Users): http://localhost:8000/admin/
@@ -347,6 +355,8 @@ The following edge cases and limitations have been identified:
   - Chat messages are stored entirely in memory. Navigating away from the chat interface, entering a chess match, or refreshing the page will clear the message history.
 - **In-Game Chat:**
   - Chat is not currently integrated into the active chess match screen.
+- **Stale username in existing chat messages after username change:**
+   - After a user changes their username, messages already displayed in Global Chat keep the username that was attached when they were sent; only new messages use the updated username.
 
 ### UI / UX Glitches
 
@@ -361,6 +371,7 @@ The following edge cases and limitations have been identified:
 
 - **Limited Test Coverage:**
   - The automated test suite (unit, integration, no end-to-end tests) is in an early stage and does not fully cover complex edge cases, such as asynchronous WebSocket race conditions, abrupt user disconnections, and dynamic bracket generation.
+
 
 # Individual Contributions
 
