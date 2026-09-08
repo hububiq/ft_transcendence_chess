@@ -136,8 +136,8 @@ cd chess42
 
 2. Setup the Environment Variables
 
-- Copy .env.example to .env in the project root, then fill in the required secrets such as SECRET_KEY, GITHUB_CLIENT_ID, GITHUB_SECRET.
-- Copy frontend/.env.example to frontend/.env, then fill in the required secrets such as VITE_GITHUB_CLIENT_ID.
+- Create .env file in the project root and copy .env.example to .env, then fill in the required secrets such as SECRET_KEY, GITHUB_CLIENT_ID, GITHUB_SECRET.
+- Create frontend/.env file and copy frontend/.env.example to frontend/.env, then fill in the required secrets such as VITE_GITHUB_CLIENT_ID.
 - When you run make, the Makefile automatically detects the host machine's LAN IP and updates the host-dependent values in both .env files, including HOST_IP, FRONTEND_URL, VITE_BASE_API_URL, VITE_FASTAPI_URL, VITE_WS_BASE_URL.
 - The detected HOST_IP is then used by scripts/generate-local-certs.sh to generate the local HTTPS certificate for the current host machine.
 
